@@ -1,122 +1,67 @@
 [
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/main.o",
-      "src/main.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/main.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/main.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/config/ConfigException.o",
-      "src/config/ConfigException.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/config/ConfigException.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/config/ConfigException.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/utils/StringUtils.o",
-      "src/utils/StringUtils.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/utils/StringUtils.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/utils/StringUtils.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/network/EpollWrapper.o",
-      "src/network/EpollWrapper.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/network/EpollWrapper.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/network/EpollWrapper.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/network/TcpListener.o",
-      "src/network/TcpListener.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/network/TcpListener.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/network/TcpListener.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/c++",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-std=c++98",
-      "-pedantic",
-      "-Wshadow",
-      "-Isrc",
-      "-Iinclude",
-      "-c",
-      "-o",
-      "build/network/ServerManager.o",
-      "src/network/ServerManager.cpp"
-    ],
-    "directory": "/home/carles/Documents/42bcn/webserv",
-    "file": "/home/carles/Documents/42bcn/webserv/src/network/ServerManager.cpp",
-    "output": "/home/carles/Documents/42bcn/webserv/build/network/ServerManager.o"
-  }
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/cgi/CgiHandler.cpp.o -c /home/cpujades/developments/github/webserv/src/cgi/CgiHandler.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/cgi/CgiHandler.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/cgi/CgiProcess.cpp.o -c /home/cpujades/developments/github/webserv/src/cgi/CgiProcess.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/cgi/CgiProcess.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/client/Client.cpp.o -c /home/cpujades/developments/github/webserv/src/client/Client.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/client/Client.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/client/RequestProcessor.cpp.o -c /home/cpujades/developments/github/webserv/src/client/RequestProcessor.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/client/RequestProcessor.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/config/ConfigException.cpp.o -c /home/cpujades/developments/github/webserv/src/config/ConfigException.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/config/ConfigException.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/config/ConfigParser.cpp.o -c /home/cpujades/developments/github/webserv/src/config/ConfigParser.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/config/ConfigParser.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/http/HttpParser.cpp.o -c /home/cpujades/developments/github/webserv/src/http/HttpParser.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/http/HttpParser.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/http/HttpUtils.cpp.o -c /home/cpujades/developments/github/webserv/src/http/HttpUtils.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/http/HttpUtils.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/main.cpp.o -c /home/cpujades/developments/github/webserv/src/main.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/main.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/network/EpollWrapper.cpp.o -c /home/cpujades/developments/github/webserv/src/network/EpollWrapper.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/network/EpollWrapper.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/network/ServerManager.cpp.o -c /home/cpujades/developments/github/webserv/src/network/ServerManager.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/network/ServerManager.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/network/TcpListener.cpp.o -c /home/cpujades/developments/github/webserv/src/network/TcpListener.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/network/TcpListener.cpp"
+},
+{
+  "directory": "/home/cpujades/developments/github/webserv/build",
+  "command": "/usr/bin/c++  -I/home/cpujades/developments/github/webserv/src -I/home/cpujades/developments/github/webserv/src/cgi -I/home/cpujades/developments/github/webserv/src/client -I/home/cpujades/developments/github/webserv/src/config -I/home/cpujades/developments/github/webserv/src/http -I/home/cpujades/developments/github/webserv/src/network -I/home/cpujades/developments/github/webserv/src/utils -Wall -Wextra -Werror -pedantic -Wshadow -std=gnu++98 -o CMakeFiles/ex.dir/src/utils/StringUtils.cpp.o -c /home/cpujades/developments/github/webserv/src/utils/StringUtils.cpp",
+  "file": "/home/cpujades/developments/github/webserv/src/utils/StringUtils.cpp"
+}
 ]
