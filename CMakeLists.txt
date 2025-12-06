@@ -16,3 +16,4 @@ add_compile_options(-Wall -Wextra -Werror)
 add_executable(webserv
         src/main.cpp
 )
+add_executable(test-socket docs/allowed_functions/TestServer.cpp)
