@@ -4,7 +4,6 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-ifndef
 
 std::string findFile(const std::string& startDirectory, const std::string& fileName)
 {
@@ -41,6 +40,7 @@ std::string findFile(const std::string& startDirectory, const std::string& fileN
     closedir(dir);
     return ("");
 }
+
 //	get directory parent of current directory 
 std::string getParentDirectory(const std::string& path)
 {
@@ -64,6 +64,12 @@ std::string getProjectRoot(const std::string& currentFilePath)
 
     return (path);
 }
+    /*
+    std::string path = __FILE__;
+    std::string projectRoot = getProjectRoot(__FILE__);
+    std::string projectRoot = __FILE__;
+    std::cout << "Project root: [" << projectRoot << "]\n";
+    */
 
 int  main(int argc, char const *argv[])
 {
@@ -71,13 +77,7 @@ int  main(int argc, char const *argv[])
 
     if (argc == 1)
     {
-        //std::string path = __FILE__;
         std::cout << "Use default config file store in [config/default.conf]\n";
-
-		//std::string projectRoot = getProjectRoot(__FILE__);
-		//std::string projectRoot = __FILE__;
-        std::cout << "Project root: [" << projectRoot << "]\n";
-
     }
 	else if (argc == 2)
 	{
@@ -85,11 +85,13 @@ int  main(int argc, char const *argv[])
 	}
 	else
 	{
-		std::cerr << "Use: ./webserv" << "\n";
+		std::cerr << "Use: ./webserv [default.conf]" << "\n";
+        return (1);
 	}
 
     return (0);
 }
+
 /*
 int main(int argc, char const *argv[])
 {
