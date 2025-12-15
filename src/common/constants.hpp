@@ -1,0 +1,10 @@
+#ifndef WEBSERV_CONSTANTS_HPP
+#define WEBSERV_CONSTANTS_HPP
+
+
+class Constants
+{
+};
+
+
+#endif //WEBSERV_CONSTANTS_HPP

@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "ConfigParser.hpp"
+
 std::string findFile(const std::string& startDirectory, const std::string& fileName)
 {
     DIR* dir = opendir(startDirectory.c_str());
@@ -78,10 +80,14 @@ int  main(int argc, char const *argv[])
     if (argc == 1)
     {
         std::cout << "Use default config file store in [config/default.conf]\n";
+    	ConfigParser parser(configPath);
+    	// parser();
+    	//	add function to manage default file
     }
 	else if (argc == 2)
 	{
 		configPath = argv[1];
+		//	parsear el archivo '.conf'
 	}
 	else
 	{

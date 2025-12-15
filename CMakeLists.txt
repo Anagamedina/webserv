@@ -11,16 +11,17 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 
 add_compile_options(-Wall -Wextra -Werror)
 
-#add_subdirectory(src)
-
 add_executable(webserv
-        src/main.cpp
+        src/config/mainConfig.cpp
 )
 
 add_executable(test-socket
         docs/allowed_functions/TestServer.cpp
 )
 
+#add_source(src/config)
 add_executable(parsing
         src/config/mainConfig.cpp
+        src/config/ConfigParser.hpp
+        src/config/ConfigParser.cpp
 )
