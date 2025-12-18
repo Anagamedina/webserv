@@ -46,7 +46,7 @@ std::string findFile(const std::string& startDirectory, const std::string& fileN
 //	get directory parent of current directory 
 std::string getParentDirectory(const std::string& path)
 {
-	size_t positionOfBackslash = path.find_last_of("/\\");
+	const size_t positionOfBackslash = path.find_last_of("/\\");
 
     if (positionOfBackslash != std::string::npos)
     {
@@ -77,16 +77,14 @@ int main(int argc, char *argv[])
 {
 	try
 	{
-		std::string configPath = (argc == 2) ? argv[1] : "config/default.conf";
+		const std::string configPath = (argc == 2) ? argv[1] : "config/default.conf";
 
 		ConfigParser parsingFile(configPath);
 
 		parsingFile.parse();
 
-		std::vector<ServerConfig> vectorServers= parsingFile.getServers();
-
-		// Usar configuración...
-		std::cout << "Loaded " << vectorServers.size() << " server(s)" << std::endl;
+		// std::vector<ServerConfig> vectorServers= parsingFile.getServers();
+		// std::cout << "number of servers in file: " << vectorServers.size() << " server(s)" << std::endl;
 	}
 	catch (const ConfigException& e)
 	{

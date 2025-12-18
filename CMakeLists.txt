@@ -29,4 +29,6 @@ add_executable(parsing
         src/config/ConfigException.cpp
         src/config/ConfigException.cpp
         src/config/ConfigException.hpp
+        src/config/ServerConfig.cpp
+        src/config/ServerConfig.hpp
 )

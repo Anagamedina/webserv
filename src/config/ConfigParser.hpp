@@ -20,7 +20,7 @@ public:
 
 private:
 
-	std::string configFile_;
+	std::string configFilePath_;
 	size_t serversCount_;
 	std::vector<std::string> rawServerBlocks_;
 	std::vector<ServerConfig> servers_;
@@ -30,12 +30,16 @@ private:
 	ConfigParser& operator=(const ConfigParser& other);
 
 	bool validateExtensionAndPermissionsFile() const;
-	bool checkIfFileHasValidContent(const std::string& configFile) const;
+	bool checkIfFileHasValidContent() const ;
+	std::string trimLine(std::string& line) const ;
 	std::string readFileContent();
+
 	void extractServerblocks(const std::string& content);
 	void parserServerBlocks();
+	/*
 	ServerConfig parseServerBlock(const std::string& block);
 	LocationConfig parseLocationBlock(const std::string& block);
+	*/
 };
 
 //ostream
