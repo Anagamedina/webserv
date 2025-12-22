@@ -19,16 +19,17 @@ add_executable(test-socket
         docs/allowed_functions/TestServer.cpp
 )
 
-#add_source(src/config)
-add_executable(parsing
-#        src/main.cpp
-        src/config/mainConfig.cpp
+add_executable(config src/config/mainConfig.cpp
         src/config/ConfigParser.hpp
         src/config/ConfigParser.cpp
+
         src/config/ConfigException.hpp
         src/config/ConfigException.cpp
-        src/config/ConfigException.cpp
-        src/config/ConfigException.hpp
-        src/config/ServerConfig.cpp
+
         src/config/ServerConfig.hpp
+        src/config/ServerConfig.cpp
+
+        src/config/LocationConfig.hpp
+        src/config/LocationConfig.cpp
+
 )

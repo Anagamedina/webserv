@@ -23,7 +23,6 @@ class LocationConfig;
 class ServerConfig
 {
 private:
-	// Network configuration
 	int listen_port_;	// listen 8080
 	std::string host_address_;	// host 127.0.0.1
 	std::string server_name_;	// (optional ??)

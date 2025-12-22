@@ -1,90 +1,65 @@
 #include <iostream>
 #include <string>
-#include <dirent.h>
-#include <sys/stat.h>
+#include <unistd.h>
 #include <fstream>
 
 #include "ConfigParser.hpp"
 #include "ConfigException.hpp"
 
-std::string findFile(const std::string& startDirectory, const std::string& fileName)
+bool fileExists(const std::string& path)
 {
-    DIR* dir = opendir(startDirectory.c_str());
-    if (!dir)
-    {
-        return ("");
-    }
-    struct dirent* entry;
-    while ( (entry = readdir(dir)))
-    {
-        std::string name = entry->d_name;
-        std::string path = startDirectory + "/" + name;
-        struct stat st;
-
-        if (stat(path.c_str(), &st) == 0)
-        {
-            if (S_ISREG(st.st_mode) && name == fileName)
-            {
-                closedir(dir);
-                return (path);
-            }
-            else if (S_ISDIR(st.st_mode))
-            {
-                std::string found = findFile(path, fileName);
-                if (!found.empty())
-                {
-                    closedir(dir);
-                    return (found);
-                }
-            }
-        }
-    }
-    closedir(dir);
-    return ("");
+	// returns 0 on success, -1 on error
+	// F_OK: check for existence
+	// R_OK: check for read permission
+	return (access(path.c_str(), F_OK | R_OK) == 0);
 }
 
-//	get directory parent of current directory 
-std::string getParentDirectory(const std::string& path)
-{
-	const size_t positionOfBackslash = path.find_last_of("/\\");
-
-    if (positionOfBackslash != std::string::npos)
-    {
-        return (path.substr(0, positionOfBackslash));
-    }
-	return ("");
-}
-
-//	function to get the root project using system call variable __FILE__
-/*
-std::string& getProjectRoot(const std::string& currentFilePath)
-{
-	std::string path = currentFilePath;
-
-    path = getParentDirectory(path);
-
-}
-    */
-    /*
-    std::string path = __FILE__;
-    std::string projectRoot = getProjectRoot(__FILE__);
-    std::string projectRoot = __FILE__;
-    std::cout << "Project root: [" << projectRoot << "]\n";
-    */
-
-
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	try
 	{
-		const std::string configPath = (argc == 2) ? argv[1] : "config/default.conf";
+		std::string configPath;
 
-		ConfigParser parsingFile(configPath);
+		if (argc == 1)
+		{
+			configPath = "config/default.conf";
+			std::cout << "Using default config: " << configPath << std::endl;
+		}
+		else if (argc == 2)
+		{
+			configPath = argv[1];
+		}
+		else
+		{
+			std::cerr << "Usage: ./webserver [config_file.conf]" << std::endl;
+			return 1;
+		}
 
-		parsingFile.parse();
+		if (!fileExists(configPath))
+		{
+			std::cerr << "Error: Config file not found or not readable: " <<
+				configPath
+				<<
+				"\nPlease ensure:\n1. The file exists\n2. You have read permissions\n3. You are running from project root: ./webserver"
+				<< std::endl;
+			return 1;
+		}
 
-		// std::vector<ServerConfig> vectorServers= parsingFile.getServers();
-		// std::cout << "number of servers in file: " << vectorServers.size() << " server(s)" << std::endl;
+		// Parse configuration
+		ConfigParser parser(configPath);
+		parser.parse();
+
+		// Get parsed servers
+		const std::vector<ServerConfig>& servers = parser.getServers();
+		std::cout << "✓ Successfully loaded " << servers.size() << " server(s)"
+			<< std::endl;
+
+		// Debug: print server configurations
+		for (size_t i = 0; i < servers.size(); ++i)
+		{
+			std::cout << "\n--- Server " << (i + 1) << " ---" << std::endl;
+			servers[i].print();
+		}
 	}
 	catch (const ConfigException& e)
 	{

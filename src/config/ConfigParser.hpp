@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 
-class ServerConfig;
-class LocationConfig;
+#include "ServerConfig.hpp"
+
+// class ServerConfig;
+// class LocationConfig;
 
 class ConfigParser
 {
@@ -32,10 +34,10 @@ private:
 	bool validateExtensionAndPermissionsFile() const;
 	bool checkIfFileHasValidContent() const ;
 	std::string trimLine(std::string& line) const ;
-	std::string readFileContent();
+	std::string readFileContent() const;
 
 	void extractServerblocks(const std::string& content);
-	void parserServerBlocks();
+	void parserServerBlocks() const;
 	/*
 	ServerConfig parseServerBlock(const std::string& block);
 	LocationConfig parseLocationBlock(const std::string& block);

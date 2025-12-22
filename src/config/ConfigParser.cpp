@@ -4,7 +4,7 @@
 
 #include "ConfigException.hpp"
 
-ConfigParser::ConfigParser() : serversCount_(0U)
+ConfigParser::ConfigParser() : serversCount_()
 {
 }
 
@@ -112,7 +112,6 @@ bool ConfigParser::checkIfFileHasValidContent() const
 	return true;
 }
 
-
 /**
  * remove includes: space, tab, newline and carriage return
  * 
@@ -143,21 +142,28 @@ std::string ConfigParser::trimLine(std::string& line) const
  * @return String containing all file content
  * @throws ConfigException if file cannot be opened
  */
-std::string ConfigParser::readFileContent()
+std::string ConfigParser::readFileContent() const
 {
 	std::ifstream file(configFilePath_.c_str());
 	
 	if (!file.is_open())
 	{
-		throw ConfigException("Cannot open config file: " + configFilePath_);
+		// throw ConfigException("Cannot open config file: " + configFilePath_);
+		return "Cannot open config file: ";
 	}
 	
 	// Read entire file using stringstream
+	/*
 	std::stringstream buffer;
 	buffer << file.rdbuf();
-	
+	while (buffer <<  )
+	{
+
+	}
 	file.close();
 	return buffer.str();
+	*/
+	return "";
 }
 
 /**
@@ -199,7 +205,7 @@ void ConfigParser::extractServerblocks(const std::string& content)
 	serversCount_ = rawServerBlocks_.size();
 }
 
-void ConfigParser::parserServerBlocks()
+void ConfigParser::parserServerBlocks() const
 {
 	// TODO: Implement when ServerConfig is ready
 	// For now, just count them
