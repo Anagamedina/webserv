@@ -1,14 +1,17 @@
 #include "ConfigParser.hpp"
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "ConfigException.hpp"
+#include "../common/constants.hpp"
 
 ConfigParser::ConfigParser() : serversCount_()
 {
 }
 
-ConfigParser::ConfigParser(const std::string& configFile) : configFilePath_(configFile) , serversCount_(0U)
+ConfigParser::ConfigParser(const std::string& configFile) :
+	configFilePath_(configFile), serversCount_(0U)
 {
 }
 
@@ -16,7 +19,7 @@ ConfigParser::~ConfigParser()
 {
 }
 
-void ConfigParser::parse()
+void ConfigParser::parse() const
 {
 	if (validateExtensionAndPermissionsFile() == true)
 	{
@@ -25,6 +28,10 @@ void ConfigParser::parse()
 	else
 	{
 		std::cout << "\nError open file :(\n";
+	}
+	if (checkIfFileHasValidContent())
+	{
+		std::cout << "FILE IS VALID LINES.\n";
 	}
 }
 
@@ -63,23 +70,24 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other)
  * manage if configFilePath:
  * has valid size of length
  * has extension '.conf'
- * if is posible open the file.
- * @return
+ * is possible to open the file.
+ * @return true or false
  */
 bool ConfigParser::validateExtensionAndPermissionsFile() const
 {
-	if (configFilePath_.size() < 5 || configFilePath_.substr(configFilePath_.size() - 5) != ".conf")
+	if (configFilePath_.size() < 5 || configFilePath_.substr(
+		configFilePath_.size() - 5) != ".conf")
 	{
 		//	throw exception
-		std::cout << "error with filename: {" << configFilePath_.c_str() << "}\n";
+		std::cout << "error with filename: {" << configFilePath_.c_str() << "}";
 		return false;
 	}
-	std::cout << "file in validate: {" << configFilePath_.c_str() << "}\n";
 	std::ifstream ifs(configFilePath_.c_str());
 	if (!ifs.is_open())
 	{
 		//	throw config exception
-		std::cout << "Error: Cannot open config file: [" + configFilePath_ << "]";
+		std::cout << "Error: Cannot open config file: [" + configFilePath_ <<
+			"]";
 		return false;
 	}
 	ifs.close();
@@ -93,23 +101,44 @@ bool ConfigParser::checkIfFileHasValidContent() const
 	{
 		// throw ConfigException("Cannot open file: [" + configFilePath_ + "]");
 		std::cout << "Cannot open file: [" + configFilePath_ + "]";
+		return false;
 	}
 	std::string line;
 	size_t lineNumber = 0;
+
+	//	buffer to save lines
+	std::ostringstream logBuffer;
+
 	while (std::getline(ifsFile, line))
 	{
-		lineNumber++;
-		const size_t commentPosition = line.find('#');
+		++lineNumber;
+		//	remove comments
+		size_t commentPosition = line.find('#');
 		if (commentPosition != std::string::npos)
 		{
 			line = line.substr(0, commentPosition);
 		}
+		//	trim line customize
 		line = trimLine(line);
 		if (line.empty())
 			continue;
-		std::cout << "Line {" << lineNumber <<"} -> [" << line << "]";
+		logBuffer << "Line [" << lineNumber << "] -> [" << line << "]\n";
 	}
 	ifsFile.close();
+
+	std::ofstream logFileOutput(constants::LOG_FILE_CLEAN.data());
+	if (logFileOutput.is_open())
+	{
+		logFileOutput << "=== Config file debug: " << configFilePath_ << "===\n";
+		logFileOutput << logBuffer.str();
+		logFileOutput << "=== End of config debug ===\n";
+		logFileOutput.close();
+	}
+	else
+	{
+		std::cout << "Warning: Could not write to config_debug.log\n";
+	}
+
 	return true;
 }
 
@@ -124,7 +153,7 @@ bool ConfigParser::checkIfFileHasValidContent() const
  *   "\t\ntest\r\n" -> "test"
  *   "   " -> ""
  */
-std::string ConfigParser::trimLine(std::string& line) const
+std::string ConfigParser::trimLine(std::string& line)
 {
 	const std::string whitespace = " \t\n\r";
 
@@ -134,7 +163,7 @@ std::string ConfigParser::trimLine(std::string& line) const
 		return "";
 	}
 	const size_t end = line.find_last_not_of(whitespace);
-	
+
 	return line.substr(start, end - start + 1);
 }
 
@@ -146,13 +175,13 @@ std::string ConfigParser::trimLine(std::string& line) const
 std::string ConfigParser::readFileContent() const
 {
 	std::ifstream file(configFilePath_.c_str());
-	
+
 	if (!file.is_open())
 	{
 		// throw ConfigException("Cannot open config file: " + configFilePath_);
 		return "Cannot open config file: ";
 	}
-	
+
 	// Read entire file using stringstream
 	/*
 	std::stringstream buffer;
@@ -175,18 +204,18 @@ std::string ConfigParser::readFileContent() const
 void ConfigParser::extractServerblocks(const std::string& content)
 {
 	size_t pos = 0;
-	
+
 	while ((pos = content.find("server", pos)) != std::string::npos)
 	{
 		// Find opening brace
 		size_t braceStart = content.find('{', pos);
 		if (braceStart == std::string::npos)
 			break;
-		
+
 		// Find matching closing brace (handle nested braces)
 		int braceCount = 1;
 		size_t braceEnd = braceStart + 1;
-		
+
 		while (braceEnd < content.size() && braceCount > 0)
 		{
 			if (content[braceEnd] == '{')
@@ -195,14 +224,14 @@ void ConfigParser::extractServerblocks(const std::string& content)
 				braceCount--;
 			braceEnd++;
 		}
-		
+
 		// Extract the complete server block
 		std::string block = content.substr(pos, braceEnd - pos);
 		rawServerBlocks_.push_back(block);
-		
+
 		pos = braceEnd;
 	}
-	
+
 	serversCount_ = rawServerBlocks_.size();
 }
 

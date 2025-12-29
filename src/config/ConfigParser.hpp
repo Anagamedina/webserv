@@ -13,12 +13,11 @@ public:
 	explicit ConfigParser(const std::string& configFile);
 	~ConfigParser();
 
-	void parse();
+	void parse() const;
 	const std::vector<ServerConfig>& getServers() const;
 	size_t getServerCount() const;
 
 private:
-
 	std::string configFilePath_;
 	size_t serversCount_;
 	std::vector<std::string> rawServerBlocks_;
@@ -29,8 +28,8 @@ private:
 	ConfigParser& operator=(const ConfigParser& other);
 
 	bool validateExtensionAndPermissionsFile() const;
-	bool checkIfFileHasValidContent() const ;
-	std::string trimLine(std::string& line) const ;
+	bool checkIfFileHasValidContent() const;
+	static std::string trimLine(std::string& line) ;
 	std::string readFileContent() const;
 
 	void extractServerblocks(const std::string& content);

@@ -2,7 +2,9 @@
 #include <string>
 #include <unistd.h>
 #include <fstream>
+#include <dirent.h>
 
+#include "../common/constants.hpp"
 #include "ConfigParser.hpp"
 #include "ConfigException.hpp"
 
@@ -25,9 +27,7 @@ int main(int argc, char* argv[])
 
 		if (argc == 1)
 		{
-			//	TODO: create one function to find the default file of 'configuration'
-			configPath = "../config/default.conf";
-			std::cout << "Using default config: " << configPath << std::endl;
+			configPath = constants::DEFAULT_CONFIG_PATH;
 		}
 		else if (argc == 2)
 		{
@@ -41,15 +41,12 @@ int main(int argc, char* argv[])
 
 		if (!fileExists(configPath))
 		{
-			std::cerr << "Error: Config file not found or not readable: " <<
-				configPath
-				<<
-				"\nPlease ensure:\n1. The file exists\n2. You have read permissions\n3. You are running from project root: ./webserver"
-				<< std::endl;
+			std::cerr << "Error: Config file: '" << configPath << "'\nPlease ensure:\n\t1. The file exists\n\t2. You have read permissions\n\t3. You are running from project root: ./webserver";
+			return 1;
 		}
 
 		// Parse configuration
-		ConfigParser parser(configPath);
+		const ConfigParser parser(configPath);
 		parser.parse();
 
 		// Get parsed servers
@@ -77,5 +74,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	std::flush(std::cout);
 	return 0;
 }
