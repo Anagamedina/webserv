@@ -1,35 +1,28 @@
 cmake_minimum_required(VERSION 3.10)
 project(webserv
-    VERSION 0.1.0
-        DESCRIPTION ""
+        VERSION 0.1.0
+        DESCRIPTION "HTTP Web Server"
         LANGUAGES CXX
 )
 
+# Global Configuration
 set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 
 add_compile_options(-Wall -Wextra -Werror)
 
+#include subdirectories of each module in src/
+add_subdirectory(src/config)
+
+# main executable
+#        src/main.cpp
 add_executable(webserv
         src/config/mainConfig.cpp
 )
 
-add_executable(test-socket
-        docs/allowed_functions/TestServer.cpp
+# enlazar con libreria.
+target_link_libraries(webserv PRIVATE
+        config
 )
 
-add_executable(config src/config/mainConfig.cpp
-        src/config/ConfigParser.hpp
-        src/config/ConfigParser.cpp
-
-        src/config/ConfigException.hpp
-        src/config/ConfigException.cpp
-
-        src/config/ServerConfig.hpp
-        src/config/ServerConfig.cpp
-
-        src/config/LocationConfig.hpp
-        src/config/LocationConfig.cpp
-
-)

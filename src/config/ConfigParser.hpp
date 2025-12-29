@@ -6,9 +6,6 @@
 
 #include "ServerConfig.hpp"
 
-// class ServerConfig;
-// class LocationConfig;
-
 class ConfigParser
 {
 public:

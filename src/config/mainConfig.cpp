@@ -6,11 +6,14 @@
 #include "ConfigParser.hpp"
 #include "ConfigException.hpp"
 
+
+/**
+ * returns 0 on success, -1 on error
+ * F_OK: check for existence
+ * R_OK: check for read permission
+*/
 bool fileExists(const std::string& path)
 {
-	// returns 0 on success, -1 on error
-	// F_OK: check for existence
-	// R_OK: check for read permission
 	return (access(path.c_str(), F_OK | R_OK) == 0);
 }
 
@@ -22,7 +25,8 @@ int main(int argc, char* argv[])
 
 		if (argc == 1)
 		{
-			configPath = "config/default.conf";
+			//	TODO: create one function to find the default file of 'configuration'
+			configPath = "../config/default.conf";
 			std::cout << "Using default config: " << configPath << std::endl;
 		}
 		else if (argc == 2)
@@ -42,7 +46,6 @@ int main(int argc, char* argv[])
 				<<
 				"\nPlease ensure:\n1. The file exists\n2. You have read permissions\n3. You are running from project root: ./webserver"
 				<< std::endl;
-			return 1;
 		}
 
 		// Parse configuration
@@ -54,12 +57,14 @@ int main(int argc, char* argv[])
 		std::cout << "✓ Successfully loaded " << servers.size() << " server(s)"
 			<< std::endl;
 
-		// Debug: print server configurations
+		// Debug: print server
+		/*
 		for (size_t i = 0; i < servers.size(); ++i)
 		{
 			std::cout << "\n--- Server " << (i + 1) << " ---" << std::endl;
-			servers[i].print();
+			std::cout << servers[i];
 		}
+	*/
 	}
 	catch (const ConfigException& e)
 	{

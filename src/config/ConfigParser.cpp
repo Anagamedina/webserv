@@ -71,6 +71,7 @@ bool ConfigParser::validateExtensionAndPermissionsFile() const
 	if (configFilePath_.size() < 5 || configFilePath_.substr(configFilePath_.size() - 5) != ".conf")
 	{
 		//	throw exception
+		std::cout << "error with filename: {" << configFilePath_.c_str() << "}\n";
 		return false;
 	}
 	std::cout << "file in validate: {" << configFilePath_.c_str() << "}\n";
