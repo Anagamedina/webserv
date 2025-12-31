@@ -5,9 +5,10 @@
 
 namespace constants
 {
-	// static const std::string DEFAULT_CONFIG_PATH = "../config/default.conf";
-	static const std::string DEFAULT_CONFIG_PATH = "../config/examples/nginx.conf";
+	static const std::string DEFAULT_CONFIG_PATH = "../config/default.conf";
+	// static const std::string DEFAULT_CONFIG_PATH = "../config/examples/nginx.conf";
 	static const std::string LOG_FILE_CLEAN= "../config/logs/config-clean.log";
+	static const std::string EXTENSION_FILE = ".conf";
 }
 
 namespace ansi

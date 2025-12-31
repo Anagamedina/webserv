@@ -46,13 +46,13 @@ int main(int argc, char* argv[])
 		}
 
 		// Parse configuration
-		const ConfigParser parser(configPath);
+		ConfigParser parser(configPath);
 		parser.parse();
 
 		// Get parsed servers
-		const std::vector<ServerConfig>& servers = parser.getServers();
-		std::cout << "✓ Successfully loaded " << servers.size() << " server(s)"
-			<< std::endl;
+		// const std::vector<ServerConfig>& servers = parser.getServers();
+		// std::cout << "✓ Successfully loaded " << servers.size() << " server(s)"
+			// << std::endl;
 
 		// Debug: print server
 		/*
