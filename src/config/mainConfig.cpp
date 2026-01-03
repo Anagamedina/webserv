@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		ConfigParser parser(configPath);
-		std::cout << "Config file: [" << parser.getConfigFile() << "]\n";
+		std::cout << "Config file: [" << parser.getConfigFilePath() << "]\n";
 		parser.parse();
 
 		// Get parsed servers

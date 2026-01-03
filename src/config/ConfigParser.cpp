@@ -40,10 +40,11 @@ void ConfigParser::parse()
 	}
 }
 
-std::string& ConfigParser::getConfigFile()
+std::string& ConfigParser::getConfigFilePath()
 {
 	return configFilePath_;
 }
+
 const std::vector<ServerConfig>& ConfigParser::getServers() const
 {
 	return servers_;
@@ -113,6 +114,31 @@ if (!ifs.is_open())
 ifs.close();
 */
 
+void ConfigParser::removeComments(std::string& line) const
+{
+	size_t commentPosition = line.find('#');
+	if (commentPosition != std::string::npos)
+	{
+		line = line.substr(0, commentPosition);
+	}
+}
+
+void ConfigParser::exportCleanConfigFile(const std::ostringstream& logBuffer) const
+{
+	std::ofstream logFileOutput(constants::log_file.data());
+	if (logFileOutput.is_open())
+	{
+		logFileOutput << "=== Config file debug: " << configFilePath_ <<
+			"===\n";
+		logFileOutput << logBuffer.str();
+		logFileOutput.close();
+	}
+	else
+	{
+		std::cout << "Warning: Could not write to config_debug.log\n";
+	}
+}
+
 /**
  * check if lines start with comments '#'
  * iterate through each line of file.
@@ -123,7 +149,9 @@ bool ConfigParser::validateBasicContent() const
 	std::ifstream ifsFile(configFilePath_.c_str());
 	if (!ifsFile.is_open())
 	{
-		throw ConfigException(error::cannot_open_file + configFilePath_ + "in validateBasicContent");
+		throw ConfigException(
+			error::cannot_open_file + configFilePath_ +
+			"in validateBasicContent");
 	}
 	std::string line;
 	size_t lineNumber = 0;
@@ -135,11 +163,7 @@ bool ConfigParser::validateBasicContent() const
 	{
 		++lineNumber;
 		//	remove comments
-		size_t commentPosition = line.find('#');
-		if (commentPosition != std::string::npos)
-		{
-			line = line.substr(0, commentPosition);
-		}
+		removeComments(line);
 		//	trim line customize
 		line = trimLine(line);
 		if (line.empty())
@@ -147,20 +171,10 @@ bool ConfigParser::validateBasicContent() const
 		logBuffer << "|" << lineNumber << "|" << line << "\n";
 	}
 	ifsFile.close();
+	exportCleanConfigFile(logBuffer);
+	// TODO: create a function to sustituir  espacios por un espacio
+	//	si encuentra un ';' hacer un new line
 
-	/**
-	std::ofstream logFileOutput(constants::log_file.data());
-	if (logFileOutput.is_open())
-	{
-		logFileOutput << "=== Config file debug: " << configFilePath_ << "===\n";
-		logFileOutput << logBuffer.str();
-		logFileOutput.close();
-	}
-	else
-	{
-		std::cout << "Warning: Could not write to config_debug.log\n";
-	}
-	*/
 
 	return true;
 }
@@ -186,7 +200,6 @@ std::string ConfigParser::trimLine(std::string& line) const
 		return "";
 	}
 	const size_t end = line.find_last_not_of(whitespace);
-
 	return line.substr(start, end - start + 1);
 }
 
@@ -204,9 +217,8 @@ std::string ConfigParser::readFileContent() const
 		// throw ConfigException("Cannot open config file: " + configFilePath_);
 		return "Cannot open config file: ";
 	}
-
 	// Read entire file using stringstream
-	/*
+	/**
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	while (buffer <<  )
