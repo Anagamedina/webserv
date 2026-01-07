@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include "ConfigException.hpp"
 #include "../common/namespaces.hpp"
@@ -123,19 +124,33 @@ void ConfigParser::removeComments(std::string& line) const
 	}
 }
 
-void ConfigParser::exportCleanConfigFile(const std::ostringstream& logBuffer) const
+/**
+ * export config file '.log'
+ * remove empty lines and comment lines.
+ */
+void ConfigParser::generatePrettyConfigLog() const
 {
-	std::ofstream logFileOutput(constants::log_file.data());
-	if (logFileOutput.is_open())
+	std::ifstream ifs(configFilePath_.c_str());
+	std::ofstream logFileOutput(constants::log_file_output.data());
+	std::string line;
+	size_t lineNum = 0;
+	while (std::getline(ifs, line))
 	{
-		logFileOutput << "=== Config file debug: " << configFilePath_ <<
-			"===\n";
-		logFileOutput << logBuffer.str();
-		logFileOutput.close();
-	}
-	else
-	{
-		std::cout << "Warning: Could not write to config_debug.log\n";
+		++lineNum;
+		removeComments(line);
+		line = trimLine(line);
+		if (line.empty())
+			continue;
+		size_t pos = 0;
+		while ((pos = line.find(';', pos)) != std::string::npos)
+		{
+			if (pos + 1 < line.size() && line[pos + 1] != ' ')
+			{
+				line.insert(pos + 1, "\n");
+			}
+			pos += 1;
+		}
+		logFileOutput << lineNum << " | " << line << "\n";
 	}
 }
 
@@ -162,19 +177,15 @@ bool ConfigParser::validateBasicContent() const
 	while (std::getline(ifsFile, line))
 	{
 		++lineNumber;
-		//	remove comments
 		removeComments(line);
-		//	trim line customize
 		line = trimLine(line);
 		if (line.empty())
 			continue;
 		logBuffer << "|" << lineNumber << "|" << line << "\n";
 	}
 	ifsFile.close();
-	exportCleanConfigFile(logBuffer);
-	// TODO: create a function to sustituir  espacios por un espacio
-	//	si encuentra un ';' hacer un new line
-
+	generatePrettyConfigLog();
+	// TODO: create a function to sustituir  espacios por un espacio si encuentra un ';' hacer un new line
 
 	return true;
 }
@@ -214,8 +225,8 @@ std::string ConfigParser::readFileContent() const
 
 	if (!file.is_open())
 	{
-		// throw ConfigException("Cannot open config file: " + configFilePath_);
-		return "Cannot open config file: ";
+		throw ConfigException("Cannot open config file: " + configFilePath_);
+		// return "Cannot open config file: ";
 	}
 	// Read entire file using stringstream
 	/**
@@ -232,11 +243,40 @@ std::string ConfigParser::readFileContent() const
 }
 
 /**
+ * la idea es que dependiendo de que estado se encuentre se actualize el enum,
+ * asi saber cuando esta en un bloque de server o location o fuera de bloque
+ *
+ */
+//	TODO: reorganize this part to understand whar we need to do
+void ConfigParser::MachineStatesOfConfigFile()
+{
+	ParserState state = OUTSIDE_BLOCK;
+	size_t braceCount = 0;
+	size_t lineNum = 0;
+
+	std::ifstream ifs(configFilePath_.c_str());
+	if (!ifs.is_open())
+	{
+		std::ostringstream oss;
+		oss << error::cannot_open_file << configFilePath_ <<
+			" in MachineStatesOfConfigFile()";
+		throw ConfigException(oss.str());
+	}
+
+	std::string line;
+	while (getline(ifs, line))
+	{
+
+	}
+
+}
+
+/**
  * Extracts all server { } blocks from the config content.
  * Handles nested braces within location blocks.
  * @param content The entire config file content
  */
-void ConfigParser::extractServerblocks(const std::string& content)
+void ConfigParser::extractServerBlocks(const std::string& content)
 {
 	size_t pos = 0;
 

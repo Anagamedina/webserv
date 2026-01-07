@@ -6,7 +6,8 @@ namespace constants
 {
 	static const std::string default_config_path = "../config/default.conf";
 	// static const std::string default_config_path = "../config/examples/nginx.conf";
-	static const std::string log_file = "../config/logs/config-clean.log";
+	// static const std::string log_file = "../config/logs/config-clean.log";
+	static const std::string log_file_output = "config_pretty.log";
 	static const std::string extension_file = ".conf";
 }
 
@@ -32,4 +33,7 @@ namespace error
 	static const char* const invalid_extension = "Invalid file extension: ";
 	static const char* const cannot_open_file = "Cannot open config file: ";
 }
+
+enum ParserState { OUTSIDE_BLOCK, IN_SERVER, IN_LOCATION };
+
 #endif

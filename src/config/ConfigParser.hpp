@@ -33,11 +33,12 @@ private:
 	bool validateBasicContent() const;
 
 	void removeComments(std::string& line) const;
-	void exportCleanConfigFile(const std::ostringstream& logBuffer) const;
+	void generatePrettyConfigLog() const;
 	std::string trimLine(std::string& line) const;
 	std::string readFileContent() const;
 
-	void extractServerblocks(const std::string& content);
+	void MachineStatesOfConfigFile();
+	void extractServerBlocks(const std::string& content);
 	void parserServerBlocks() const;
 	/**
 	ServerConfig parseServerBlock(const std::string& block);
