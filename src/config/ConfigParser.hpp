@@ -40,14 +40,13 @@ private:
 	bool ValidateCurlyBrackets() const;
 
 	//	auxiliar member function
-	void RemoveComments(std::string& line) const;
+	static void RemoveComments(std::string& line);
 	void DebugConfigLog() const;
-	std::string TrimLine(const std::string& line) const;
-	std::string ReadFileContent() const;
-	std::string RemoveSpacesAndTabs(std::string& line);
-	std::string NormalizeSpaces(const std::string& line);
+	static std::string TrimLine(const std::string& line);
+	static std::string RemoveSpacesAndTabs(std::string& line);
+	static std::string NormalizeSpaces(const std::string& line);
 
-	void MachineStatesOfConfigFile();
+	void MachineStatesOfConfigFile() const;
 	void extractServerBlocks(const std::string& content);
 	void parserServerBlocks() const;
 	/**

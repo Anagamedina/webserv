@@ -62,8 +62,7 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const
 }
 
 /**
- * todas las validaciones del archivo .conf
- * se gestionan en esta funcion.
+ * main function of parsing
  *
  */
 void ConfigParser::parse()
@@ -136,7 +135,7 @@ std::string ConfigParser::CleanFileConfig()
 	{
 		throw ConfigException(
 			config::errors::cannot_open_file + config_file_path_ +
-			" in validateBasicContent");
+			" in CleanFileConfig()");
 	}
 
 	std::ostringstream logBuffer;
@@ -194,9 +193,11 @@ bool ConfigParser::ValidateCurlyBrackets() const
 	return countBrackets == 0;
 }
 
-
-//	aux member functions
-void ConfigParser::RemoveComments(std::string& line) const
+/**
+ * if line start wirh '#' remove line
+ * @param line
+ */
+void ConfigParser::RemoveComments(std::string& line)
 {
 	size_t commentPosition = line.find('#');
 	if (commentPosition != std::string::npos)
@@ -206,6 +207,7 @@ void ConfigParser::RemoveComments(std::string& line) const
 }
 
 /**
+ * AUX FUNCTION TO DEBUG
  * export config file '.log'
  * remove empty lines and comment lines.
  */
@@ -220,48 +222,42 @@ void ConfigParser::DebugConfigLog() const
 			" (in generatePrettyConfigLog)"
 		);
 	}
+
 	std::ofstream logFile(config::paths::log_file.c_str());
 	if (!logFile.is_open())
 	{
-		// Aquí puedes elegir: lanzar excepción o solo warning
 		std::cerr << "Warning: Could not open/create pretty log file: ";
-		//<< config::paths::log_file_output << "\n";
-		// throw ConfigException("Cannot write pretty log");
 		return;
 	}
+
 	logFile << "=== Pretty print of configuration file ===\n";
 	logFile << "File: " << config_file_path_ << "\n";
 	logFile << "Generated: " << __DATE__ << " " << __TIME__ << "\n";
 	logFile << "----------------------------------------\n\n";
 
 	std::string line;
-
-	// size_t lineNum = 0;
+	size_t lineNum = 0;
 	while (std::getline(ifs, line))
 	{
-		// ++lineNum;
+		++lineNum;
 		RemoveComments(line);
 		line = TrimLine(line);
 		if (line.empty())
 			continue;
-		//logFileOutput << lineNum << "|" << line << "\n";
-		logFile << line << "\n";
+		logFile << lineNum << "|" << line << "\n";
 	}
 	ifs.close();
 }
 
 /**
  * remove includes: space, tab, newline and carriage return
- * 
  * @param line The string to trim
  * @return New string without leading/trailing whitespace
  * 
- * Examples:
  *   "  hello  " -> "hello"
  *   "\t\ntest\r\n" -> "test"
- *   "   " -> ""
  */
-std::string ConfigParser::TrimLine(const std::string& line) const
+std::string ConfigParser::TrimLine(const std::string& line)
 {
 	const std::string whitespace = "\t\n\r";
 
@@ -272,34 +268,6 @@ std::string ConfigParser::TrimLine(const std::string& line) const
 	}
 	const size_t end = line.find_last_not_of(whitespace);
 	return line.substr(start, end - start + 1);
-}
-
-/**
- * Reads entire content of config file into a string.
- * @return String containing all file content
- * @throws ConfigException if file cannot be opened
- */
-std::string ConfigParser::ReadFileContent() const
-{
-	std::ifstream file(config_file_path_.c_str());
-
-	if (!file.is_open())
-	{
-		throw ConfigException("Cannot open config file: " + config_file_path_);
-		// return "Cannot open config file: ";
-	}
-	// Read entire file using stringstream
-	/**
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	while (buffer <<  )
-	{
-
-	}
-	file.close();
-	return buffer.str();
-	*/
-	return "";
 }
 
 struct IsConsecutiveSpace
@@ -334,16 +302,16 @@ std::string ConfigParser::NormalizeSpaces(const std::string& line)
  * asi saber cuando esta en un bloque de server o location o fuera de bloque
  *
  */
-//	TODO: reorganize this part to understand whar we need to do
+//	TODO: redo this part to understand whar we need to do
 
-/*
-void ConfigParser::MachineStatesOfConfigFile()
+void ConfigParser::MachineStatesOfConfigFile() const
 {
-	config::ParserState state = config::OUTSIDE_BLOCK;
+	config::ParserState state;// = config::OUTSIDE_BLOCK;
 	size_t braceCount = 0;
 	size_t countLines = 0;
 
-	std::ifstream ifs(config_file_path_.c_str());
+	// std::ifstream ifs(config_file_path_.c_str());
+	std::ifstream ifs(config::paths::log_file.c_str());
 	if (!ifs.is_open())
 	{
 		std::ostringstream oss;
@@ -353,20 +321,17 @@ void ConfigParser::MachineStatesOfConfigFile()
 	}
 
 	std::string line;
-	config::ParserState state;
+	state = config::OUTSIDE_BLOCK;
 
 	while (getline(ifs, line))
 	{
 		++countLines;
 
-		RemoveComments(line);
-		line = TrimLine(line);
 
 		if (line.empty())
 			continue ;
 	}
 }
-*/
 
 /**
  * Extracts all server { } blocks from the config content.

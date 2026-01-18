@@ -35,6 +35,14 @@ namespace config
 		static const char* const cannot_open_file = "Cannot open config file: ";
 	}
 
+	namespace section
+	{
+		static const std::string sever = "server {";
+		static const std::string local = "location";
+		static const std::string error_page= "error_page";
+
+	}
+
 	enum ParserState
 	{
 		OUTSIDE_BLOCK,
