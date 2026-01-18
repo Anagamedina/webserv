@@ -17,14 +17,15 @@ public:
 	std::string& getConfigFilePath();
 	size_t getServerCount() const;
 
-	void parse() const;
+	void parse();
 
 	const std::vector<ServerConfig>& getServers() const;
 
 private:
-	std::string configFilePath_;
-	size_t serversCount_;
-	std::vector<std::string> rawServerBlocks_;
+	std::string config_file_path_;
+	std::string clean_file_str_;
+	size_t servers_count_;
+	std::vector<std::string> raw_server_blocks_;
 	std::vector<ServerConfig> servers_;
 
 	//	constructors of copy and operator
@@ -32,16 +33,19 @@ private:
 	ConfigParser& operator=(const ConfigParser& other);
 
 	//	different validations.
-	bool validateFileExtension() const;
-	bool validateFilePermissions() const;
-	bool validateBasicContent() const;
-	bool validateCurlyBrackets() const;
+	bool ValidateFileExtension() const;
+	bool ValidateFilePermissions() const;
+
+	std::string CleanFileConfig();
+	bool ValidateCurlyBrackets() const;
 
 	//	auxiliar member function
-	void removeComments(std::string& line) const;
-	void generatePrettyConfigLog() const;
-	std::string trimLine(const std::string& line) const;
-	std::string readFileContent() const;
+	void RemoveComments(std::string& line) const;
+	void DebugConfigLog() const;
+	std::string TrimLine(const std::string& line) const;
+	std::string ReadFileContent() const;
+	std::string RemoveSpacesAndTabs(std::string& line);
+	std::string NormalizeSpaces(const std::string& line);
 
 	void MachineStatesOfConfigFile();
 	void extractServerBlocks(const std::string& content);

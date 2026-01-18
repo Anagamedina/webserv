@@ -1,4 +1,6 @@
 #include "ConfigParser.hpp"
+
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -7,12 +9,12 @@
 #include "ConfigException.hpp"
 #include "../common/namespaces.hpp"
 
-ConfigParser::ConfigParser() : serversCount_(0)
+ConfigParser::ConfigParser() : servers_count_(0)
 {
 }
 
 ConfigParser::ConfigParser(const std::string& configFile) :
-	configFilePath_(configFile), serversCount_(0U)
+	config_file_path_(configFile), servers_count_(0U)
 {
 }
 
@@ -23,8 +25,8 @@ ConfigParser::~ConfigParser()
 //	============= PRIVATE CONSTRUCTORS ===============
 
 ConfigParser::ConfigParser(const ConfigParser& other) :
-	configFilePath_(other.configFilePath_), serversCount_(other.serversCount_),
-	rawServerBlocks_(other.rawServerBlocks_)
+	config_file_path_(other.config_file_path_), servers_count_(other.servers_count_),
+	raw_server_blocks_(other.raw_server_blocks_)
 {
 	// servers_ = other.servers_;
 }
@@ -34,8 +36,8 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other)
 	if (this != &other)
 	{
 		ConfigParser tmp(other);
-		std::swap(configFilePath_, tmp.configFilePath_);
-		std::swap(serversCount_, tmp.serversCount_);
+		std::swap(config_file_path_, tmp.config_file_path_);
+		std::swap(servers_count_, tmp.servers_count_);
 		// std::swap(servers_, tmp.servers_);
 	}
 	return *this;
@@ -45,12 +47,12 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other)
 
 std::string& ConfigParser::getConfigFilePath()
 {
-	return configFilePath_;
+	return config_file_path_;
 }
 
 size_t ConfigParser::getServerCount() const
 {
-	return serversCount_;
+	return servers_count_;
 }
 
 const std::vector<ServerConfig>& ConfigParser::getServers() const
@@ -63,50 +65,52 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const
  * se gestionan en esta funcion.
  *
  */
-void ConfigParser::parse() const
+void ConfigParser::parse()
 {
-	if (!validateFileExtension())
+	if (!ValidateFileExtension())
 	{
 		throw ConfigException(
-			config::errors::invalid_extension + configFilePath_);
+			config::errors::invalid_extension + config_file_path_);
 	}
-	if (!validateFilePermissions())
+	if (!ValidateFilePermissions())
 	{
 		throw ConfigException(
-			config::errors::cannot_open_file + configFilePath_);
+			config::errors::cannot_open_file + config_file_path_);
 	}
-	if (!validateCurlyBrackets())
+
+	clean_file_str_ = CleanFileConfig();
+	std::ofstream log(config::paths::log_file.data());
+	log << clean_file_str_;
+	log.close();
+
+	// std::cout << "CLEANFILESTR in PARSE:\n" << clean_file_str_.c_str();
+
+	if (!ValidateCurlyBrackets())
 	{
 		throw ConfigException(
-			"Invalid number of curly brackets " + configFilePath_);
-	}
-	generatePrettyConfigLog();
-	if (!validateBasicContent())
-	{
-		std::cout << "\nError open file :(\n";
+			"Invalid number of curly brackets " + config_file_path_);
 	}
 }
 
 /**
- * manage if configFilePath:
+ * manage if config_file_path_:
  * has valid size of length
  * has extension '.conf'
- * is possible to open the file.
  * @return true or false
  */
-bool ConfigParser::validateFileExtension() const
+bool ConfigParser::ValidateFileExtension() const
 {
-	if (configFilePath_.size() < 5 || configFilePath_.substr(
-		configFilePath_.size() - 5) != config::paths::extension_file)
+	if (config_file_path_.size() < 5 || config_file_path_.substr(
+		config_file_path_.size() - 5) != config::paths::extension_file)
 	{
 		return false;
 	}
 	return true;
 }
 
-bool ConfigParser::validateFilePermissions() const
+bool ConfigParser::ValidateFilePermissions() const
 {
-	std::ifstream ifs(configFilePath_.c_str());
+	std::ifstream ifs(config_file_path_.c_str());
 	if (!ifs.is_open())
 		return false;
 	ifs.close();
@@ -114,73 +118,110 @@ bool ConfigParser::validateFilePermissions() const
 }
 
 /**
- * check if lines start with comments '#'
+ * RemoveComments(): if line start with '#' skip line
+ * TrimLine(): if line find "\t\n\r" remove character
+ * NormalizeSpaces(): replace 'X' spaces for one space ' '
  * iterate through each line of file.
  * @return
  */
-bool ConfigParser::validateBasicContent() const
+std::string ConfigParser::CleanFileConfig()
 {
-	std::ifstream ifs(configFilePath_.c_str());
+	std::ifstream ifs(config_file_path_.c_str());
 	if (!ifs.is_open())
 	{
 		throw ConfigException(
-			config::errors::cannot_open_file + configFilePath_ +
+			config::errors::cannot_open_file + config_file_path_ +
 			" in validateBasicContent");
 	}
 
-	std::string line;
-	size_t lineNumber = 0;
-
-	//	buffer to save lines
 	std::ostringstream logBuffer;
+	std::string line;
+	// size_t lineNumber = 0;
 
 	while (std::getline(ifs, line))
 	{
-		++lineNumber;
-		removeComments(line);
-		line = trimLine(line);
+		// ++lineNumber;
+		RemoveComments(line);
+		line = TrimLine(line);
+		line = NormalizeSpaces(line);
 		if (line.empty())
 			continue;
-		logBuffer << "|" << lineNumber << "|" << line << "\n";
+		// logBuffer << "|" << lineNumber << "|" << line << "\n";
+		logBuffer << line << "\n";
 	}
 	ifs.close();
-	return true;
+	return logBuffer.str();
 }
 
-bool ConfigParser::validateCurlyBrackets() const
+/**
+* Usar un contador dinámico (incrementa con {, decrementa con }) que nunca baje de 0
+* Detectar { y }solo cuando son estructurales (inicio/fin de bloque, no dentro de valores)
+* Manejar casos como:
+* server { (abre)
+* } (cierra)
+* location /path { (abre)
+* Cierres prematuros
+
+ * @return true solo si:
+ * Contador nunca negativo durante la lectura
+ * Contador == 0 al final
+ * Mejorar mensajes de error (línea + descripción)
+ * Opcional: devolver también el nivel máximo de anidamiento o lista de errores
+ */
+bool ConfigParser::ValidateCurlyBrackets() const
 {
-	std::ifstream ifs(configFilePath_.c_str());
+	// std::cout << "check if cleanfilestr is update:\n" << clean_file_str_;
+
+	// for (std::string It = clean_file_str_.begin(); It != clean_file_str_.end(); ++It)
+	size_t braceLevel1 = 0;
+	size_t closeBracket = 0;
+	for (size_t i = 0; i < clean_file_str_.size(); ++i)
+	{
+		if (clean_file_str_.find_first_of("{"))
+		{
+			++braceLevel1;
+		}
+
+	}
+	/*
+	std::ifstream ifs(clean_file_str_.c_str());
+	// std::ifstream ifs(config_file_path_.c_str());
+	// std::ifstream ifs(config::paths::log_file.c_str());
+	std::ifstream ifs(config::paths::log_file.c_str());
 	if (!ifs.is_open())
 	{
 		throw ConfigException("Invalid number of curly brackets ");
 	}
 	std::string line;
-	size_t openBracket = 0;
+	size_t braceLevel1 = 0;
 	size_t closeBracket = 0;
-	while (std::getline(ifs, line))
+	// while (std::getline(ifs, line))
+	while (std::getline(line, '\n'))
 	{
-		removeComments(line);
-		line = trimLine(line);
+		// RemoveComments(line);
+		// line = TrimLine(line);
 		if (line.empty())
 			continue;
+		// if ()
 		if (line.find('{') != std::string::npos)
 		{
-			++openBracket;
+			++braceLevel1;
 		}
 		else if (line.find('}') != std::string::npos)
 		{
 			++closeBracket;
 		}
 	}
-	std::cout << "Total open brackets: " << openBracket <<
+	std::cout << "Total open brackets: " << braceLevel1 <<
 		"\nTotal open brackets: " << closeBracket << "\n";
-	if (openBracket != closeBracket)
+	if (braceLevel1 != closeBracket && braceLevel1 > 0 && closeBracket > 0)
 		return false;
 	return true;
+	*/
 }
 
 //	aux member functions
-void ConfigParser::removeComments(std::string& line) const
+void ConfigParser::RemoveComments(std::string& line) const
 {
 	size_t commentPosition = line.find('#');
 	if (commentPosition != std::string::npos)
@@ -193,14 +234,14 @@ void ConfigParser::removeComments(std::string& line) const
  * export config file '.log'
  * remove empty lines and comment lines.
  */
-void ConfigParser::generatePrettyConfigLog() const
+void ConfigParser::DebugConfigLog() const
 {
-	std::ifstream ifs(configFilePath_.c_str());
+	std::ifstream ifs(config_file_path_.c_str());
 	if (!ifs.is_open())
 	{
 		throw ConfigException(
 			config::errors::cannot_open_file +
-			configFilePath_ +
+			config_file_path_ +
 			" (in generatePrettyConfigLog)"
 		);
 	}
@@ -214,7 +255,7 @@ void ConfigParser::generatePrettyConfigLog() const
 		return;
 	}
 	logFile << "=== Pretty print of configuration file ===\n";
-	logFile << "File: " << configFilePath_ << "\n";
+	logFile << "File: " << config_file_path_ << "\n";
 	logFile << "Generated: " << __DATE__ << " " << __TIME__ << "\n";
 	logFile << "----------------------------------------\n\n";
 
@@ -224,8 +265,8 @@ void ConfigParser::generatePrettyConfigLog() const
 	while (std::getline(ifs, line))
 	{
 		// ++lineNum;
-		removeComments(line);
-		line = trimLine(line);
+		RemoveComments(line);
+		line = TrimLine(line);
 		if (line.empty())
 			continue;
 		//logFileOutput << lineNum << "|" << line << "\n";
@@ -245,9 +286,9 @@ void ConfigParser::generatePrettyConfigLog() const
  *   "\t\ntest\r\n" -> "test"
  *   "   " -> ""
  */
-std::string ConfigParser::trimLine(const std::string& line) const
+std::string ConfigParser::TrimLine(const std::string& line) const
 {
-	const std::string whitespace = " \t\n\r";
+	const std::string whitespace = "\t\n\r";
 
 	const size_t start = line.find_first_not_of(whitespace);
 	if (start == std::string::npos)
@@ -263,13 +304,13 @@ std::string ConfigParser::trimLine(const std::string& line) const
  * @return String containing all file content
  * @throws ConfigException if file cannot be opened
  */
-std::string ConfigParser::readFileContent() const
+std::string ConfigParser::ReadFileContent() const
 {
-	std::ifstream file(configFilePath_.c_str());
+	std::ifstream file(config_file_path_.c_str());
 
 	if (!file.is_open())
 	{
-		throw ConfigException("Cannot open config file: " + configFilePath_);
+		throw ConfigException("Cannot open config file: " + config_file_path_);
 		// return "Cannot open config file: ";
 	}
 	// Read entire file using stringstream
@@ -286,6 +327,33 @@ std::string ConfigParser::readFileContent() const
 	return "";
 }
 
+struct IsConsecutiveSpace
+{
+	bool operator()(char a, char b) const { return a == ' ' && b == ' '; }
+};
+
+std::string ConfigParser::RemoveSpacesAndTabs(std::string& line)
+{
+	line.erase(std::unique(line.begin(), line.end(), IsConsecutiveSpace()),
+				line.end());
+	return line;
+}
+
+std::string ConfigParser::NormalizeSpaces(const std::string& line)
+{
+	std::stringstream ss(line);
+	std::string word;
+	std::string result;
+
+	while (ss >> word)
+	{
+		if (!result.empty())
+			result += " ";
+		result += word;
+	}
+	return result;
+}
+
 /**
  * la idea es que dependiendo de que estado se encuentre se actualize el enum,
  * asi saber cuando esta en un bloque de server o location o fuera de bloque
@@ -300,11 +368,11 @@ void ConfigParser::MachineStatesOfConfigFile()
 	size_t braceCount = 0;
 	size_t countLines = 0;
 
-	std::ifstream ifs(configFilePath_.c_str());
+	std::ifstream ifs(config_file_path_.c_str());
 	if (!ifs.is_open())
 	{
 		std::ostringstream oss;
-		oss << config::errors::cannot_open_file << configFilePath_ <<
+		oss << config::errors::cannot_open_file << config_file_path_ <<
 			" in MachineStatesOfConfigFile()";
 		throw ConfigException(oss.str());
 	}
@@ -316,8 +384,8 @@ void ConfigParser::MachineStatesOfConfigFile()
 	{
 		++countLines;
 
-		removeComments(line);
-		line = trimLine(line);
+		RemoveComments(line);
+		line = TrimLine(line);
 
 		if (line.empty())
 			continue ;
@@ -356,17 +424,17 @@ void ConfigParser::extractServerBlocks(const std::string& content)
 
 		// Extract the complete server block
 		std::string block = content.substr(pos, braceEnd - pos);
-		rawServerBlocks_.push_back(block);
+		raw_server_blocks_.push_back(block);
 
 		pos = braceEnd;
 	}
 
-	serversCount_ = rawServerBlocks_.size();
+	servers_count_ = raw_server_blocks_.size();
 }
 
 void ConfigParser::parserServerBlocks() const
 {
 	// TODO: Implement when ServerConfig is ready
 	// For now, just count them
-	std::cout << "Found " << serversCount_ << " server block(s)" << std::endl;
+	std::cout << "Found " << servers_count_ << " server block(s)" << std::endl;
 }
