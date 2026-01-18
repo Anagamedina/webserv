@@ -25,7 +25,8 @@ ConfigParser::~ConfigParser()
 //	============= PRIVATE CONSTRUCTORS ===============
 
 ConfigParser::ConfigParser(const ConfigParser& other) :
-	config_file_path_(other.config_file_path_), servers_count_(other.servers_count_),
+	config_file_path_(other.config_file_path_),
+	servers_count_(other.servers_count_),
 	raw_server_blocks_(other.raw_server_blocks_)
 {
 	// servers_ = other.servers_;
@@ -89,6 +90,10 @@ void ConfigParser::parse()
 	{
 		throw ConfigException(
 			"Invalid number of curly brackets " + config_file_path_);
+	}
+	else
+	{
+		std::cout << "curly brackerts correct :)\n";
 	}
 }
 
@@ -170,55 +175,25 @@ std::string ConfigParser::CleanFileConfig()
  */
 bool ConfigParser::ValidateCurlyBrackets() const
 {
-	// std::cout << "check if cleanfilestr is update:\n" << clean_file_str_;
-
-	// for (std::string It = clean_file_str_.begin(); It != clean_file_str_.end(); ++It)
-	size_t braceLevel1 = 0;
-	size_t closeBracket = 0;
-	for (size_t i = 0; i < clean_file_str_.size(); ++i)
+	int countBrackets = 0;
+	for (u_int32_t Index = 0; Index < clean_file_str_.size(); ++Index)
 	{
-		if (clean_file_str_.find_first_of("{"))
+		if (clean_file_str_.at(Index) == '{')
 		{
-			++braceLevel1;
+			++countBrackets;
 		}
-
-	}
-	/*
-	std::ifstream ifs(clean_file_str_.c_str());
-	// std::ifstream ifs(config_file_path_.c_str());
-	// std::ifstream ifs(config::paths::log_file.c_str());
-	std::ifstream ifs(config::paths::log_file.c_str());
-	if (!ifs.is_open())
-	{
-		throw ConfigException("Invalid number of curly brackets ");
-	}
-	std::string line;
-	size_t braceLevel1 = 0;
-	size_t closeBracket = 0;
-	// while (std::getline(ifs, line))
-	while (std::getline(line, '\n'))
-	{
-		// RemoveComments(line);
-		// line = TrimLine(line);
-		if (line.empty())
-			continue;
-		// if ()
-		if (line.find('{') != std::string::npos)
+		else if (clean_file_str_.at(Index) == '}')
 		{
-			++braceLevel1;
-		}
-		else if (line.find('}') != std::string::npos)
-		{
-			++closeBracket;
+			--countBrackets;
+			if (countBrackets < 0)
+			{
+				return false;
+			}
 		}
 	}
-	std::cout << "Total open brackets: " << braceLevel1 <<
-		"\nTotal open brackets: " << closeBracket << "\n";
-	if (braceLevel1 != closeBracket && braceLevel1 > 0 && closeBracket > 0)
-		return false;
-	return true;
-	*/
+	return countBrackets == 0;
 }
+
 
 //	aux member functions
 void ConfigParser::RemoveComments(std::string& line) const
