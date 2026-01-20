@@ -46,13 +46,12 @@ private:
 	static std::string RemoveSpacesAndTabs(std::string& line);
 	static std::string NormalizeSpaces(const std::string& line);
 
-	void MachineStatesOfConfigFile() const;
-	void extractServerBlocks(const std::string& content);
+	void MachineStatesOfConfigFile();
+	void extractServerBlock(const std::string& content, const std::string& typeOfExtraction);
 	void parserServerBlocks() const;
-	/**
+	
 	ServerConfig parseServerBlock(const std::string& block);
 	LocationConfig parseLocationBlock(const std::string& block);
-	*/
 };
 
 //ostream

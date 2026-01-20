@@ -37,7 +37,7 @@ namespace config
 
 	namespace section
 	{
-		static const std::string sever = "server {";
+		static const std::string server = "server";
 		static const std::string local = "location";
 		static const std::string error_page= "error_page";
 

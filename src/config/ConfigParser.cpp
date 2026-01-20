@@ -1,4 +1,5 @@
 #include "ConfigParser.hpp"
+#include "LocationConfig.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -175,7 +176,7 @@ std::string ConfigParser::CleanFileConfig()
 bool ConfigParser::ValidateCurlyBrackets() const
 {
 	int countBrackets = 0;
-	for (u_int32_t Index = 0; Index < clean_file_str_.size(); ++Index)
+	for (size_t Index = 0; Index < clean_file_str_.size(); ++Index)
 	{
 		if (clean_file_str_.at(Index) == '{')
 		{
@@ -301,72 +302,57 @@ std::string ConfigParser::NormalizeSpaces(const std::string& line)
  * la idea es que dependiendo de que estado se encuentre se actualize el enum,
  * asi saber cuando esta en un bloque de server o location o fuera de bloque
  *
+ * extract all blocks 'server'
+ * the function extractServerBlock() search all the occurrences to fill the vector
+ * raw_server_block_
  */
-//	TODO: redo this part to understand whar we need to do
-
-void ConfigParser::MachineStatesOfConfigFile() const
+void ConfigParser::MachineStatesOfConfigFile()
 {
-	config::ParserState state;// = config::OUTSIDE_BLOCK;
-	size_t braceCount = 0;
-	size_t countLines = 0;
+	if (clean_file_str_.empty())
+		return ;
 
-	// std::ifstream ifs(config_file_path_.c_str());
-	std::ifstream ifs(config::paths::log_file.c_str());
-	if (!ifs.is_open())
-	{
-		std::ostringstream oss;
-		oss << config::errors::cannot_open_file << config_file_path_ <<
-			" in MachineStatesOfConfigFile()";
-		throw ConfigException(oss.str());
-	}
-
-	std::string line;
-	state = config::OUTSIDE_BLOCK;
-
-	while (getline(ifs, line))
-	{
-		++countLines;
-
-
-		if (line.empty())
-			continue ;
-	}
+	extractServerBlock(clean_file_str_, "server");
 }
 
 /**
  * Extracts all server { } blocks from the config content.
  * Handles nested braces within location blocks.
  * @param content The entire config file content
+ * @param typeOfExtraction
  */
-void ConfigParser::extractServerBlocks(const std::string& content)
+void ConfigParser::extractServerBlock(const std::string& content,
+									const std::string& typeOfExtraction)
 {
-	size_t pos = 0;
-
-	while ((pos = content.find("server", pos)) != std::string::npos)
+	size_t currentPos = 0;
+	while ((currentPos = content.find(typeOfExtraction, currentPos)) !=
+		std::string::npos)
 	{
-		// Find opening brace
-		size_t braceStart = content.find('{', pos);
+		size_t braceStart = content.find('{', currentPos);
 		if (braceStart == std::string::npos)
 			break;
 
-		// Find matching closing brace (handle nested braces)
+		// Find matching closing brace
 		int braceCount = 1;
 		size_t braceEnd = braceStart + 1;
 
 		while (braceEnd < content.size() && braceCount > 0)
 		{
 			if (content[braceEnd] == '{')
+			{
 				braceCount++;
+			}
 			else if (content[braceEnd] == '}')
+			{
 				braceCount--;
+			}
 			braceEnd++;
 		}
 
 		// Extract the complete server block
-		std::string block = content.substr(pos, braceEnd - pos);
-		raw_server_blocks_.push_back(block);
-
-		pos = braceEnd;
+		std::string getBlock = content.
+			substr(currentPos, braceEnd - currentPos);
+		raw_server_blocks_.push_back(getBlock);
+		currentPos = braceEnd;
 	}
 
 	servers_count_ = raw_server_blocks_.size();
@@ -374,7 +360,82 @@ void ConfigParser::extractServerBlocks(const std::string& content)
 
 void ConfigParser::parserServerBlocks() const
 {
-	// TODO: Implement when ServerConfig is ready
-	// For now, just count them
-	std::cout << "Found " << servers_count_ << " server block(s)" << std::endl;
+	for (size_t i = 0; i < raw_server_blocks_.size(); ++i)
+	{
+		// Llamamos a nuestra función de parseo que retorna un ServerConfig
+		// ServerConfig server = parseServerBlock(raw_server_blocks_[i]);
+		// servers_.push_back(server); // Asumimos que ConfigParser es non-const o servers_ es mutable
+		// Como el metodo es const, no podemos modificar servers_. 
+		// Deberíamos quitar el const de parserServerBlocks o hacerlo en parse().
+		// Por ahora solo imprimimos para verificar.
+		std::cout << "Parsing Block " << i + 1 << "...\n";
+		// parseServerBlock(raw_server_blocks_[i]); 
+	}
+}
+
+ServerConfig ConfigParser::parseServerBlock(const std::string& block)
+{
+	ServerConfig serverConfig;
+	LocationConfig currentLocation;
+	config::ParserState state = config::IN_SERVER;
+	
+	std::stringstream ss(block);
+	std::string line;
+
+	while (std::getline(ss, line))
+	{
+		RemoveComments(line);
+		line = TrimLine(line);
+		if (line.empty()) continue;
+
+		std::vector<std::string> tokens;
+		std::stringstream ss_line(line);
+		std::string token;
+		while (ss_line >> token) tokens.push_back(token);
+
+		if (state == config::IN_SERVER)
+		{
+			if (tokens[0] == "server" && tokens[1] == "{") continue; // Inicio de bloque
+			if (tokens[0] == "}") break; // Fin de server
+
+			if (tokens[0] == "listen")
+			{
+				// serverConfig.setPort(std::atoi(tokens[1].c_str()));
+				std::cout << "  Configured Port: " << tokens[1] << "\n";
+			}
+			else if (tokens[0] == "host")
+			{
+				// serverConfig.setHost(tokens[1]);
+				std::cout << "  Configured Host: " << tokens[1] << "\n";
+			}
+			else if (tokens[0] == "location")
+			{
+				state = config::IN_LOCATION;
+				// currentLocation = LocationConfig();
+				// currentLocation.setPath(tokens[1]);
+				std::cout << "  >> Entering Location: " << tokens[1] << "\n";
+			}
+		}
+		else if (state == config::IN_LOCATION)
+		{
+			if (tokens[0] == "}")
+			{
+				state = config::IN_SERVER;
+				// serverConfig.addLocation(currentLocation);
+				std::cout << "  << Exiting Location\n";
+				continue;
+			}
+			
+			if (tokens[0] == "root")
+			{
+				// currentLocation.setRoot(tokens[1]);
+				std::cout << "    Location Root: " << tokens[1] << "\n";
+			}
+			else if (tokens[0] == "methods") // example
+			{
+				std::cout << "    Location Methods: " << tokens[1] << "\n";
+			}
+		}
+	}
+	return serverConfig;
 }
