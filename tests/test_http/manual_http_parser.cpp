@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "http/HttpParser.hpp"
+#include "../../src/http/HttpParser.hpp"
 
 static int g_failures = 0;
 

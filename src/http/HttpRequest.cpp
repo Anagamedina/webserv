@@ -8,7 +8,7 @@
 
 //constructor por defecto
 HttpRequest::HttpRequest() : _method(HTTP_METHOD_UNKNOWN), _version(HTTP_VERSION_UNKNOWN),
-      _headers(), _path(), _query(), _body(), _status(HTTP_STATUS_PENDING)
+      _headers(), _status(HTTP_STATUS_PENDING), _path(), _query()
 {
 }
 //constructor de inicialización
@@ -16,17 +16,20 @@ HttpRequest::HttpRequest(const std::string& method, const std::string& version,
                          const HeaderMap& headers, const std::string& path,
                          const std::string& query, const std::vector<char>& body)
     : _method(HTTP_METHOD_UNKNOWN), _version(HTTP_VERSION_UNKNOWN),
-      _headers(headers), _path(path), _query(query), _body(body), _status(HTTP_STATUS_PENDING)
+      _headers(headers), _status(HTTP_STATUS_PENDING), _path(path), _query(query), _body(body)
 {
     // Convertir strings a enums  
     setMethod(method); //← Convierte "GET" → HTTP_METHOD_GET
     setVersion(version); //← Convierte "HTTP/1.1" → HTTP_VERSION_1_1
 }
 
-//constructor de copia 
-HttpRequest::HttpRequest(const HttpRequest& other)
-    : _method(other._method), _version(other._version),
-      _headers(other._headers), _path(other._path), _query(other._query), _body(other._body), _status(other._status)
+//constructor de copia
+HttpRequest::HttpRequest(const HttpRequest& other) :
+	_method(other._method), _version(other._version),
+	_headers(other._headers),
+	_status(other._status),
+	_path(other._path),
+	_query(other._query)
 {
 }
 

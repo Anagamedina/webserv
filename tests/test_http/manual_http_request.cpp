@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "http/HttpRequest.hpp"
+#include "../../src/http/HttpRequest.hpp"
 
 static int g_failures = 0;
 
