@@ -18,17 +18,6 @@
  * - epoll nos avisará cuando haya una conexión nueva lista
  */
 class TcpListener {
-private:
-	// No copy constructor or assignment operator (C++98 style)
-	TcpListener(const TcpListener&);
-	TcpListener& operator=(const TcpListener&);
-
-	int listenFd_;      // File descriptor del socket de escucha
-	bool isBound_;      // Flag para saber si ya está enlazado
-	
-	void createSocket();        // Crea el socket TCP
-	void setSocketOptions();    // Configura opciones del socket (SO_REUSEADDR)
-
 public:
 	TcpListener();
 	~TcpListener();
@@ -77,6 +66,17 @@ public:
 	 * - Permite que el servidor maneje múltiples clientes sin bloquearse
 	 */
 	void setNonBlocking();
+
+private:
+	// No copy constructor or assignment operator (C++98 style)
+	TcpListener(const TcpListener&);
+	TcpListener& operator=(const TcpListener&);
+
+	int listenFd_;      // File descriptor del socket de escucha
+	bool isBound_;      // Flag para saber si ya está enlazado
+	
+	void createSocket();        // Crea el socket TCP
+	void setSocketOptions();    // Configura opciones del socket (SO_REUSEADDR)
 };
 
 #endif // TCPLISTENER_HPP

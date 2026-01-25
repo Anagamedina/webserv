@@ -87,12 +87,34 @@ leaks: re
 debug: CXXFLAGS += -g -fsanitize=address -DTDEBUG=1
 debug: LDFLAGS += -fsanitize=address
 debug: re
+####################################HTTP TESTS#######################################
+# tests (manual) - HTTP (parser/request)
+TEST_HTTP_REQUEST_BIN = tests/manual_http_request
+TEST_HTTP_PARSER_BIN  = tests/manual_http_parser
 
+TEST_HTTP_REQUEST_SRC = tests/manual_http_request.cpp \
+				   $(SRC_DIR)/http/HttpRequest.cpp
+
+TEST_HTTP_PARSER_SRC = tests/manual_http_parser.cpp \
+				  $(SRC_DIR)/http/HttpParser.cpp \
+				  $(SRC_DIR)/http/HttpParserStartLine.cpp \
+				  $(SRC_DIR)/http/HttpParserHeaders.cpp \
+				  $(SRC_DIR)/http/HttpParserBody.cpp \
+				  $(SRC_DIR)/http/HttpRequest.cpp
+
+test_http_request:
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_HTTP_REQUEST_SRC) -o $(TEST_HTTP_REQUEST_BIN) \
+		&& ./$(TEST_HTTP_REQUEST_BIN)
+
+test_http_parser:
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_HTTP_PARSER_SRC) -o $(TEST_HTTP_PARSER_BIN) \
+		&& ./$(TEST_HTTP_PARSER_BIN)
+####################################HTTP TESTS#######################################
 bear: fclean
 	bear -- $(MAKE) all
 	
 # extras
 -include $(DEP_FILES)
 
-.PHONY: all clean fclean re bear debug leak
+.PHONY: all clean fclean re bear debug leak test_http_request test_http_parser
 #.SILENT:

@@ -3,8 +3,9 @@
 
 #include <string>
 #include <map>
+#include <vector>
+#include <iostream>
 
-// Métodos HTTP básicos que vamos a soportar de momento.
 enum HttpMethod {
     HTTP_METHOD_GET,
     HTTP_METHOD_POST,
@@ -12,25 +13,67 @@ enum HttpMethod {
     HTTP_METHOD_UNKNOWN
 };
 
-// Versión de HTTP (solo 1.0 y 1.1 para webserv).
+enum HttpStatus {
+    HTTP_STATUS_PENDING,
+    HTTP_STATUS_PARSING_HEADERS,
+    HTTP_STATUS_PARSING_BODY,
+    HTTP_STATUS_SENDING_RESPONSE,
+    HTTP_STATUS_CLOSED,
+    HTTP_STATUS_ERROR
+};
+
 enum HttpVersion {
     HTTP_VERSION_1_0,
     HTTP_VERSION_1_1,
     HTTP_VERSION_UNKNOWN
 };
 
-// Representa una petición HTTP ya parseada (modelo de datos, sin lógica de parseo).
 class HttpRequest {
-public:
-    typedef std::map<std::string, std::string> HeaderMap;
+    private:
+        typedef std::map<std::string, std::string> HeaderMap;
 
-private:
-    HttpMethod  _method;
-    HttpVersion _version;
-    std::string _path;
-    std::string _query;
-    HeaderMap   _headers;
-    std::string _body;
+        HttpMethod          _method;
+        HttpVersion         _version;
+        HeaderMap           _headers;
+        HttpStatus          _status;    
+        std::string         _path; // URL de la petición ej: "/images/logo.png"
+        std::string         _query; // Query string de la petición ej: "?name=John&age=30"
+        std::vector<char>   _body; // vector para soportar binarios y texto grande (ej: videos, imagenes, etc.)
+    public:
+        // constructors
+        HttpRequest();
+        HttpRequest(const HttpRequest& other);
+        HttpRequest(const std::string& method, const std::string& version, const HeaderMap& headers, const std::string& path, const std::string& query, const std::vector<char>& body);
+        ~HttpRequest(); 
+        HttpRequest& operator=(const HttpRequest& other);
+
+        // setters
+        void setMethod(const std::string& method); 
+        void setVersion(const std::string& version); 
+        void addHeaders(const std::string& key, const std::string& value);
+        void setPath(const std::string& path); 
+        void setQuery(const std::string& query); 
+        //void addBody(const std::vector<char>& chunk); 
+        void addBody(std::string::const_iterator begin,
+                     std::string::const_iterator end);
+        void setStatus(HttpStatus status);
+
+        // getters
+        HttpMethod getMethod() const; 
+        HttpVersion getVersion() const; 
+        HttpStatus getStatus() const;
+        // getters para headers
+        const std::string& getHeader(const std::string& key) const;
+        const HeaderMap& getHeaders() const;
+        // getters para path y query
+        std::string getPath() const; 
+        std::string getQuery() const;
+        std::vector<char> getBody() const;
+
+        // clear
+        void clear();
+        // shouldCloseConnection
+        bool shouldCloseConnection() const;
 };
 
 #endif // HTTP_REQUEST_HPP

@@ -71,9 +71,25 @@ En un objeto con campos útiles:
 - host = mysite.com
 - cookies = { user: ana }
 - body = (vacío)
- 
-## 7) Lecturas recomendadas (apuntes detallados)
-- `start-line.md`: explicación en profundidad de **request line, URI, query string** y recursos estáticos/dinámicos.
-- `headers.md`: apuntes sobre **headers**, `Content-Length`, `Transfer-Encoding: chunked`, buffers y manejo de errores.
-- `body.md`: guía del **body HTTP**, cómo se lee (Content-Length vs chunked) y tipos de contenido más comunes.
+
+## 7) Lo que implementé (mi parte)
+- Implementé un parser incremental con máquina de estados en `HttpParser`:
+  - Entrada principal en `consume()`.
+  - Start line en `HttpParserStartLine.cpp`.
+  - Headers en `HttpParserHeaders.cpp`.
+  - Body (Content-Length y chunked) en `HttpParserBody.cpp`.
+- Separé `path` y `query` desde la start line para dejarlo listo para CGI y routing.
+- Normalicé headers a minúsculas y validé `Host` obligatorio en HTTP/1.1.
+- Preparé tests manuales para validar el parser y el request:
+  - `tests/manual_http_request.cpp`
+  - `tests/manual_http_parser.cpp`
+- Añadí targets en CMake para correr tests en CLion:
+  - `test_http_request`
+  - `test_http_parser`
+
+## 8) Apuntes / documentación que fui escribiendo
+- `docsHttp/start-line.md`: request line, URI, query string.
+- `docsHttp/headers.md`: headers, Content-Length, chunked y errores.
+- `docsHttp/body.md`: body, Content-Type y tipos comunes.
+- `docsHttp/body-parser-flow.md`: flujo del parser del body según funciones actuales.
 
