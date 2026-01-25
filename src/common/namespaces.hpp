@@ -50,6 +50,13 @@ namespace config
 		IN_LOCATION
 	};
 
+	namespace debug
+	{
+		void debugConfigLog(const std::string& config_file_path);
+
+	}
+
+
 }
 
 #endif

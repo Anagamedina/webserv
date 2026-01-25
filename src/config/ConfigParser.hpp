@@ -40,16 +40,14 @@ private:
 	bool ValidateCurlyBrackets() const;
 
 	//	auxiliar member function
-	static void RemoveComments(std::string& line);
 	void DebugConfigLog() const;
-	static std::string TrimLine(const std::string& line);
-	static std::string RemoveSpacesAndTabs(std::string& line);
-	static std::string NormalizeSpaces(const std::string& line);
 
 	void MachineStatesOfConfigFile();
-	void extractServerBlock(const std::string& content, const std::string& typeOfExtraction);
+	void extractServerBlock(const std::string& content,
+							const std::string& typeOfExtraction);
+
 	// void parserServerBlocks();
-	
+
 	// ServerConfig parseServerBlock(const std::string& block);
 	// LocationConfig parseLocationBlock(const std::string& block);
 };

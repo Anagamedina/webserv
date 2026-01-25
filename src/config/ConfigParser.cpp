@@ -1,14 +1,13 @@
 #include "ConfigParser.hpp"
 #include "LocationConfig.hpp"
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <cstdlib>
 
 #include "ConfigException.hpp"
+#include "ConfigUtils.hpp"
 #include "../common/namespaces.hpp"
 
 ConfigParser::ConfigParser() : servers_count_(0)
@@ -147,9 +146,9 @@ std::string ConfigParser::CleanFileConfig()
 	while (std::getline(ifs, line))
 	{
 		// ++lineNumber;
-		RemoveComments(line);
-		line = TrimLine(line);
-		line = NormalizeSpaces(line);
+		config::utils::removeComments(line);
+		line = config::utils::trimLine(line);
+		line = config::utils::normalizeSpaces(line);
 		if (line.empty())
 			continue;
 		// logBuffer << "|" << lineNumber << "|" << line << "\n";
@@ -177,6 +176,7 @@ std::string ConfigParser::CleanFileConfig()
 bool ConfigParser::ValidateCurlyBrackets() const
 {
 	int countBrackets = 0;
+
 	for (size_t Index = 0; Index < clean_file_str_.size(); ++Index)
 	{
 		if (clean_file_str_.at(Index) == '{')
@@ -193,110 +193,6 @@ bool ConfigParser::ValidateCurlyBrackets() const
 		}
 	}
 	return countBrackets == 0;
-}
-
-/**
- * if line start wirh '#' remove line
- * @param line
- */
-void ConfigParser::RemoveComments(std::string& line)
-{
-	size_t commentPosition = line.find('#');
-	if (commentPosition != std::string::npos)
-	{
-		line = line.substr(0, commentPosition);
-	}
-}
-
-/**
- * AUX FUNCTION TO DEBUG
- * export config file '.log'
- * remove empty lines and comment lines.
- */
-void ConfigParser::DebugConfigLog() const
-{
-	std::ifstream ifs(config_file_path_.c_str());
-	if (!ifs.is_open())
-	{
-		throw ConfigException(
-			config::errors::cannot_open_file +
-			config_file_path_ +
-			" (in generatePrettyConfigLog)"
-		);
-	}
-
-	std::ofstream logFile(config::paths::log_file.c_str());
-	if (!logFile.is_open())
-	{
-		std::cerr << "Warning: Could not open/create pretty log file: ";
-		return;
-	}
-
-	logFile << "=== Pretty print of configuration file ===\n";
-	logFile << "File: " << config_file_path_ << "\n";
-	logFile << "Generated: " << __DATE__ << " " << __TIME__ << "\n";
-	logFile << "----------------------------------------\n\n";
-
-	std::string line;
-	size_t lineNum = 0;
-	while (std::getline(ifs, line))
-	{
-		++lineNum;
-		RemoveComments(line);
-		line = TrimLine(line);
-		if (line.empty())
-			continue;
-		logFile << lineNum << "|" << line << "\n";
-	}
-	ifs.close();
-}
-
-/**
- * remove includes: space, tab, newline and carriage return
- * @param line The string to trim
- * @return New string without leading/trailing whitespace
- * 
- *   "  hello  " -> "hello"
- *   "\t\ntest\r\n" -> "test"
- */
-std::string ConfigParser::TrimLine(const std::string& line)
-{
-	const std::string whitespace = "\t\n\r";
-
-	const size_t start = line.find_first_not_of(whitespace);
-	if (start == std::string::npos)
-	{
-		return "";
-	}
-	const size_t end = line.find_last_not_of(whitespace);
-	return line.substr(start, end - start + 1);
-}
-
-struct IsConsecutiveSpace
-{
-	bool operator()(char a, char b) const { return a == ' ' && b == ' '; }
-};
-
-std::string ConfigParser::RemoveSpacesAndTabs(std::string& line)
-{
-	line.erase(std::unique(line.begin(), line.end(), IsConsecutiveSpace()),
-				line.end());
-	return line;
-}
-
-std::string ConfigParser::NormalizeSpaces(const std::string& line)
-{
-	std::stringstream ss(line);
-	std::string word;
-	std::string result;
-
-	while (ss >> word)
-	{
-		if (!result.empty())
-			result += " ";
-		result += word;
-	}
-	return result;
 }
 
 /**
