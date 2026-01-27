@@ -6,7 +6,7 @@
 #include <ctime>
 
 #include "../http/HttpParser.hpp"
-#include "../http/HttRequest.hpp"
+#include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
 
 // Representa una conexión TCP con un cliente.
@@ -29,7 +29,7 @@ enum ClientState {
     STATE_READING_BODY,
     STATE_WRITING_RESPONSE,
     STATE_FINISHED,
-}
+};
 
 
 class Client {
@@ -40,7 +40,7 @@ private:
     HttpParser          _parser;
     HttpResponse        _response;
     ClientState         _state;
-    struct sockadr_in   _adrr;
+    struct sockaddr_in  _addr;
     //time_t _lastActivity; para gestionar timeouts
 
     // Invocado cuando el parser marca una HttpRequest como completa.

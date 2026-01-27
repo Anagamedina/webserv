@@ -22,15 +22,15 @@ enum HttpStatusCode {
 class HttpResponse {
 
 private:
+    typedef std::map<std::string, std::string> HeaderMap;
     HttpStatusCode      _status;
     HttpVersion         _version;
     HeaderMap           _headers;
-    std::string        _reasonPhrase;
+    std::string         _reasonPhrase;
     std::vector<char>   _body;
 
 
 public:
-    typedef std::map<std::string, std::string> HeaderMap;
     HttpResponse();
     HttpResponse(const HttpResponse& other);
     HttpResponse& operator=(const HttpResponse& other);
@@ -45,7 +45,6 @@ public:
     void setVersion(const std::string& version);
     // La «razón» (reason phrase) en las respuestas HTTP es un texto breve y legible por humanos que acompaña al código de estado n     //umérico (ej. 200)
     void setReasonPhrase(const std::string& reason);
-    void setVersion(const std:: string& version);
     //para cuando envias HTML simple o texto
     void setBody(const std::string& body);
 
