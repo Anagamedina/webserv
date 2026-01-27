@@ -23,12 +23,14 @@ class LocationConfig;
 class ServerConfig
 {
 private:
-	int listen_port_;	// listen 8080
-	std::string host_address_;	// host 127.0.0.1
-	std::string server_name_;	// (optional ??)
-	size_t max_body_size_;                         // max is 1048576 (bytes)
-	std::map<int, std::string> error_pages_;       // Map: HTTP code -> file path | Error pages: error_page 404 /404.html
-	// std::vector<LocationConfig> location_configs_; // All location { } blocks
+	int listen_port_; // listen 8080
+	std::string host_address_; // host 127.0.0.1
+	std::string server_name_; // (optional ??)
+	std::string root_; //	root server
+	std::string index_; //	root server
+	size_t max_body_size_; // max is 1048576 (bytes)
+	std::map<int, std::string> error_pages_;	// Error pages: error_page 404 /404.html
+	std::vector<LocationConfig> location_; // All location { } blocks
 
 public:
 	ServerConfig();
@@ -38,9 +40,33 @@ public:
 
 	// Validation
 	// bool isValid() const;
-	
+
+	// Setters
+	void setPort(int port);
+	void setHost(const std::string& host);
+	void setServerName(const std::string& name);
+	void setRoot(const std::string& root);
+	void setIndex(const std::string& index);
+	void setMaxBodySize(size_t size);
+	void addErrorPage(int code, const std::string& path);
+	void addLocation(const LocationConfig& location);
+
+	// Getters
+	int getPort() const;
+	const std::string& getHost() const;
+	const std::string& getServerName() const;
+	const std::string& getRoot() const;
+	const std::string& getIndex() const;
+	size_t getMaxBodySize() const;
+	const std::map<int, std::string>& getErrorPages() const;
+	const std::vector<LocationConfig>& getLocations() const;
+
+	// friend function
+	friend std::ostream& operator<<(std::ostream& os, const ServerConfig& config);
+
 	// Debug
 	void print() const;
 };
+
 
 #endif //WEBSERV_SERVERCONFIG_HPP

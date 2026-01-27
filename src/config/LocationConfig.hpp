@@ -9,20 +9,45 @@ class LocationConfig
 private:
 	std::string path_;                    // /upload, /, /api, etc.
 	std::string root_;                    // root ./www
-	std::string index_;                   // index index.html
+	std::vector<std::string> index_;      // index index.html index.htm ...
 	std::vector<std::string> methods_;    // methods GET POST DELETE
 	bool autoindex_;                      // autoindex on/off
 	std::string upload_store_;            // upload_store ./uploads
 	std::string redirect_;                // return 301 /new-path (optional)
 
 public:
+	LocationConfig();
+	LocationConfig(const LocationConfig& other);
+	LocationConfig& operator=(const LocationConfig& other);
+	~LocationConfig();
+
+	// Setters
+	void setPath(const std::string& path);
+	void setRoot(const std::string& root);
+	void addIndex(const std::string& index);
+	void addMethod(const std::string& method);
+	void setAutoIndex(bool autoindex);
+	void setUploadStore(const std::string& store);
+	void setRedirect(const std::string& redirect);
+
+	// Getters
+	const std::string& getPath() const;
+	const std::string& getRoot() const;
+	const std::vector<std::string>& getIndexes() const;
+	const std::vector<std::string>& getMethods() const;
+	bool getAutoIndex() const;
+	const std::string& getUploadStore() const;
+	const std::string& getRedirect() const;
+
 
 	// Validation
 	bool isMethodAllowed(const std::string& method) const;
-	bool isValid() const;
+	// bool isValid() const;
 	
 	// Debug
 	void print() const;
+
+	friend std::ostream& operator<<(std::ostream& os, const LocationConfig& config);
 };
 
 #endif //WEBSERV_LOCATIONCONFIG_HPP
