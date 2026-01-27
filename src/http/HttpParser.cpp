@@ -40,11 +40,11 @@ void HttpParser::reset()
 */
 void HttpParser::consume(const std::string &data)
 {
-    _buffer.append(data); // acumular datos en el buffer
+    _buffer.append(data);
 
     while (true)
     {
-        State prevState = _state; // guardar estado anterior
+        State prevState = _state;
 
         switch (_state)
         {
@@ -68,7 +68,7 @@ void HttpParser::consume(const std::string &data)
         {
             // Dejar la petición disponible para el caller.
             // El caller decide cuándo llamar a reset().
-            // Importante: no se debe perder el request antes de leerlo.
+            //IMPORTANTE!!: no se debe perder el request antes de leerlo.
             break;
         }
 

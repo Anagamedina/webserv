@@ -18,7 +18,6 @@ HttpRequest::HttpRequest(const std::string& method, const std::string& version,
     : _method(HTTP_METHOD_UNKNOWN), _version(HTTP_VERSION_UNKNOWN),
       _headers(headers), _status(HTTP_STATUS_PENDING), _path(path), _query(query), _body(body)
 {
-    // Convertir strings a enums  
     setMethod(method); //← Convierte "GET" → HTTP_METHOD_GET
     setVersion(version); //← Convierte "HTTP/1.1" → HTTP_VERSION_1_1
 }
@@ -151,7 +150,7 @@ HttpVersion HttpRequest::getVersion() const
  * 
  * @param key : es el nombre del header ej: "Host", "Content-Length", "Connection"
  * @return const std::string& : es el contenido del header ej: "localhost:8080" o "100000" o "keep-alive"
- * y pasamos referencia porque no queremos copiar el string cada vez que llamamos a la función
+ *
  */
 
 const std::string& HttpRequest::getHeader(const std::string& key) const
@@ -167,7 +166,7 @@ const std::string& HttpRequest::getHeader(const std::string& key) const
     std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), ::tolower);
     HeaderMap::const_iterator it = _headers.find(lowerKey);
     if (it != _headers.end())
-        return it->second; // it->second es el valor del header la segunda parte de la key-value pair
+        return it->second; // value lo que nos interesa 
 
     return empty; 
 }
@@ -176,8 +175,7 @@ const std::string& HttpRequest::getHeader(const std::string& key) const
  * @brief Obtiene todos los headers de la petición
  * 
  * @return const HttpRequest::HeaderMap& : es un mapa con todos los headers
- * y pasamos referencia constante porque no queremos copiar el mapa completo cada vez que llamamos a la función
- * es util para CGI que necesita iterar sobre todos los headers para variables de entorno
+ * y util para CGI que necesita iterar sobre todos los headers para variables de entorno.  Carles
  */
 const HttpRequest::HeaderMap& HttpRequest::getHeaders() const
 {

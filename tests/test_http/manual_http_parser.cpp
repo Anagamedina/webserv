@@ -26,7 +26,7 @@ int main()
         assertTrue(parser.getState() == COMPLETE, "Request completa -> COMPLETE");
 
         const HttpRequest& req = parser.getRequest();
-        // DEBUG (si quieres ver valores):
+        // DEBUG
         // std::cout << "Method=" << req.getMethod()
         //           << " Version=" << req.getVersion()
         //           << " Path=" << req.getPath()
