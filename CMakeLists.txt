@@ -11,5 +11,7 @@ set(WEBSERV_ROOT ${CMAKE_SOURCE_DIR})
 # tenemos que incluir la carpeta donde está tu código
 #add_subdirectory(src/http)
 add_subdirectory(tests/test_http)
+add_subdirectory(tests/manual_processor)
+add_subdirectory(tests/manual_client)
 
 

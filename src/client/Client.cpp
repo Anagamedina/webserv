@@ -3,15 +3,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-Client::Client(int fd, struct sockaddr_in addr)
+Client::Client(int fd, const std::vector<ServerBlock>* configs)
     : _fd(fd),
       _inBuffer(),
       _outBuffer(),
       _parser(),
       _response(),
       _processor(),
+      _configs(configs),
       _state(STATE_IDLE),
-      _addr(addr),
       _lastActivity(std::time(0))
 {
 }
@@ -119,7 +119,7 @@ void Client::buildResponse() {
     //depende del status que tengas respondemos una cosa u otra...
     //serializar a raw bytes para el envio 
     const HttpRequest& request = _parser.getRequest();
-    _response = _processor.process(request, _parser.getState() == ERROR);
+    _processor.process(request, _configs, _parser.getState() == ERROR, _response);
 }
 
 void Client::handleCompleteRequest()

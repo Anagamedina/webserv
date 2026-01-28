@@ -81,7 +81,7 @@ void HttpResponse::setStatusCode(int code)
 
 void HttpResponse::setHeader(const std::string& key, const std::string& value)
 {
-    _headers[key] = value;
+    _headers[toLowerCopy(key)] = value;
 }
 
 void HttpResponse::setVersion(const std::string& version)
@@ -128,10 +128,13 @@ std::vector<char> HttpResponse::serialize() const
    //no se declara _headers porque? 
     for (HeaderMap::const_iterator it = _headers.begin();
             it != _headers.end(); ++it) {
+        //evitar duplicar el header content-length
+        if (toLowerCopy(it->first) == "content-length")
+            continue;
         buffer << it->first << ": " << it->second << "\r\n";
     }
 
-
+    // TODO: agregar header Date cuando sea obligatorio.
     buffer << "Content-Length: " << _body.size() << "\r\n";
 
     buffer << "\r\n";
@@ -150,9 +153,12 @@ std::vector<char> HttpResponse::serialize() const
 void HttpResponse::setContentType(const std::string& filename)
 {
     std::string::size_type dotPos = filename.find_last_of('.');
-    std::string ext = (dotPos == std::string::npos)
-        ? ""
-        : toLowerCopy(filename.substr(dotPos + 1));
+    std::string ext;
+
+    if (dotPos == std::string::npos)
+        ext = "";
+    else
+        ext = toLowerCopy(filename.substr(dotPos + 1));
 
     std::string contentType = "application/octet-stream";
     if (ext == "html" || ext == "htm")

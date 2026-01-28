@@ -1,15 +1,22 @@
 #ifndef REQUEST_PROCESSOR_HPP
 #define REQUEST_PROCESSOR_HPP
 
+#include <vector>
+
 #include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
-#include "../config/ServerConfig.hpp"
 
-// Capa de lógica de alto nivel: dado un HttpRequest y la configuración,
-// construye un HttpResponse (estático, CGI, error, etc.).
+struct ServerBlock;
+
+// El cerebro del servidor: es quien decide que hacer con la peticion dado un HttpRequest y la configuración,
+// construye un HttpResponse (estático, CGI, error, etc.) y lo devuelve al cliente.
+//solo transforma un HttpRequest en HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
 public:
-    HttpResponse process(const HttpRequest& request, bool parseError);
+    void process(const HttpRequest& request,
+                 const std::vector<ServerBlock>* configs,
+                 bool parseError,
+                 HttpResponse& response);
 private:
 };
 

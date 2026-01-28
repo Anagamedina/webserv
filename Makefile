@@ -102,6 +102,23 @@ TEST_HTTP_PARSER_SRC = tests/manual_http_parser.cpp \
 				  $(SRC_DIR)/http/HttpParserBody.cpp \
 				  $(SRC_DIR)/http/HttpRequest.cpp
 
+TEST_REQUEST_PROCESSOR_BIN = tests/manual_request_processor
+TEST_REQUEST_PROCESSOR_SRC = tests/manual_processor/manual_request_processor.cpp \
+				  $(SRC_DIR)/client/RequestProcessor.cpp \
+				  $(SRC_DIR)/http/HttpRequest.cpp \
+				  $(SRC_DIR)/http/HttpResponse.cpp
+
+TEST_CLIENT_BIN = tests/manual_client
+TEST_CLIENT_SRC = tests/manual_client/manual_client.cpp \
+				  $(SRC_DIR)/client/Client.cpp \
+				  $(SRC_DIR)/client/RequestProcessor.cpp \
+				  $(SRC_DIR)/http/HttpParser.cpp \
+				  $(SRC_DIR)/http/HttpParserStartLine.cpp \
+				  $(SRC_DIR)/http/HttpParserHeaders.cpp \
+				  $(SRC_DIR)/http/HttpParserBody.cpp \
+				  $(SRC_DIR)/http/HttpRequest.cpp \
+				  $(SRC_DIR)/http/HttpResponse.cpp
+
 test_http_request:
 	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_HTTP_REQUEST_SRC) -o $(TEST_HTTP_REQUEST_BIN) \
 		&& ./$(TEST_HTTP_REQUEST_BIN)
@@ -109,6 +126,14 @@ test_http_request:
 test_http_parser:
 	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_HTTP_PARSER_SRC) -o $(TEST_HTTP_PARSER_BIN) \
 		&& ./$(TEST_HTTP_PARSER_BIN)
+
+test_request_processor:
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_REQUEST_PROCESSOR_SRC) -o $(TEST_REQUEST_PROCESSOR_BIN) \
+		&& ./$(TEST_REQUEST_PROCESSOR_BIN)
+
+test_client:
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) $(TEST_CLIENT_SRC) -o $(TEST_CLIENT_BIN) \
+		&& ./$(TEST_CLIENT_BIN)
 ####################################HTTP TESTS#######################################
 bear: fclean
 	bear -- $(MAKE) all
@@ -116,5 +141,5 @@ bear: fclean
 # extras
 -include $(DEP_FILES)
 
-.PHONY: all clean fclean re bear debug leak test_http_request test_http_parser
+.PHONY: all clean fclean re bear debug leak test_http_request test_http_parser test_request_processor test_client
 #.SILENT:

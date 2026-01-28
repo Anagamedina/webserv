@@ -1,16 +1,16 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <string>
-#include <netinet/in.h>
 #include <ctime>
+#include <string>
+#include <vector>
 
+#include "RequestProcessor.hpp"
 #include "../http/HttpParser.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
-#include "RequestProcessor.hpp"
 
-// Representa una conexión TCP con un cliente.
+// Representa una conexion TCP con un cliente.
 // Se encarga de:
 // - Acumular bytes que vienen del socket.
 // - Pasarlos al HttpParser.
@@ -21,52 +21,52 @@
 
 
 
-//EL cliente no puede simplemente leer y escribir . Necesita saber que esta
-//haciendo en cada momento para que el bucle rpincipal sepa escuchar eventos
-//POLLIN POLLOUT 
+// El cliente no puede leer/escribir sin control: necesita saber en que estado
+// esta para que el bucle principal escuche eventos.
 enum ClientState { 
-    STATE_IDLE, //espera pasiva es el momento en que la conexcion esta abierta y establecida.pero el servidor no esta procesando peticion activa , despues de accept 
+    STATE_IDLE, // Conexion abierta sin peticion activa (despues de accept).
     STATE_READING_HEADER,
     STATE_READING_BODY,
     STATE_WRITING_RESPONSE,
     STATE_CLOSED,
 };
 
+struct ServerBlock;
+
 
 class Client {
 private:
+    Client(const Client&);
+    Client& operator=(const Client&);
+
     int                 _fd;
     std::string         _inBuffer;   // datos recibidos aún sin procesar
     std::string         _outBuffer;  // respuesta lista para enviar (o parcialmente enviada)
     HttpParser          _parser;
     HttpResponse        _response;
     RequestProcessor    _processor;
+    const std::vector<ServerBlock>* _configs;
     ClientState         _state;
-    struct sockaddr_in  _addr;
     time_t              _lastActivity; // para gestionar timeouts
 
     // Invocado cuando el parser marca una HttpRequest como completa.
     void handleCompleteRequest();
 
 public:
-    Client(int fd, struct sockaddr_in addr);
+    Client(int fd, const std::vector<ServerBlock>* configs);
     ~Client();
-    
 
-    //GETTERS
+    // Getters
     int getFd() const;
     ClientState getState() const;
     bool needsWrite() const;
     time_t getLastActivity() const;
-    
 
-    //HANDLES
-    //el motor de entrada este metodo se llamara cuando epoll te avise cuando
-    //hay datos con EPOLLIN
+    // Manejo de eventos
     void handleRead(); 
     void handleWrite();
 
-    //BUILD RESPONSE
+    // Construccion de respuesta
     void buildResponse();
 
 };
