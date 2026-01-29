@@ -10,7 +10,7 @@
 
 class ServerManager {
 public:
-  ServerManager(const ServerConfig &config);
+  ServerManager(const ServerConfig& config);
   ~ServerManager();
 
   void run();
@@ -20,8 +20,8 @@ private:
   static const int MAX_EVENTS = 64;
 
   // Disable copying
-  ServerManager(const ServerManager &);
-  ServerManager &operator=(const ServerManager &);
+  ServerManager(const ServerManager&);
+  ServerManager& operator=(const ServerManager&);
 
   // Event handlers
   void handleNewConnection(int listener_fd);
@@ -31,13 +31,13 @@ private:
 
   EpollWrapper epoll_;
 
-  std::map<int, TcpListener *> listeners_;
+  std::map< int, TcpListener* > listeners_;
   // Map listener FD to port, or directly to configs?
   // Map Port -> Vector of ServerBlocks
-  std::map<int, std::vector<ServerBlock>> port_configs_;
+  std::map< int, std::vector< ServerBlock > > port_configs_;
   // Map Listener FD -> Port (to look up configs)
-  std::map<int, int> listener_ports_;
+  std::map< int, int > listener_ports_;
 
   // Active clients
-  std::map<int, Client *> clients_;
+  std::map< int, Client* > clients_;
 };

@@ -3,4 +3,6 @@ BreakBeforeBraces: Attach
 AllowShortEnumsOnASingleLine: false
 ReferenceAlignment: Left
 PointerAlignment: Left
+SpacesInAngles: true
+
 
