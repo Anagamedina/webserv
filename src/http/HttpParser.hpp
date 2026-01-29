@@ -19,7 +19,7 @@ enum StateChunk {
     CHUNK_DATA,
     CHUNK_END,
     CHUNK_ERROR,
-    CHUNK_COMPLETE,
+    CHUNK_COMPLETE
 };
 
 
