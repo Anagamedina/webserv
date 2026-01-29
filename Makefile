@@ -30,7 +30,19 @@ BIN_DIR		= bin
 BUILD_DIR	= build
 INCLUDE 	= -I$(SRC_DIR) -Iinclude
 
-SRC_FILES = $(SRC_DIR)/main.cpp 
+SRC_FILES = $(SRC_DIR)/main.cpp \
+			$(SRC_DIR)/config/ConfigException.cpp \
+			$(SRC_DIR)/config/ConfigParser.cpp \
+			$(SRC_DIR)/utils/StringUtils.cpp \
+			$(SRC_DIR)/network/EpollWrapper.cpp \
+			$(SRC_DIR)/network/TcpListener.cpp \
+			$(SRC_DIR)/network/ServerManager.cpp \
+			$(SRC_DIR)/client/Client.cpp \
+			$(SRC_DIR)/http/HttpRequest.cpp \
+			$(SRC_DIR)/http/HttpParser.cpp \
+			$(SRC_DIR)/http/HttpResponse.cpp \
+			$(SRC_DIR)/client/RequestProcessor.cpp \
+			$(SRC_DIR)/cgi/CgiExecutor.cpp 
 
 
 #OBJ_FILES = $(SRC_FILES:%.cpp=$(BUILD_DIR)/%.o) # works with vpath
@@ -87,7 +99,7 @@ debug: re
 
 bear: fclean
 	bear -- $(MAKE) all
-	
+
 # extras
 -include $(DEP_FILES)
 

@@ -1,0 +1,6 @@
+BasedOnStyle: LLVM
+BreakBeforeBraces: Attach
+AllowShortEnumsOnASingleLine: false
+ReferenceAlignment: Left
+PointerAlignment: Left
+

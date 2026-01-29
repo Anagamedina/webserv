@@ -90,3 +90,5 @@ dkms.conf
 webserver
 /local
 /build
+/.cache
+compile_commands.json

@@ -1,22 +1,40 @@
+#include "config/ConfigException.hpp"
+#include "config/ConfigParser.hpp"
+#include "network/ServerManager.hpp"
+
 #include <exception>
 #include <iostream>
 #include <signal.h>
 
 int main(int argc, char *argv[]) {
-	((void)argc, (void)argv);
-	
-	// Disable SIGPIPE globally to prevent crashes
-	// this will be for the CGI part, but already having it here doesn't hurt
+	std::string config_path = "configs/default.conf";
+	if (argc > 2) {
+		std::cerr << "Usage: " << argv[0] << " [config_file]" << std::endl;
+		return 1;
+	}
+	if (argc == 2) {
+		config_path = argv[1];
+	}
+
+	std::cout << "Starting Webserv..." << std::endl;
+	std::cout << "Loading config: " << config_path << std::endl;
+
+	// Ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 
-	std::cout << "Esto se pone interesante" << std::endl;
-
 	try {
-		// load configuration into webserver
-		// execute webserver
-	} catch (std::exception& e) {
-		// ooh fuck! something wrong happend
-		// you can do it better next time :)
-	 }
+		ConfigParser parser(config_path);
+		ServerConfig config = parser.parse();
 
+		ServerManager server(config);
+		server.run();
+
+	} catch (const ConfigException& e) {
+		std::cerr << "Configuration Error: " << e.what() << std::endl;
+		return 1;
+	} catch (const std::exception& e) {
+		std::cerr << "Fatal Runtime Error: " << e.what() << std::endl;
+		return 1;
+	}
+	return 0;
 }
