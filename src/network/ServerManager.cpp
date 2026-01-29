@@ -5,19 +5,17 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <cstring>
-#include <errno.h>
 
 ServerManager::ServerManager() {
 }
 
 ServerManager::~ServerManager() {
 	// Cerrar todas las conexiones de clientes al destruir el servidor
-	//std::map<int, Client> clientFds_;  // ← En el futuro
-	//boolActualmente siempre true, no se usa realmente
-	for (std::map<int, bool>::iterator it = clientFds_.begin(); it != clientFds_.end(); ++it) {
+	for (std::map<int, Client*>::iterator it = clients_.begin(); it != clients_.end(); ++it) {
 		close(it->first);
+		delete it->second;
 	}
-	clientFds_.clear();
+	clients_.clear();
 }
 
 /**
@@ -30,19 +28,17 @@ ServerManager::~ServerManager() {
  * EPOLLIN: Queremos ser notificados cuando haya datos para leer
  *          En el socket de escucha, esto significa "hay una conexión nueva"
  * 
- * EPOLLET: Edge-triggered mode (modo disparado por borde)
- *          - Solo notifica cuando el estado CAMBIA (de "no conexión" a "hay conexión")
- *          - Más eficiente que level-triggered (que notifica mientras haya conexiones)
- *          - Requiere leer TODOS los datos disponibles en una pasada
+ * Level-triggered (LT):
+ *          - Notifica mientras el socket siga listo
+ *          - Mas simple de manejar para lectura/escritura incremental
  */
 void ServerManager::start(const std::string& host, int port) {
 	// Bind and listen
 	listener_.bindAndListen(host, port);
 	
-	// Agregar el socket de escucha a epoll
+	// Agregar el socket de escucha a epoll (level-triggered)
 	// EPOLLIN: Notificar cuando haya conexiones nuevas
-	// EPOLLET: Edge-triggered (solo notifica cuando cambia el estado)
-	epoll_.addFd(listener_.getFd(), EPOLLIN | EPOLLET);
+	epoll_.addFd(listener_.getFd(), EPOLLIN);
 	
 	std::cout << "Server started and ready to accept connections" << std::endl;
 }
@@ -104,12 +100,25 @@ void ServerManager::run() {
 			if (fd == listener_.getFd()) {
 				handleNewConnection();
 			}
-			// ¿Es un cliente con datos para leer? → Leer datos
-			else if (events[i].events & EPOLLIN) {
-				handleClientData(fd);
-			}
 			// ¿Hubo error o el cliente cerró? → Limpiar conexión
 			if (events[i].events & (EPOLLERR | EPOLLHUP)) {
+				handleClientDisconnect(fd);
+				continue;
+			}
+			// ¿Es un cliente con datos para leer? → Leer datos
+			if (events[i].events & EPOLLIN) {
+				handleClientData(fd);
+			}
+			// ¿Es un cliente con datos para escribir? → Enviar respuesta
+			if (events[i].events & EPOLLOUT) {
+				std::map<int, Client*>::iterator it = clients_.find(fd);
+				if (it != clients_.end())
+					it->second->handleWrite();
+			}
+
+			// Si el cliente cerró, limpiar
+			std::map<int, Client*>::iterator it = clients_.find(fd);
+			if (it != clients_.end() && it->second->getState() == STATE_CLOSED) {
 				handleClientDisconnect(fd);
 			}
 		}
@@ -124,36 +133,20 @@ void ServerManager::run() {
  * Se llama cuando epoll detecta EPOLLIN en el socket de escucha.
  * Esto significa que hay al menos una conexión nueva esperando ser aceptada.
  * 
- * ¿Por qué el bucle while?
- * - En modo edge-triggered (EPOLLET), epoll solo notifica UNA VEZ cuando cambia el estado
- * - Pero pueden llegar MÚLTIPLES conexiones entre notificaciones
- * - Debemos aceptar TODAS las conexiones pendientes en una pasada
- * - Si no, algunas conexiones quedarían esperando hasta la próxima notificación
- * 
- * ¿Cuándo termina el bucle?
- * - Cuando accept() retorna -1 (EAGAIN)
- * - Significa que ya no hay más conexiones pendientes
+ * En level-triggered basta con aceptar una conexion por evento.
  */
 void ServerManager::handleNewConnection() {
-	// Aceptar TODAS las conexiones pendientes (importante en edge-triggered)
-	while (true) {
-		int clientFd = listener_.acceptConnection();
-		
-		if (clientFd == -1) {
-			// No hay más conexiones disponibles (EAGAIN)
-			// Esto es normal, significa que ya aceptamos todas las pendientes
-			break;
-		}
-		
-		// Registrar el nuevo cliente en epoll para monitorear sus datos
-		// EPOLLIN: Notificar cuando el cliente envíe datos
-		// EPOLLET: Edge-triggered (solo notifica cuando llegan nuevos datos)
-		// EPOLLRDHUP: Notificar cuando el cliente cierre la conexión
-		epoll_.addFd(clientFd, EPOLLIN | EPOLLET | EPOLLRDHUP);
-		
-		// Guardar el fd del cliente para poder rastrearlo
-		clientFds_[clientFd] = true;
-	}
+	int clientFd = listener_.acceptConnection();
+	if (clientFd == -1)
+		return;
+
+	// Registrar el nuevo cliente en epoll para monitorear sus datos
+	// EPOLLIN: Notificar cuando el cliente envíe datos
+	// EPOLLRDHUP: Notificar cuando el cliente cierre la conexión
+	epoll_.addFd(clientFd, EPOLLIN | EPOLLRDHUP);
+
+	// Guardar el fd del cliente para poder rastrearlo
+	clients_[clientFd] = new Client(clientFd, 0);
 }
 
 /**
@@ -162,69 +155,29 @@ void ServerManager::handleNewConnection() {
  * Se llama cuando epoll detecta EPOLLIN en un socket de cliente.
  * Esto significa que el cliente envió datos y están listos para leer.
  * 
- * ¿Por qué el bucle while?
- * - En modo edge-triggered, epoll solo notifica cuando LLEGAN nuevos datos
- * - Pero puede haber MÁS datos en el buffer del socket que no caben en un solo read()
- * - Debemos leer TODOS los datos disponibles hasta que read() retorne EAGAIN
- * - Si no, perderíamos datos y epoll no volvería a notificar (edge-triggered)
- * 
  * ¿Qué hace recv()?
  * - Lee datos del socket del cliente
  * - En modo no bloqueante:
  *   - bytesRead > 0: Leyó datos (puede ser menos que el tamaño del buffer)
  *   - bytesRead == 0: Cliente cerró la conexión
- *   - bytesRead == -1: Error o EAGAIN (no hay más datos)
- * 
- * ¿Por qué EAGAIN es normal?
- * - Significa "no hay más datos disponibles en este momento"
- * - En modo no bloqueante, esto es esperado cuando leemos todo
- * - No es un error, simplemente ya leímos todos los datos disponibles
+ *   - bytesRead == -1: Error de lectura
  */
 void ServerManager::handleClientData(int clientFd) {
-	char buffer[4096];  // Buffer para leer datos (4KB a la vez)
-	ssize_t bytesRead;
-	
-	// Leer TODOS los datos disponibles (crucial en edge-triggered)
-	while (true) {
-		// recv() lee datos del socket
-		// En modo no bloqueante, retorna inmediatamente
-		bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
-		
-		if (bytesRead > 0) {
-			// ¡Datos recibidos! Imprimirlos todos
-			// Null-terminate para seguridad (aunque usamos write para imprimir todos los bytes)
-			buffer[bytesRead] = '\0';
-			
-			// Imprimir todos los bytes recibidos
-			std::cout << "=== Received " << bytesRead << " bytes from client " << clientFd << " ===" << std::endl;
-			std::cout.write(buffer, bytesRead);  // write() imprime exactamente 'bytesRead' bytes
-			std::cout << std::endl;
-			std::cout << "=== End of data ===" << std::endl;
-			
-			// Continuar el bucle para leer más datos si hay
-		}
-		else if (bytesRead == 0) {
-			// bytesRead == 0 significa que el cliente cerró la conexión
-			// (el cliente hizo close() o cerró su programa)
-			handleClientDisconnect(clientFd);
-			break;
-		}
-		else {
-			// bytesRead == -1: Error o no hay más datos
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				// EAGAIN: No hay más datos disponibles (normal en modo no bloqueante)
-				// Ya leímos todos los datos que había en el buffer
-				// Salir del bucle, epoll nos notificará cuando lleguen más datos
-				break;
-			}
-			else {
-				// Error real (no EAGAIN)
-				std::cerr << "Error reading from client " << clientFd << ": " << strerror(errno) << std::endl;
-				handleClientDisconnect(clientFd);
-				break;
-			}
-		}
+	std::map<int, Client*>::iterator it = clients_.find(clientFd);
+	if (it == clients_.end())
+		return;
+
+	it->second->handleRead();
+
+	if (it->second->getState() == STATE_CLOSED) {
+		handleClientDisconnect(clientFd);
+		return;
 	}
+
+	uint32_t events = EPOLLIN | EPOLLRDHUP;
+	if (it->second->needsWrite())
+		events |= EPOLLOUT;
+	epoll_.modifyFd(clientFd, events);
 }
 
 /**
@@ -255,6 +208,10 @@ void ServerManager::handleClientDisconnect(int clientFd) {
 	close(clientFd);
 	
 	// Remover del mapa de clientes (limpiar nuestra estructura de datos)
-	clientFds_.erase(clientFd);
+	std::map<int, Client*>::iterator it = clients_.find(clientFd);
+	if (it != clients_.end()) {
+		delete it->second;
+		clients_.erase(it);
+	}
 }
 

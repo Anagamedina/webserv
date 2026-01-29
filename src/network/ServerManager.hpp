@@ -3,6 +3,7 @@
 
 #include "TcpListener.hpp"
 #include "EpollWrapper.hpp"
+#include "../client/Client.hpp"
 #include <map>
 #include <string>
 
@@ -36,9 +37,8 @@ private:
 	TcpListener listener_;  // Socket de escucha para nuevas conexiones
 	EpollWrapper epoll_;    // Mecanismo de eventos para I/O no bloqueante
 	
-	// Mapa para rastrear los file descriptors de los clientes conectados
-	// En el futuro, esto podría mapear a objetos Client con más información
-	std::map<int, bool> clientFds_;
+	// Mapa fd -> Client*
+	std::map<int, Client*> clients_;
 	
 	/**
 	 * Maneja nuevas conexiones entrantes

@@ -33,7 +33,15 @@ INCLUDE 	= -I$(SRC_DIR) -Iinclude
 SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/network/EpollWrapper.cpp \
 			$(SRC_DIR)/network/TcpListener.cpp \
-			$(SRC_DIR)/network/ServerManager.cpp 
+			$(SRC_DIR)/network/ServerManager.cpp \
+			$(SRC_DIR)/client/Client.cpp \
+			$(SRC_DIR)/client/RequestProcessor.cpp \
+			$(SRC_DIR)/http/HttpParser.cpp \
+			$(SRC_DIR)/http/HttpParserStartLine.cpp \
+			$(SRC_DIR)/http/HttpParserHeaders.cpp \
+			$(SRC_DIR)/http/HttpParserBody.cpp \
+			$(SRC_DIR)/http/HttpRequest.cpp \
+			$(SRC_DIR)/http/HttpResponse.cpp
 
 
 #OBJ_FILES = $(SRC_FILES:%.cpp=$(BUILD_DIR)/%.o) # works with vpath
