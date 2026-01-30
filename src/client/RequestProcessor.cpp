@@ -73,7 +73,7 @@ static const LocationConfig* matchLocation(const ServerConfig& server,
 
     // TODO: elegir la location con el mejor match de path.
     // Falta acceso a getters de LocationConfig para comparar path.
-    // Cuando existan getters:
+    // Cuando existan getters Daru:
     // const std::string& path = locations[i].getPath();
     // const std::string& root = locations[i].getRoot();
     // const std::string& index = locations[i].getIndex();
@@ -82,17 +82,45 @@ static const LocationConfig* matchLocation(const ServerConfig& server,
     // const std::string& upload = locations[i].getUploadStore();
     // const std::string& redirect = locations[i].getRedirect();
     
-    //PSEUDOCODIGO MATCH LOCATION : mejor match de path.
-    // const std::map<std::string, std::string>& cgi = locations[i].getCgiHandlers();
+    // PSEUDOCODIGO MATCH LOCATION : mejor match de path.
 
     // Pseudologica de match:
-    // size_t best = 0; const LocationConfig* bestLoc = 0;
+    // size_t best = 0; 
+    //const LocationConfig* bestLoc = 0;
     // for cada location:
     //   if uri empieza por path y (path == "/" o uri[path.size()] == '/'):
     //       si path.size() > best -> best = path.size(); bestLoc = &location;
     // return bestLoc;
     (void)uri;
+    //por defecto, usar la primera location.
     return &locations[0];
+}
+
+
+//funcion auxiliar para resolver la ruta real del archivo.
+//ej: "/index.html" -> "./www/index.html"
+//ej: "/index.html" -> "./www/index.html"
+//path real : root + uri (si no existe root, usar "./www")
+//si uri no empieza por "/", agregar "/" al principio.
+
+static std::string resolvePath(const ServerConfig& server,
+                               const LocationConfig* location,
+                               const std::string& uri)
+{
+    std::string root = "./www";
+    // TODO: usar getters cuando existan:
+    // if (location) root 
+     //       root = location->getRoot();
+    // if (root.empty()) 
+    //      root = server.getRoot();
+
+    std::string path = root;
+    if (!path.empty() && path[path.size() - 1] != '/' && !uri.empty() && uri[0] != '/')
+        path += "/";
+    path += uri;
+    (void)server;
+    (void)location;
+    return path;
 }
 
 //funcion auxiliar para verificar si la peticion es un request CGI.
@@ -155,20 +183,34 @@ void RequestProcessor::process(const HttpRequest& request,
                                HttpResponse& response)
 {
     int statusCode = HTTP_STATUS_OK;
-    // TODO: reemplazar body fijo por contenido real (archivo o CGI).
-    std::vector<char> body = toBody("OK\n");
+    std::string path_real = "";
+    bool isCgi = false;
+    std::vector<char> body;
     bool shouldClose = request.shouldCloseConnection();
-
-    // Primero por puerto (obligatorio), luego por Host si hace falta.
-    const ServerConfig* server = selectServerByPort(listenPort, configs);
+    const ServerConfig* server = 0;
+    const LocationConfig* location = 0;
+    server = selectServerByPort(listenPort, configs);
     // Host como extra (opcional):
     // if (server == 0) {
     //     server = selectServerByHost(request.getHeader("Host"), configs);
     // }
-    const LocationConfig* location = 0;
     if (server)
         location = matchLocation(*server, request.getPath());
-    (void)location;
+    
+    if (location)
+    { //si hay location, resolver la ruta real.
+        path_real = resolvePath(*server, location, request.getPath());
+        isCgi = isCgiRequest(path_real);
+        if (isCgi)
+        {
+            body = toBody("CGI\n");
+        }
+        else
+        {
+            body = toBody("Static\n");
+        }
+    }
+
     if (parseError || request.getMethod() == HTTP_METHOD_UNKNOWN)
     {
         statusCode = HTTP_STATUS_BAD_REQUEST;
@@ -178,8 +220,6 @@ void RequestProcessor::process(const HttpRequest& request,
 
     // TODO: integrar CGI: si la location es CGI, delegar en CgiHandler (Carles).
     // TODO: respuesta estatica: root + path, access/stat, leer archivo.
-    bool isCgi = isCgiRequest(request.getPath());
-    (void)isCgi;
     // TODO: pseudologica de decision estatica vs CGI (cuando LocationConfig tenga getters):
     // if (location) {
     //   if (!location->getRedirect().empty()) -> 301/302

@@ -65,6 +65,13 @@ Siempre se termina creando un HttpResponse completo:
 - Headers (Content-Length, Content-Type, Connection, Date).
 - Body (archivo, listado, CGI o error).
 
+## 5.b) Respuesta estatica (pasos practicos)
+1) Resolver path real: root/alias + URI.
+2) Comprobar existencia/permisos (stat/access).
+3) Si es directorio: buscar index o autoindex.
+4) Leer archivo en binario -> std::vector<char>.
+5) Rellenar HttpResponse: status, content-type, body, connection.
+
 ## 6) Serializar respuesta
 - HttpResponse::serialize() convierte la respuesta en bytes.
 - Esos bytes se guardan en _outBuffer.
