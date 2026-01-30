@@ -8,7 +8,8 @@ configuracion, y decide que HttpResponse crear.
 ## 1) Matching (emparejar reglas)
 Primero se decide que reglas aplicar segun la config:
 
-- Virtual host: se usa el header Host para elegir el bloque server correcto.
+- Primero por puerto (obligatorio).
+- Luego, si hay varios en ese puerto, se usa Host como extra (virtual host).
 - Location: se compara la URI con los bloques location para saber:
   - root o alias
   - metodos permitidos

@@ -3,7 +3,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-Client::Client(int fd, const std::vector<ServerConfig>* configs)
+Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
     : _fd(fd),
       _inBuffer(),
       _outBuffer(),
@@ -11,6 +11,7 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs)
       _response(),
       _processor(),
       _configs(configs),
+      _listenPort(listenPort),
       _state(STATE_IDLE),
       _lastActivity(std::time(0))
 {
@@ -119,7 +120,7 @@ void Client::buildResponse() {
     //depende del status que tengas respondemos una cosa u otra...
     //serializar a raw bytes para el envio 
     const HttpRequest& request = _parser.getRequest();
-    _processor.process(request, _configs, _parser.getState() == ERROR, _response);
+    _processor.process(request, _configs, _listenPort, _parser.getState() == ERROR, _response);
 }
 
 void Client::handleCompleteRequest()

@@ -18,7 +18,7 @@ int main()
     }
 
     std::vector<ServerConfig> dummyConfigs;
-    Client client(fds[0], &dummyConfigs);
+    Client client(fds[0], &dummyConfigs, 8080);
 
     const std::string request =
         "GET /index.html HTTP/1.1\r\n"

@@ -44,6 +44,7 @@ private:
 
 	// Configuracion compartida (ServerConfig)
 	const std::vector<ServerConfig>* configs_;
+	int listen_port_;
 	
 	/**
 	 * Maneja nuevas conexiones entrantes

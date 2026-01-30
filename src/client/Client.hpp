@@ -44,6 +44,7 @@ private:
     HttpResponse        _response;
     RequestProcessor    _processor;
     const std::vector<ServerConfig>* _configs;
+    int                 _listenPort;
     ClientState         _state;
     time_t              _lastActivity; // para gestionar timeouts
 
@@ -51,7 +52,7 @@ private:
     void handleCompleteRequest();
 
 public:
-    Client(int fd, const std::vector<ServerConfig>* configs);
+    Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
     ~Client();
 
     // Getters

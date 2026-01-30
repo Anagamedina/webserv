@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <cstring>
 
-ServerManager::ServerManager() : configs_(0) {
+ServerManager::ServerManager() : configs_(0), listen_port_(0) {
 }
 
 ServerManager::~ServerManager() {
@@ -35,6 +35,7 @@ ServerManager::~ServerManager() {
 void ServerManager::start(const std::string& host, int port) {
 	// Bind and listen
 	listener_.bindAndListen(host, port);
+	listen_port_ = port;
 	
 	// Agregar el socket de escucha a epoll (level-triggered)
 	// EPOLLIN: Notificar cuando haya conexiones nuevas
@@ -150,7 +151,7 @@ void ServerManager::handleNewConnection() {
 	epoll_.addFd(clientFd, EPOLLIN | EPOLLRDHUP);
 
 	// Guardar el fd del cliente para poder rastrearlo
-	clients_[clientFd] = new Client(clientFd, configs_);
+	clients_[clientFd] = new Client(clientFd, configs_, listen_port_);
 }
 
 /**

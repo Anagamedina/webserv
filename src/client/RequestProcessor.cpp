@@ -50,6 +50,20 @@ static const ServerConfig* selectServerByHost(const std::string& hostHeader,
     return &(*configs)[0];
 }
 
+static const ServerConfig* selectServerByPort(int port,
+                                              const std::vector<ServerConfig>* configs)
+{
+    if (configs == 0 || configs->empty())
+        return 0;
+
+    for (size_t i = 0; i < configs->size(); ++i) {
+        if ((*configs)[i].getPort() == port)
+            return &(*configs)[i];
+    }
+    // comportamiento por defecto: usar el primer server.
+    return &(*configs)[0];
+}
+
 static const LocationConfig* matchLocation(const ServerConfig& server,
                                            const std::string& uri)
 {
@@ -136,6 +150,7 @@ static void fillBaseResponse(HttpResponse& response,
     // 7) Rellenar HttpResponse
 void RequestProcessor::process(const HttpRequest& request,
                                const std::vector<ServerConfig>* configs,
+                               int listenPort,
                                bool parseError,
                                HttpResponse& response)
 {
@@ -144,7 +159,12 @@ void RequestProcessor::process(const HttpRequest& request,
     std::vector<char> body = toBody("OK\n");
     bool shouldClose = request.shouldCloseConnection();
 
-    const ServerConfig* server = selectServerByHost(request.getHeader("Host"), configs);
+    // Primero por puerto (obligatorio), luego por Host si hace falta.
+    const ServerConfig* server = selectServerByPort(listenPort, configs);
+    // Host como extra (opcional):
+    // if (server == 0) {
+    //     server = selectServerByHost(request.getHeader("Host"), configs);
+    // }
     const LocationConfig* location = 0;
     if (server)
         location = matchLocation(*server, request.getPath());
@@ -158,7 +178,6 @@ void RequestProcessor::process(const HttpRequest& request,
 
     // TODO: integrar CGI: si la location es CGI, delegar en CgiHandler (Carles).
     // TODO: respuesta estatica: root + path, access/stat, leer archivo.
-    // Borrador: decision estatica vs CGI basada en extension
     bool isCgi = isCgiRequest(request.getPath());
     (void)isCgi;
     // TODO: pseudologica de decision estatica vs CGI (cuando LocationConfig tenga getters):
