@@ -29,7 +29,7 @@ enum ClientState {
     STATE_READING_HEADER,
     STATE_READING_BODY,
     STATE_WRITING_RESPONSE,
-    STATE_CLOSED,
+    STATE_CLOSED
 };
 
 class Client {
