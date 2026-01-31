@@ -57,3 +57,8 @@ cmake ..
 make manual_request_processor manual_client
 ```
 
+## Diagrama (SVG local)
+
+![Flujo de RequestProcessor](docsclient/mermaid%20de%20process.svg)
+
+

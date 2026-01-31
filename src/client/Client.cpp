@@ -58,6 +58,7 @@ void Client::handleRead()
     bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
     if (bytesRead > 0)
     {
+    	//TODO crear una macro maxtime
         _lastActivity = std::time(0);
         if (_state == STATE_IDLE)
             _state = STATE_READING_HEADER;

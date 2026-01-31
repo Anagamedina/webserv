@@ -92,3 +92,57 @@ Cuando _outBuffer queda vacio:
 - Si la conexion es "close" -> STATE_CLOSED.
 - Si es keep-alive -> reset del parser y volver a STATE_IDLE.
 
+## Resumen de consejos aplicados
+Apuntes extra sobre el flujo correcto (lo que nos recomendaron y ya corregimos):
+
+- Errores primero: si el parseo falla, responder 400 y salir.
+- Validaciones logicas antes de tocar disco:
+  - Redirect (301/302) primero.
+  - Metodo permitido (si no, 405).
+  - Body size (si excede, 413).
+- Directorios:
+  - Si es directorio, primero buscar index.
+  - Si no hay index y autoindex esta ON, generar listado.
+  - Si falla todo, devolver 403.
+- Estáticos:
+  - GET: leer y devolver archivo.
+  - DELETE: borrar con unlink.
+  - POST: normalmente no permitido en estaticos (salvo uploads/CGI).
+
+## Pasos actuales del flujo (y por qué)
+
+1) Inicialización  
+   - status/body por defecto  
+   - shouldClose según Connection  
+   Por qué: necesitamos un estado base y saber si cerrar la conexión.
+
+2) ServerConfig por puerto/IP  
+   - match por puerto → elegir ServerConfig correcto  
+   - si no hay match → usar el primero  
+   Por qué: es obligatorio servir contenido distinto por puerto.
+
+3) Location match  
+   - usar server.getLocations() y la URI  
+   - elegir la LocationConfig que mejor encaja  
+   Por qué: cada location define reglas específicas.
+
+4) Validaciones  
+   - método permitido  
+   - body size  
+   - redirect  
+   Por qué: son reglas lógicas; si falla aquí, no tocamos disco.
+
+5) Resolver path real  
+   - root/alias + uri → path físico  
+   Por qué: necesitamos la ruta real para acceder al filesystem.
+
+6) Decidir respuesta  
+   - estático (leer archivo)  
+   - CGI (delegar a Carles)  
+   - errores (403/404/405/413)  
+   Por qué: define la respuesta final según tipo de recurso.
+
+7) Construir HttpResponse  
+   - status, headers, body  
+   Por qué: el Client solo serializa y envía.
+
