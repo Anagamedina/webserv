@@ -10,7 +10,7 @@ namespace
 	//Helper function to strip the port from the host header.
 	//ej: "localhost:8080" -> "localhost"
 	//ej: "localhost" -> "localhost" (no tiene puerto)
-	static std::string stripPortFromHost(const std::string& hostHeader)
+/*	static std::string stripPortFromHost(const std::string& hostHeader)
 	{
 		std::string result_header = hostHeader;
 		std::string::size_type colon = result_header.find(':');
@@ -18,9 +18,9 @@ namespace
 			result_header.erase(colon);
 
 		return (result_header);
-	}
+	}*/
 
-	static const ServerConfig* selectServerByHost(const std::string& hostHeader,
+	/*static const ServerConfig* selectServerByHost(const std::string& hostHeader,
 												const std::vector<ServerConfig>*
 												configs)
 	{
@@ -35,7 +35,7 @@ namespace
 		}
 		//comportamiento por defecto: usar el primer server.
 		return &(*configs)[0];
-	}
+	}*/
 
 	static const ServerConfig* selectServerByPort(int port,
 												const std::vector<ServerConfig>*
