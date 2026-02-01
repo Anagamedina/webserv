@@ -20,7 +20,8 @@ public:
 	void parse();
 
 	const std::vector<ServerConfig>& getServers() const;
-	void exportToLogFile(std::string fileContent, std::string pathToExport);
+	void exportContentToLogFile(const std::string& fileContent,
+								const std::string& pathToExport);
 
 private:
 	std::string config_file_path_;
@@ -40,16 +41,15 @@ private:
 	std::string CleanFileConfig() const;
 	bool ValidateCurlyBrackets() const;
 
-	void MachineStatesOfConfigFile();
-	void extractServerBlock(const std::string& content,
-							const std::string& typeOfExtraction);
-	void parserServerBlocks();
+	void extractServerBlocks();
+	void extractRawBlocks(const std::string& content, const std::string& typeOfExtraction);
+	void parseServers();
 
-	ServerConfig parseServerBlock(const std::string& blockContent);
+	ServerConfig parseServer(const std::string& blockContent);
 
 	// LocationConfig parseLocationBlock(const std::string& block);
 };
 
-//ostream
+// ostream
 
-#endif //WEBSERV_CONFIGPARSER_HPP
+#endif // WEBSERV_CONFIGPARSER_HPP
