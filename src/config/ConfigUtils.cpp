@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <unistd.h>
 
@@ -121,6 +122,31 @@ namespace config
 			}
 			return str;
 		}
+
+		int stringToInt(const std::string& str)
+		{
+			char* end;
+			long value = std::strtol(str.c_str(), &end, 10);
+
+			if (*end != '\0' || end == str.c_str())
+			{
+				throw std::runtime_error("Invalid Characters.");
+			}
+			if (value > std::numeric_limits<int>::max() || value < std::numeric_limits<int>::min())
+			{
+				throw std::runtime_error("Number out of range (overflow).");
+			}
+
+			return static_cast<int>(value);
+		}
+
+		void exportContentToLogFile(const std::string& fileContent, const std::string& pathToExport)
+		{
+			std::ofstream log(pathToExport.data());
+			log << fileContent;
+			log.close();
+		}
+
 	}
 
 	namespace debug
@@ -169,4 +195,30 @@ namespace config
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

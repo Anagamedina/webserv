@@ -1,7 +1,4 @@
 #include "ConfigParser.hpp"
-
-#include <cstdlib>
-
 #include "LocationConfig.hpp"
 
 #include <fstream>
@@ -81,12 +78,9 @@ void ConfigParser::parse()
 	}
 
 	clean_file_str_ = CleanFileConfig();
-	exportContentToLogFile(clean_file_str_, config::paths::log_file_config);
-
-	// std::cout << "CLEANFILESTR in PARSE:\n" << clean_file_str_.c_str();
+	config::utils::exportContentToLogFile(clean_file_str_, config::paths::log_file_config);
 
 	// TODO: need to fix error order of brackets: '} {' should be error but now is
-	// not a error.
 	if (!ValidateCurlyBrackets())
 	{
 		throw ConfigException("Invalid number of curly brackets " +
@@ -104,13 +98,6 @@ void ConfigParser::parse()
 const std::vector<ServerConfig>& ConfigParser::getServers() const
 {
 	return servers_;
-}
-
-void ConfigParser::exportContentToLogFile(const std::string& fileContent, const std::string& pathToExport)
-{
-	std::ofstream log(pathToExport.data());
-	log << fileContent;
-	log.close();
 }
 
 /**
@@ -235,13 +222,12 @@ void ConfigParser::extractServerBlocks()
  * @param content The entire config file content
  * @param typeOfExtraction
  */
-void ConfigParser::extractRawBlocks(const std::string& content,
-									const std::string& typeOfExtraction)
+void ConfigParser::extractRawBlocks(const std::string& content, const std::string& typeOfExtraction)
 {
 	size_t currentPos = 0;
+	size_t countServers = 1;
 
-	while ((currentPos = content.find(typeOfExtraction, currentPos)) !=
-		std::string::npos)
+	while ((currentPos = content.find(typeOfExtraction, currentPos)) != std::string::npos)
 	{
 		size_t braceStart = content.find('{', currentPos);
 		if (braceStart == std::string::npos)
@@ -255,9 +241,9 @@ void ConfigParser::extractRawBlocks(const std::string& content,
 		{
 			if (content[braceEnd] == '\n')
 				braceEnd++;
-			std::cout << "inside loop position [" << braceEnd << "]";
-			std::cout << "\ncontent: [" << content[braceEnd] << "]\n" <<
-				std::endl;
+			// std::cout << "inside loop position [" << braceEnd << "]";
+			// std::cout << "\ncontent: [" << content[braceEnd] << "]\n" <<
+				// std::endl;
 			if (content[braceEnd] == '{')
 			{
 				countBrackets++;
@@ -270,12 +256,15 @@ void ConfigParser::extractRawBlocks(const std::string& content,
 		}
 
 		// Extract the complete server block
-		std::string getBlock = content.
-			substr(currentPos, braceEnd - currentPos);
-		exportContentToLogFile(getBlock, config::paths::log_file_block);
+		std::string getBlock = content.substr(currentPos, braceEnd - currentPos);
+
+		std::stringstream ss;
+		ss << config::paths::log_file_block << "_" << countServers;
+		config::utils::exportContentToLogFile(getBlock, ss.str());
 
 		raw_server_blocks_.push_back(getBlock);
 		currentPos = braceEnd;
+		++countServers;
 	}
 
 	servers_count_ = raw_server_blocks_.size();
@@ -289,6 +278,7 @@ void ConfigParser::parseServers()
 		servers_.push_back(server);
 		// std::cout << "Parsing Block " << i + 1 << " [OK]\n";
 	}
+	std::cout << servers_.at(0);
 }
 
 ServerConfig ConfigParser::parseServer(const std::string& blockContent)
@@ -302,8 +292,8 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		int indexTokens = 0;
 		line = config::utils::trimLine(line);
 
-		std::cout << colors::blue << "currentline: [" << line << "]\n"
-			<< colors::reset;
+		// std::cout << colors::blue << "currentline: [" << line << "]\n"
+			// << colors::reset;
 		if (line.empty() || line[0] == '#')
 		{
 			continue;
@@ -314,23 +304,51 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		if (tokens.empty())
 			continue;
 
-		std::cout << "tokens in line:\n";
+		// std::cout << "tokens in line:\n";
+		/**
 		for (size_t i = 0; i < tokens.size(); ++i)
 		{
 			std::cout << "token[" << i << "]: |" << colors::yellow << tokens.
 				at(i)
 				<< colors::reset << "|\n";
 		}
+		*/
 
-		std::string directive = tokens[indexTokens];
+		const std::string& directive = tokens[indexTokens];
 
 		//	LISTEN
-		std::cout << "current directive: [" << directive << "]" << std::endl;
+		// std::cout << "current directive: [" << directive << "]" << std::endl;
 		if (directive == config::section::listen)
 		{
-			std::cout << "current token: " << tokens[indexTokens + 1];
-			//	TODO: add validations in case: '8080:127.0.0.1'
-			server.setPort(atoi(tokens[indexTokens + 1].c_str()));
+
+			std::string value = tokens[indexTokens + 1];
+
+			// find ':'
+			size_t pos = value.find(':');
+
+			if (pos != std::string::npos)
+			{
+				// Case: IP:PORT (127.0.0.1:8080)
+				std::string host = value.substr(0, pos);
+				std::string portStr = value.substr(pos + 1);
+
+				server.setHost(host);
+				server.setPort(config::utils::stringToInt(portStr));
+			}
+			else
+			{
+				// Caso: PORT (8080) or only HOST (localhost)
+				// Simple heurística: Si tiene digitos es puerto, sino host
+				if (value.find_first_not_of("0123456789") == std::string::npos)
+				{
+					server.setPort(config::utils::stringToInt(value));
+				}
+				else
+				{
+					server.setHost(value);
+					server.setPort(80); // Puerto default si solo dan host
+				}
+			}
 		}
 		else if (directive == config::section::server_name)
 		{
@@ -346,7 +364,8 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		}
 		else if (directive == config::section::client_max_body_size)
 		{
-			server.setMaxBodySize(atoi(tokens[1].c_str()));
+			server.setMaxBodySize(
+				config::utils::stringToInt(tokens[1].c_str()));
 		}
 		else if (directive == config::section::error_page)
 		{
@@ -362,7 +381,9 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 					config::utils::removeSemicolon(tokens.back());
 				for (size_t i = 1; i < tokens.size() - 1; ++i)
 				{
-					server.addErrorPage(std::atoi(tokens[i].c_str()), path);
+					server.addErrorPage(
+						config::utils::stringToInt(tokens[i].c_str()),
+						path);
 				}
 			}
 		}
