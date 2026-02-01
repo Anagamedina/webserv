@@ -122,50 +122,51 @@ namespace config
 			return str;
 		}
 	}
-}
 
-namespace debug
-{
-	/**
-	* AUX FUNCTION TO DEBUG
-	* export config file '.log'
-	* remove empty lines and comment lines.
-	*/
-	void debugConfigLog(const std::string& config_file_path)
+	namespace debug
 	{
-		std::ifstream ifs(config_file_path.c_str());
-		if (!ifs.is_open())
+		/**
+		* AUX FUNCTION TO DEBUG
+		* export config file '.log'
+		* remove empty lines and comment lines.
+		*/
+		void debugConfigLog(const std::string& config_file_path)
 		{
-			throw ConfigException(
-				config::errors::cannot_open_file +
-				config_file_path +
-				" (in generatePrettyConfigLog)"
-			);
-		}
+			std::ifstream ifs(config_file_path.c_str());
+			if (!ifs.is_open())
+			{
+				throw ConfigException(
+					config::errors::cannot_open_file +
+					config_file_path +
+					" (in generatePrettyConfigLog)"
+				);
+			}
 
-		std::ofstream logFile(config::paths::log_file_config.c_str());
-		if (!logFile.is_open())
-		{
-			std::cerr << "Warning: Could not open/create pretty log file: ";
-			return;
-		}
+			std::ofstream logFile(config::paths::log_file_config.c_str());
+			if (!logFile.is_open())
+			{
+				std::cerr << "Warning: Could not open/create pretty log file: ";
+				return;
+			}
 
-		logFile << "=== Pretty print of configuration file ===\n";
-		logFile << "File: " << config_file_path << "\n";
-		logFile << "Generated: " << __DATE__ << " " << __TIME__ << "\n";
-		logFile << "----------------------------------------\n\n";
+			logFile << "=== Pretty print of configuration file ===\n";
+			logFile << "File: " << config_file_path << "\n";
+			logFile << "Generated: " << __DATE__ << " " << __TIME__ << "\n";
+			logFile << "----------------------------------------\n\n";
 
-		std::string line;
-		size_t lineNum = 0;
-		while (std::getline(ifs, line))
-		{
-			++lineNum;
-			config::utils::removeComments(line);
-			line = config::utils::trimLine(line);
-			if (line.empty())
-				continue;
-			logFile << lineNum << "|" << line << "\n";
+			std::string line;
+			size_t lineNum = 0;
+			while (std::getline(ifs, line))
+			{
+				++lineNum;
+				config::utils::removeComments(line);
+				line = config::utils::trimLine(line);
+				if (line.empty())
+					continue;
+				logFile << lineNum << "|" << line << "\n";
+			}
+			ifs.close();
 		}
-		ifs.close();
 	}
 }
+

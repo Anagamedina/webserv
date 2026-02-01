@@ -1,0 +1,8 @@
+
+https://github.com/nginx/nginx/blob/master/conf/nginx.conf
+
+https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-ubuntu-20-04
+
+https://www.digitalocean.com/community/tutorials/understanding-nginx-server-and-location-block-selection-algorithms
+
+https://www.digitalocean.com/community/tutorials/nginx-location-directive
