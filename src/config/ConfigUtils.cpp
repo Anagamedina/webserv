@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <unistd.h>
 
 #include "ConfigException.hpp"
@@ -14,13 +15,13 @@ namespace config
 	namespace utils
 	{
 		/**
-		 * remove in line: space, tab, newline and carriage return
-		 * @param line The string to trim
-		 * @return New string without leading/trailing whitespace
-		 *
-		 *   "  hello  " -> "hello"
-		 *   "\t\ntest\r\n" -> "test"
-		 */
+		* remove in line: space, tab, newline and carriage return
+		* @param line The string to trim
+		* @return New string without leading/trailing whitespace
+		*
+		*   "  hello  " -> "hello"
+		*   "\t\ntest\r\n" -> "test"
+		*/
 		std::string trimLine(const std::string& line)
 		{
 			const std::string whitespace = "\t\n\r";
@@ -35,9 +36,9 @@ namespace config
 		}
 
 		/**
-		 * if line start wirh '#' remove line
-		 * @param line
-		 */
+		* if line start wirh '#' remove line
+		* @param line
+		*/
 		void removeComments(std::string& line)
 		{
 			size_t commentPosition = line.find('#');
@@ -79,9 +80,9 @@ namespace config
 		}
 
 		/**
-		 * returns 0 on success, -1 on msg_errors
-		 * F_OK: check for existence
-		 * R_OK: check for read permission
+		* returns 0 on success, -1 on msg_errors
+		* F_OK: check for existence
+		* R_OK: check for read permission
 		*/
 		bool fileExists(const std::string& path)
 		{
@@ -110,9 +111,9 @@ namespace config
 		}
 
 		/**
-		 * use find() function to search position of ';'
-		 * @return substr of str
-		 */
+		* use find() function to search position of ';'
+		* @return substr of str
+		*/
 		std::string removeSemicolon(const std::string& str)
 		{
 			size_t pos = str.find(';');
@@ -130,24 +131,25 @@ namespace config
 
 			if (*end != '\0' || end == str.c_str())
 			{
-				throw std::runtime_error("Invalid Characters.");
+				throw ConfigException(config::errors::invalid_characters);
 			}
-			if (value > std::numeric_limits<int>::max() || value < std::numeric_limits<int>::min())
+			if (value > std::numeric_limits<int>::max() ||
+				value < std::numeric_limits<int>::min())
 			{
-				throw std::runtime_error("Number out of range (overflow).");
+				throw ConfigException(config::errors::number_out_of_range);
 			}
 
 			return static_cast<int>(value);
 		}
 
-		void exportContentToLogFile(const std::string& fileContent, const std::string& pathToExport)
+		void exportContentToLogFile(const std::string& fileContent,
+									const std::string& pathToExport)
 		{
 			std::ofstream log(pathToExport.data());
 			log << fileContent;
 			log.close();
 		}
-
-	}
+	} // namespace utils
 
 	namespace debug
 	{
@@ -162,10 +164,8 @@ namespace config
 			if (!ifs.is_open())
 			{
 				throw ConfigException(
-					config::errors::cannot_open_file +
-					config_file_path +
-					" (in generatePrettyConfigLog)"
-				);
+					config::errors::cannot_open_file + config_file_path +
+					" (in generatePrettyConfigLog)");
 			}
 
 			std::ofstream logFile(config::paths::log_file_config.c_str());
@@ -193,32 +193,5 @@ namespace config
 			}
 			ifs.close();
 		}
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	} // namespace debug
+} // namespace config

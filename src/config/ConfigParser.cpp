@@ -78,7 +78,8 @@ void ConfigParser::parse()
 	}
 
 	clean_file_str_ = CleanFileConfig();
-	config::utils::exportContentToLogFile(clean_file_str_, config::paths::log_file_config);
+	config::utils::exportContentToLogFile(clean_file_str_,
+										config::paths::log_file_config);
 
 	// TODO: need to fix error order of brackets: '} {' should be error but now is
 	if (!ValidateCurlyBrackets())
@@ -222,12 +223,14 @@ void ConfigParser::extractServerBlocks()
  * @param content The entire config file content
  * @param typeOfExtraction
  */
-void ConfigParser::extractRawBlocks(const std::string& content, const std::string& typeOfExtraction)
+void ConfigParser::extractRawBlocks(const std::string& content,
+									const std::string& typeOfExtraction)
 {
 	size_t currentPos = 0;
 	size_t countServers = 1;
 
-	while ((currentPos = content.find(typeOfExtraction, currentPos)) != std::string::npos)
+	while ((currentPos = content.find(typeOfExtraction, currentPos)) !=
+		std::string::npos)
 	{
 		size_t braceStart = content.find('{', currentPos);
 		if (braceStart == std::string::npos)
@@ -243,7 +246,7 @@ void ConfigParser::extractRawBlocks(const std::string& content, const std::strin
 				braceEnd++;
 			// std::cout << "inside loop position [" << braceEnd << "]";
 			// std::cout << "\ncontent: [" << content[braceEnd] << "]\n" <<
-				// std::endl;
+			// std::endl;
 			if (content[braceEnd] == '{')
 			{
 				countBrackets++;
@@ -256,7 +259,8 @@ void ConfigParser::extractRawBlocks(const std::string& content, const std::strin
 		}
 
 		// Extract the complete server block
-		std::string getBlock = content.substr(currentPos, braceEnd - currentPos);
+		std::string getBlock = content.
+			substr(currentPos, braceEnd - currentPos);
 
 		std::stringstream ss;
 		ss << config::paths::log_file_block << "_" << countServers;
@@ -278,7 +282,14 @@ void ConfigParser::parseServers()
 		servers_.push_back(server);
 		// std::cout << "Parsing Block " << i + 1 << " [OK]\n";
 	}
-	std::cout << servers_.at(0);
+
+	for (size_t i = 0; i < servers_.size(); ++i)
+	{
+		std::cout << config::colors::magenta << "Config of Server[" << i <<
+			"]\n"
+			<< config::colors::reset;
+		std::cout << servers_[i];
+	}
 }
 
 ServerConfig ConfigParser::parseServer(const std::string& blockContent)
@@ -292,12 +303,10 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		int indexTokens = 0;
 		line = config::utils::trimLine(line);
 
-		// std::cout << colors::blue << "currentline: [" << line << "]\n"
-			// << colors::reset;
+		// std::cout << colors::blue << "currentline: [" << line << "]\n" <<
+		// colors::reset;
 		if (line.empty() || line[0] == '#')
-		{
 			continue;
-		}
 
 		// 2. Tokenization
 		std::vector<std::string> tokens = config::utils::split(line, ' ');
@@ -308,9 +317,9 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		/**
 		for (size_t i = 0; i < tokens.size(); ++i)
 		{
-			std::cout << "token[" << i << "]: |" << colors::yellow << tokens.
-				at(i)
-				<< colors::reset << "|\n";
+				std::cout << "token[" << i << "]: |" << colors::yellow << tokens.
+						at(i)
+						<< colors::reset << "|\n";
 		}
 		*/
 
@@ -318,22 +327,33 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 
 		//	LISTEN
 		// std::cout << "current directive: [" << directive << "]" << std::endl;
+		//	function to check if pattern is correct respect to PORT:IP
+		//8080:192.178.1.1
 		if (directive == config::section::listen)
 		{
-
-			std::string value = tokens[indexTokens + 1];
-
-			// find ':'
+			std::string value =
+				config::utils::removeSemicolon(tokens[indexTokens + 1]);
 			size_t pos = value.find(':');
+
+			// std::cout << "current directive: [" << directive << "]" << std::endl;
+			// std::cout << "value [" << value << "]" << std::endl;
 
 			if (pos != std::string::npos)
 			{
 				// Case: IP:PORT (127.0.0.1:8080)
-				std::string host = value.substr(0, pos);
-				std::string portStr = value.substr(pos + 1);
+				std::string ip = value.substr(0, pos);
+				std::string port = value.substr(pos + 1);
 
-				server.setHost(host);
-				server.setPort(config::utils::stringToInt(portStr));
+				if (ip.find_first_not_of("0123456789") == std::string::npos)
+				{
+					server.setPort(config::utils::stringToInt(ip));
+					server.setHost(port);
+				}
+				else
+				{
+					server.setHost(ip);
+					server.setPort(config::utils::stringToInt(port));
+				}
 			}
 			else
 			{
@@ -346,7 +366,7 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 				else
 				{
 					server.setHost(value);
-					server.setPort(80); // Puerto default si solo dan host
+					server.setPort(80); // DEFAULT ?
 				}
 			}
 		}
@@ -364,18 +384,26 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		}
 		else if (directive == config::section::client_max_body_size)
 		{
-			server.setMaxBodySize(
-				config::utils::stringToInt(tokens[1].c_str()));
+			const std::string& copyOfToken = tokens[1];
+			if (!copyOfToken.empty())
+			{
+				config::utils::removeSemicolon(copyOfToken);
+				std::cout << "client_max_body_size clean: " << copyOfToken;
+
+				server.setMaxBodySize(config::utils::stringToInt(copyOfToken));
+			}
 		}
 		else if (directive == config::section::error_page)
 		{
 			/**
-			Lógica especial para múltiples códigos de error
-			error_page 404 500 /error.html;
-			error_page 404 /404.html;
-			error_page 500 502 503 504 /50x.html;
+			* Lógica especial para múltiples códigos de error
+			* error_page 404 500 /error.html;
+			* error_page 404 /404.html;
+			* error_page 500 502 503 504 /50x.html;
+			* el último token es siempre la ruta del archivo (ej. /404.html)
 			*/
 			if (tokens.size() >= 3)
+			// el mínimo son 3 tokens: error_page, 404 y /ruta)
 			{
 				std::string path =
 					config::utils::removeSemicolon(tokens.back());
@@ -387,6 +415,7 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 				}
 			}
 		}
+		//	TODO: this case fail(the char '='): location = /50x.html {
 		else if (directive == config::section::location)
 		{
 			std::string locationPath = tokens[1];
@@ -426,20 +455,22 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 							locTokens[1]);
 						loc.setAutoIndex(val == config::section::autoindex_on);
 					}
-					else if (locTokens[0] == "methods" ||
-						locTokens[0] == "allow_methods")
+					else if (locTokens[0] == config::section::methods ||
+						locTokens[0] == config::section::allow_methods ||
+						locTokens[0] == config::section::limit_except)
 					{
 						for (size_t i = 1; i < locTokens.size(); ++i)
 							loc.addMethod(
 								config::utils::removeSemicolon(locTokens[i]));
 					}
-					else if (locTokens[0] == config::section::returnStr)
-					// redirection
+					else if (locTokens[0] == config::section::return_str)
 					{
 						// simple support: return 301 /url;
 						if (locTokens.size() >= 3)
+						{
 							loc.setRedirect(
 								config::utils::removeSemicolon(locTokens[2]));
+						}
 					}
 					else if (locTokens[0] ==
 						config::section::upload_store_bonus)
