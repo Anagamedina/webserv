@@ -15,11 +15,11 @@ graph TD
     %% Nodos principales
     Root[Root CMakeLists.txt]
     
-    subgraph Modules [Módulos Independientes (C++98)]
-        Config[src/config <br/> (libconfig.a)]
-        Network[src/network <br/> (libnetwork.a)]
-        HTTP[src/http <br/> (libhttp.a)]
-        CGI[src/cgi <br/> (libcgi.a)]
+    subgraph Modules ["Módulos Independientes (C++98)"]
+        Config[src/config <br/> libconfig.a]
+        Network[src/network <br/> libnetwork.a]
+        HTTP[src/http <br/> libhttp.a]
+        CGI[src/cgi <br/> libcgi.a]
     end
 
     subgraph Executables [Ejecutables]
