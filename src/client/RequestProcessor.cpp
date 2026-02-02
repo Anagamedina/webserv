@@ -219,7 +219,7 @@ void RequestProcessor::process(const HttpRequest& request,
 		fillBaseResponse(response, request, statusCode, shouldClose, body);
 		return;
 	}
-
+	//2) Select server, match location
 	server = selectServerByPort(listenPort, configs);
 	// Host como extra (opcional):
 	// if (server == 0) {
