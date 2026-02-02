@@ -42,6 +42,8 @@ SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/http/HttpParser.cpp \
 			$(SRC_DIR)/http/HttpParserStartLine.cpp \
 			$(SRC_DIR)/http/HttpParserHeaders.cpp \
+			$(SRC_DIR)/config/ServerConfig.cpp \
+			$(SRC_DIR)/config/LocationConfig.cpp \
 			$(SRC_DIR)/http/HttpParserBody.cpp \
 			$(SRC_DIR)/http/HttpRequest.cpp \
 			$(SRC_DIR)/http/HttpResponse.cpp
