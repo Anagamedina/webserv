@@ -88,7 +88,8 @@ bool handleStaticPath(const HttpRequest& request,
         //encontro algun index? NO -> revisamos si el autoindex esta encendido
         //si esta ON deberia mostrar la lista de archivos 
         //si esta OFF 403 forbidden
-
+        //El autoindex en Nginx se utiliza para generar automáticamente un listado de archivos y carpetas en el navegador cuando se accede a un director        //io que no contiene un archivo de índice (como index.html o index.php). Habilita la visualización de archivos, 
+        //facilitando la descarga o exploración de directorios. 
         if (location && location->getAutoIndex())
         {
             // TODO: generar listado de directorio (autoindex).
@@ -100,20 +101,27 @@ bool handleStaticPath(const HttpRequest& request,
         return true;
     }
 
+    //es algo "especial" de Linux algo raro ni archivo ni directorio
     if (!S_ISREG(st.st_mode))
     {
         buildErrorResponse(response, request, 403, false, server);
         return true;
     }
+    
 
+
+    //En una Carpeta (S_ISDIR):
+    //El método casi siempre va a ser GET (queremos ver el índice o la lista de archivos)
     // Archivos regulares: diferenciar metodo
     if (request.getMethod() == HTTP_METHOD_POST)
     {
+        //Los POST solo deberían ir a los CGIs
         buildErrorResponse(response, request, 405, false, server);
         return true;
     }
     if (request.getMethod() == HTTP_METHOD_DELETE)
     {
+        //Linux para borrar un archivo
         if (unlink(path.c_str()) == 0)
         {
             body.clear();
@@ -122,6 +130,8 @@ bool handleStaticPath(const HttpRequest& request,
         buildErrorResponse(response, request, 500, true, server);
         return true;
     }
+
+    //METHOD GET!! 
 
     if (!readFileToBody(path, body))
     {
