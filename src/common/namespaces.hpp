@@ -26,9 +26,10 @@ namespace config
 	{
 		// static const std::string default_config_path = "../config/examples/nginx.conf";
 		static const std::string default_config_path = "../config/default.conf";
-		static const std::string log_file_config = "../config/logs/config-clean.log";
-		static const std::string log_file_server= "../config/logs/server.log";
-		static const std::string log_file_block= "../config/logs/block.log";
+		static const std::string log_file_config =
+			"../config/logs/config-clean.log";
+		static const std::string log_file_server = "../config/logs/server.log";
+		static const std::string log_file_block = "../config/logs/block.log";
 		static const std::string extension_file = ".conf";
 	}
 
@@ -37,7 +38,12 @@ namespace config
 		static const char* const invalid_extension = "Invalid file extension: ";
 		static const std::string cannot_open_file = "Cannot open config file: ";
 		static const std::string number_out_of_range = "Number out of range.";
-		static const std::string invalid_characters= "Invalid Characters in stringToInt().";
+		static const std::string invalid_characters =
+			"Invalid Characters in stringToInt().";
+		static const std::string invalid_num_args_return_directive =
+			"Invalid number of arguments in 'return' directive";
+		static const std::string invalid_redirect_code = "Invalid redirect code.";
+		static const std::string missing_args_in_return = "Missing arguments after 'return' directive";
 	}
 
 	namespace section
@@ -47,18 +53,27 @@ namespace config
 		static const std::string server_name = "server_name";
 		static const std::string client_max_body_size = "client_max_body_size";
 		static const std::string location = "location";
-		static const std::string error_page= "error_page";
+		static const std::string error_page = "error_page";
 		static const std::string root = "root";
 		static const std::string index = "index";
 		static const std::string autoindex = "autoindex";
 		static const std::string autoindex_on = "on";
 		static const std::string autoindex_off = "off";
-		static const std::string upload_store_bonus= "upload_store";
-		static const std::string methods= "methods";
-		static const std::string allow_methods= "allow_methods";
-		static const std::string limit_except= "limit_except";
-		static const std::string return_str= "return";
+		static const std::string upload_bonus = "uploads";
+		static const std::string upload_store_bonus = "upload_store";
+		static const std::string methods = "methods";
+		static const std::string allow_methods = "allow_methods";
+		static const std::string limit_except = "limit_except";
+		static const std::string return_str = "return";
 
+		// 1. Exact match (prioridad más alta: coincide SOLO si la URI es idéntica)
+		// location = /exact/path { ... }
+		static const std::string exact_match_modifier = "=";
+
+		// 2. Preferential prefix (prefix más largo, pero detiene la búsqueda de regex si coincide)
+		// location ^~ /images/ { ... } → no chequea regex después
+		static const std::string preferential_prefix_modifier = "^~";
+		static const int default_return_code= 302;
 	}
 
 	enum ParserState
@@ -71,9 +86,7 @@ namespace config
 	namespace debug
 	{
 		void debugConfigLog(const std::string& config_file_path);
-
 	}
-
 }
 
 #endif

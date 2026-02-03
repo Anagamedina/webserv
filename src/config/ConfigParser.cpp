@@ -6,6 +6,7 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <string>
 
 #include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
@@ -418,7 +419,18 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		//	TODO: this case fail(the char '='): location = /50x.html {
 		else if (directive == config::section::location)
 		{
-			std::string locationPath = tokens[1];
+			size_t pathIndex = 1;
+			std::string modifier = ""; // +, ~, ~*, ^~
+
+			if (tokens.size() > 2 && (tokens[1] ==
+				config::section::exact_match_modifier || tokens[1] ==
+				config::section::preferential_prefix_modifier))
+			{
+				modifier = tokens[1];
+				pathIndex = 2;
+			}
+
+			std::string locationPath = tokens[pathIndex];
 			LocationConfig loc;
 			loc.setPath(locationPath);
 
@@ -426,6 +438,7 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 			{
 				config::utils::removeComments(line);
 				line = config::utils::trimLine(line);
+
 				if (!line.empty())
 				{
 					std::vector<std::string> locTokens = config::utils::split(
@@ -446,8 +459,10 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 					else if (locTokens[0] == config::section::index)
 					{
 						for (size_t i = 1; i < locTokens.size(); ++i)
+						{
 							loc.addIndex(
 								config::utils::removeSemicolon(locTokens[i]));
+						}
 					}
 					else if (locTokens[0] == config::section::autoindex)
 					{
@@ -460,23 +475,51 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						locTokens[0] == config::section::limit_except)
 					{
 						for (size_t i = 1; i < locTokens.size(); ++i)
+						{
 							loc.addMethod(
 								config::utils::removeSemicolon(locTokens[i]));
+						}
 					}
 					else if (locTokens[0] == config::section::return_str)
 					{
-						// simple support: return 301 /url;
-						if (locTokens.size() >= 3)
+						//	return 301 http:://google.com;
+						//	return code URL;
+						//	302 - Código de estado HTTP "Found" (redirección temporal)
+						// http://example.com - URL de destino
+						if (locTokens.size() == 2)
 						{
-							loc.setRedirect(
-								config::utils::removeSemicolon(locTokens[2]));
+							// Caso: return URL; (default 302)
+							std::string cleanUrl =
+								config::utils::removeSemicolon(locTokens[1]);
+
+							loc.setRedirectCode(config::section::default_return_code);
+							loc.setRedirectUrl(cleanUrl);
+						}
+						else if (locTokens.size() == 3)
+						{
+							// Caso: return CODE URL;
+							int code = config::utils::stringToInt(locTokens[1]);
+							std::string cleanUrl =
+								config::utils::removeSemicolon(locTokens[2]);
+
+							// Validamos que el codigo sea de redireccion (3XX)
+							if (code < 300 || code > 399)
+							{
+								throw ConfigException(
+									config::errors::invalid_redirect_code +
+									locTokens[1]);
+							}
+							loc.setRedirectCode(code);
+							loc.setRedirectUrl(cleanUrl);
+						}
+						else
+						{
+							throw ConfigException(config::errors::missing_args_in_return);
 						}
 					}
-					else if (locTokens[0] ==
-						config::section::upload_store_bonus)
+					else if (locTokens[0] == config::section::upload_store_bonus || locTokens[0] == config::section::upload_bonus)
 					{
-						loc.setUploadStore(
-							config::utils::removeSemicolon(locTokens[1]));
+						loc.setUploadStore(config::utils::removeSemicolon(locTokens[1]));
 					}
 				}
 			}

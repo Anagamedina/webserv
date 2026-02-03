@@ -16,7 +16,8 @@ private:
 	std::vector<std::string> allowed_methods_; // methods GET POST DELETE
 	bool autoindex_; // autoindex on/off
 	std::string upload_store_; // upload_store ./uploads
-	std::string redirect_; // return 301 /new-path (optional)
+	int redirect_code_; // return 301 /new-path (optional)
+	std::string redirect_url_; // /new-path (optional)
 
 public:
 	LocationConfig();
@@ -31,7 +32,8 @@ public:
 	void addMethod(const std::string& method);
 	void setAutoIndex(bool autoindex);
 	void setUploadStore(const std::string& store);
-	void setRedirect(const std::string& redirect);
+	void setRedirectCode(int integerCode);
+	void setRedirectUrl(const std::string& redirectUrl);
 
 	// Getters
 	const std::string& getPath() const;
@@ -40,7 +42,8 @@ public:
 	const std::vector<std::string>& getMethods() const;
 	bool getAutoIndex() const;
 	const std::string& getUploadStore() const;
-	const std::string& getRedirect() const;
+	int getRedirectCode() const;
+	const std::string& getRedirectUrl() const;
 
 	// Validation
 	bool isMethodAllowed(const std::string& method) const;
@@ -63,9 +66,9 @@ inline std::ostream& operator<<(std::ostream& os,
 	{
 		os << "\tUpload Store: " << location.getUploadStore() << "\n";
 	}
-	if (!location.getRedirect().empty())
+	if (!location.getRedirectCode().empty())
 	{
-		os << "\tRedirect: " << location.getRedirect() << "\n";
+		os << "\tRedirect: " << location.getRedirectCode() << "\n";
 	}
 
 	const std::vector<std::string>& indexes = location.getIndexes();

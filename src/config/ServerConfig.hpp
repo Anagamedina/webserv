@@ -79,11 +79,11 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config)
 		<< "\n\tServer name: " << config.getServerName() << "\n";
 
 	const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
-	os << "Error pages:\n";
+	os << "\tError pages:\n";
 
 	if (!errorPages.empty())
 	{
-		std::map<std::string, std::vector<int>> groupedErrors;
+		std::map<std::string, std::vector<int> > groupedErrors;
 
 		for (ServerConfig::ErrorIterator it = errorPages.begin(); it !=
 			errorPages.end(); ++it)
@@ -91,7 +91,7 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config)
 			groupedErrors[it->second].push_back(it->first);
 		}
 
-		for (std::map<std::string, std::vector<int>>::const_iterator groupIt =
+		for (std::map<std::string, std::vector<int> >::const_iterator groupIt =
 				groupedErrors.begin(); groupIt != groupedErrors.end();
 			++groupIt)
 		{
