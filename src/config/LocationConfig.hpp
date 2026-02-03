@@ -66,7 +66,7 @@ inline std::ostream& operator<<(std::ostream& os,
 	{
 		os << "\tUpload Store: " << location.getUploadStore() << "\n";
 	}
-	if (!location.getRedirectCode().empty())
+	if (!location.getRedirectCode())
 	{
 		os << "\tRedirect: " << location.getRedirectCode() << "\n";
 	}
