@@ -149,7 +149,20 @@ namespace config
 			log << fileContent;
 			log.close();
 		}
-	} // namespace utils
+
+		bool isValidPath(const std::string& path)
+		{
+			if (path.empty())
+				return false;
+
+			if (path.find('\0') != std::string::npos ||
+				path.find('\n') != std::string::npos ||
+				path.find('\r') != std::string::npos)
+				return false;
+
+			return true;
+		}
+	}
 
 	namespace debug
 	{

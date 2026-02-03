@@ -18,6 +18,7 @@ namespace config
 		std::string removeSemicolon(const std::string& str);
 		int stringToInt(const std::string& str);
 		void exportContentToLogFile(const std::string& fileContent, const std::string& pathToExport);
+		bool isValidPath(const std::string& path);
 
 	}
 

@@ -26,8 +26,7 @@ namespace config
 	{
 		// static const std::string default_config_path = "../config/examples/nginx.conf";
 		static const std::string default_config_path = "../config/default.conf";
-		static const std::string log_file_config =
-			"../config/logs/config-clean.log";
+		static const std::string log_file_config = "../config/logs/config-clean.log";
 		static const std::string log_file_server = "../config/logs/server.log";
 		static const std::string log_file_block = "../config/logs/block.log";
 		static const std::string extension_file = ".conf";
@@ -44,6 +43,12 @@ namespace config
 			"Invalid number of arguments in 'return' directive";
 		static const std::string invalid_redirect_code = "Invalid redirect code.";
 		static const std::string missing_args_in_return = "Missing arguments after 'return' directive";
+
+		static const std::string invalid_min_num_args_upload_directive = "Missing path in 'upload_store' directive";
+		static const std::string invalid_max_num_args_upload_directive = "Too many arguments in 'upload_store' directive";
+		static const std::string invalid_characters_in_upload_directive = "Invalid characters in upload_store path: ";
+
+		static const std::string empty_path_in_upload_directive= "Empty path in 'upload_store' directive";
 	}
 
 	namespace section

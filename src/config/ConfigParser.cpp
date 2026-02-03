@@ -492,7 +492,8 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 							std::string cleanUrl =
 								config::utils::removeSemicolon(locTokens[1]);
 
-							loc.setRedirectCode(config::section::default_return_code);
+							loc.setRedirectCode(
+								config::section::default_return_code);
 							loc.setRedirectUrl(cleanUrl);
 						}
 						else if (locTokens.size() == 3)
@@ -514,12 +515,61 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						}
 						else
 						{
-							throw ConfigException(config::errors::missing_args_in_return);
+							throw ConfigException(
+								config::errors::missing_args_in_return);
 						}
 					}
-					else if (locTokens[0] == config::section::upload_store_bonus || locTokens[0] == config::section::upload_bonus)
+					else if (locTokens[0] == config::section::upload_store_bonus
+						|| locTokens[0] == config::section::upload_bonus)
 					{
-						loc.setUploadStore(config::utils::removeSemicolon(locTokens[1]));
+						/*
+						 * check number of arguments:
+						 * upload_store;	INVALID
+						 * upload_store /uploads;	VALID
+						 * upload_store /uploads extra;	INVALID
+						 */
+						/*
+						* upload_store "";		no valido, str Vacío
+						* upload_store /uploads;	Ruta absoluta
+						* upload_store ./uploads;	Ruta relativa
+						* upload_store uploads;		Ruta relativa (sin ./)
+						* upload_store /up\0loads;         X Null byte
+						* upload_store /up\nloads;         X Newline
+						 */
+						if (locTokens.size() < 2)
+						{
+							throw ConfigException(
+								config::errors::invalid_min_num_args_upload_directive);
+						}
+						if (locTokens.size() > 2)
+						{
+							throw ConfigException(
+								config::errors::invalid_max_num_args_upload_directive);
+						}
+
+						std::string uploadPathClean =
+							config::utils::removeSemicolon(locTokens[1]);
+						if (uploadPathClean.empty())
+						{
+							throw ConfigException(
+								config::errors::empty_path_in_upload_directive);
+						}
+						//	validamos los caracteres no recomendables
+						if (!config::utils::isValidPath(uploadPathClean))
+						{
+							throw ConfigException(
+								config::errors::invalid_characters_in_upload_directive
+								+ uploadPathClean);
+						}
+						// TODO: Opcional: podriamos verificar que el directorio existe o se puede crear
+						/*
+						if (!config::utils::directoryExists(uploadPath))
+						{
+							std::cerr << "Warning: upload_store directory does not exist: "
+									  << uploadPath;
+						}
+						*/
+						loc.setUploadStore(uploadPathClean);
 					}
 				}
 			}
