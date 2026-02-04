@@ -306,11 +306,8 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 
 		// std::cout << colors::blue << "currentline: [" << line << "]\n" <<
 		// colors::reset;
-		if (line.empty() || line[0] == '#')
-			continue;
-
 		// 2. Tokenization
-		std::vector<std::string> tokens = config::utils::split(line, ' ');
+		std::vector<std::string> tokens = config::utils::tokenize(line);
 		if (tokens.empty())
 			continue;
 
@@ -318,9 +315,9 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		/**
 		for (size_t i = 0; i < tokens.size(); ++i)
 		{
-				std::cout << "token[" << i << "]: |" << colors::yellow << tokens.
-						at(i)
-						<< colors::reset << "|\n";
+						std::cout << "token[" << i << "]: |" << colors::yellow <<
+		tokens. at(i)
+										<< colors::reset << "|\n";
 		}
 		*/
 
@@ -329,7 +326,7 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		//	LISTEN
 		// std::cout << "current directive: [" << directive << "]" << std::endl;
 		//	function to check if pattern is correct respect to PORT:IP
-		//8080:192.178.1.1
+		// 8080:192.178.1.1
 		if (directive == config::section::listen)
 		{
 			std::string value =
@@ -381,7 +378,10 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 		}
 		else if (directive == config::section::index)
 		{
-			server.setIndex(config::utils::removeSemicolon(tokens[1]));
+			for (size_t i = 1; i < tokens.size(); ++i)
+			{
+				server.addIndex(config::utils::removeSemicolon(tokens[i]));
+			}
 		}
 		else if (directive == config::section::client_max_body_size)
 		{
@@ -422,9 +422,9 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 			size_t pathIndex = 1;
 			std::string modifier = ""; // +, ~, ~*, ^~
 
-			if (tokens.size() > 2 && (tokens[1] ==
-				config::section::exact_match_modifier || tokens[1] ==
-				config::section::preferential_prefix_modifier))
+			if (tokens.size() > 2 &&
+				(tokens[1] == config::section::exact_match_modifier ||
+					tokens[1] == config::section::preferential_prefix_modifier))
 			{
 				modifier = tokens[1];
 				pathIndex = 2;
@@ -436,13 +436,13 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 
 			while (std::getline(ss, line))
 			{
-				config::utils::removeComments(line);
+				// config::utils::removeComments(line); // Tokenize handles comments
 				line = config::utils::trimLine(line);
 
 				if (!line.empty())
 				{
-					std::vector<std::string> locTokens = config::utils::split(
-						line, ' ');
+					std::vector<std::string> locTokens =
+						config::utils::tokenize(line);
 					if (locTokens.empty())
 					{
 						continue;
@@ -466,10 +466,13 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 					}
 					else if (locTokens[0] == config::section::autoindex)
 					{
-						std::string val = config::utils::removeSemicolon(locTokens[1]);
-						if (val != config::section::autoindex_on || val != config::section::autoindex_off)
+						std::string val = config::utils::removeSemicolon(
+							locTokens[1]);
+						if (val != config::section::autoindex_on ||
+							val != config::section::autoindex_off)
 						{
-							throw ConfigException(config::errors::invalid_autoindex);
+							throw ConfigException(
+								config::errors::invalid_autoindex);
 						}
 						loc.setAutoIndex(val == config::section::autoindex_on);
 					}
@@ -492,26 +495,28 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						if (locTokens.size() == 2)
 						{
 							// Caso: return URL; (default 302)
-							std::string cleanUrl =
-								config::utils::removeSemicolon(locTokens[1]);
+							std::string cleanUrl = config::utils::removeSemicolon(locTokens[1]);
 
-							loc.setRedirectCode(
-								config::section::default_return_code);
+							loc.setRedirectCode(config::section::default_return_code);
 							loc.setRedirectUrl(cleanUrl);
 						}
 						else if (locTokens.size() == 3)
 						{
 							// Caso: return CODE URL;
 							int code = config::utils::stringToInt(locTokens[1]);
-							std::string cleanUrl =
-								config::utils::removeSemicolon(locTokens[2]);
+							std::string cleanUrl = config::utils::removeSemicolon(locTokens[2]);
 
-							// Validamos que el codigo sea de redireccion (3XX)
-							if (code < 300 || code > 399)
+							// Validamos que el codigo sea de redireccion (3XX) (relaxed to
+							// 100-599)
+							if ((code < 300 || code > 399) && code != 404 &&
+								code != 200 && code != 403 && code != 500 && code != 405)
 							{
-								throw ConfigException(
-									config::errors::invalid_redirect_code +
-									locTokens[1]);
+								if (code < 100 || code > 599)
+								{
+									throw ConfigException(
+										config::errors::invalid_redirect_code +
+										locTokens[1]);
+								}
 							}
 							loc.setRedirectCode(code);
 							loc.setRedirectUrl(cleanUrl);
@@ -523,14 +528,15 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						}
 					}
 					else if (locTokens[0] == config::section::upload_store_bonus
-						|| locTokens[0] == config::section::upload_bonus)
+						||
+						locTokens[0] == config::section::upload_bonus)
 					{
 						/*
-						 * check number of arguments:
-						 * upload_store;	INVALID
-						 * upload_store /uploads;	VALID
-						 * upload_store /uploads extra;	INVALID
-						 */
+						* check number of arguments:
+						* upload_store;	INVALID
+						* upload_store /uploads;	VALID
+						* upload_store /uploads extra;	INVALID
+						*/
 						/*
 						* upload_store "";		no valido, str Vacío
 						* upload_store /uploads;	Ruta absoluta
@@ -538,7 +544,7 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						* upload_store uploads;		Ruta relativa (sin ./)
 						* upload_store /up\0loads;         X Null byte
 						* upload_store /up\nloads;         X Newline
-						 */
+						*/
 						if (locTokens.size() < 2)
 						{
 							throw ConfigException(
@@ -562,14 +568,17 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						{
 							throw ConfigException(
 								config::errors::invalid_characters_in_upload_directive
-								+ uploadPathClean);
+								+
+								uploadPathClean);
 						}
-						// TODO: Opcional: podriamos verificar que el directorio existe o se puede crear
+						// TODO: Opcional: podriamos verificar que el directorio existe o se
+						// puede crear
 						/*
 						if (!config::utils::directoryExists(uploadPath))
 						{
-							std::cerr << "Warning: upload_store directory does not exist: "
-									  << uploadPath;
+								std::cerr << "Warning: upload_store directory does not
+						exist: "
+												<< uploadPath;
 						}
 						*/
 						loc.setUploadStore(uploadPathClean);

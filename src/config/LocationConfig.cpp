@@ -62,10 +62,12 @@ void LocationConfig::setUploadStore(const std::string& store)
 
 void LocationConfig::setRedirectCode(const int integerCode)
 {
+	/*
 	if (integerCode < 300 || integerCode > 399)
 	{
 		throw ConfigException(config::errors::invalid_redirect_code);
 	}
+	*/
 	redirect_code_ = integerCode;
 }
 

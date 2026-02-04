@@ -52,6 +52,7 @@ namespace config
 		static const std::string invalid_port_range= "Invalid port: must be 1 - 65535";
 		static const std::string invalid_http_status_code = "Invalid HTTP status code.";
 		static const std::string invalid_autoindex= "autoindex must be 'on' or 'off'.";
+		static const std::string missing_args_in_index= "Missing arguments in 'index' directive.";
 	}
 
 	namespace section
