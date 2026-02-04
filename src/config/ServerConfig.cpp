@@ -2,6 +2,8 @@
 #include "LocationConfig.hpp"
 #include <iostream>
 
+#include "ConfigException.hpp"
+
 ServerConfig::ServerConfig() :
 	listen_port_(80),
 	host_address_("127.0.0.1"),
@@ -43,6 +45,10 @@ ServerConfig::~ServerConfig()
 //	GETTERS AND SETTERS
 void ServerConfig::setPort(int port)
 {
+	if (port < 1 || port > config::section::max_port)
+	{
+		throw ConfigException(config::errors::invalid_port_range);
+	}
 	listen_port_ = port;
 }
 
@@ -73,6 +79,10 @@ void ServerConfig::setMaxBodySize(size_t size)
 
 void ServerConfig::addErrorPage(int code, const std::string& path)
 {
+	if (code < 100 || code > 599)
+	{
+		throw ConfigException(config::errors::invalid_http_status_code);
+	}
 	error_pages_.insert(std::make_pair(code, path));
 }
 
