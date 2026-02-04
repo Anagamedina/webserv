@@ -4,6 +4,7 @@
 #include "../http/HttpResponse.hpp"
 #include "../config/ServerConfig.hpp"
 #include "../cgi/CgiExecutor.hpp"
+#include "../cgi/CgiProcess.hpp"
 #include <string>
 
 class RequestProcessor {
@@ -12,6 +13,10 @@ public:
     ~RequestProcessor();
 
     HttpResponse process(const HttpRequest& request, const ServerBlock* config);
+    
+    // Get CGI process if one was started (NULL if not CGI)
+    CgiProcess* getCgiProcess() const;
+    void clearCgiProcess();
 
 private:
     // Helpers
@@ -33,4 +38,5 @@ private:
     bool methodAllowed(const std::string& method, const LocationConfig& location);
     
     CgiExecutor cgi_executor_;
+    CgiProcess* cgi_process_;  // NEW: Track CGI process if active
 };

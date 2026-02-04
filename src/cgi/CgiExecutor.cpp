@@ -1,3 +1,16 @@
+/**
+ * CgiExecutor.cpp
+ * 
+ * Asynchronous CGI execution implementation
+ * 
+ * Key design decisions:
+ * 1. Non-blocking: Fork immediately, don't wait for output
+ * 2. Pipes are non-blocking for reading/writing
+ * 3. Monitored via epoll in main server loop
+ * 4. Supports streaming responses as data becomes available
+ * 5. Timeout enforcement via SIGALRM in child
+ */
+
 #include "CgiExecutor.hpp"
 #include "../utils/StringUtils.hpp"
 #include <algorithm>
@@ -5,286 +18,253 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <sys/wait.h>
+#include <sstream>
+#include <fcntl.h>
 #include <unistd.h>
-#include <vector>
+#include <sys/wait.h>
+#include <signal.h>
 
 CgiExecutor::CgiExecutor() {}
 
 CgiExecutor::~CgiExecutor() {}
 
-HttpResponse CgiExecutor::execute(const HttpRequest &request,
-                                  const std::string &script_path,
-                                  const std::string &interpreter_path) {
-  int pipe_in[2];  // Parent writes to Child (Request Body)
-  int pipe_out[2]; // Child writes to Parent (Response)
-
-  if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
-    return HttpResponse(500);
-  }
-
-  pid_t pid = fork();
-  if (pid == -1) {
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
-    return HttpResponse(500);
-  }
-
-  if (pid == 0) {
-    // CHILD PROCESS
-
-    // Setup pipes
-    dup2(pipe_in[0], STDIN_FILENO);
-    dup2(pipe_out[1], STDOUT_FILENO);
-
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
-
-    // Timeout safety
-    alarm(5);
-
-    // Change to script directory for relative path access
-    // Required by subject: "The CGI should be run in the correct directory for relative path file access"
-    size_t last_slash = script_path.find_last_of('/');
-    if (last_slash != std::string::npos) {
-      std::string script_dir = script_path.substr(0, last_slash);
-      if (chdir(script_dir.c_str()) == -1) {
-        perror("chdir failed");
-        exit(1);
-      }
+CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
+                                      const std::string& script_path,
+                                      const std::string& interpreter_path) {
+    // =========================================================================
+    // Step 1: Create communication pipes
+    // =========================================================================
+    // pipe_in: parent writes request body to child stdin
+    // pipe_out: parent reads CGI output from child stdout
+    
+    int pipe_in[2];   // Parent → Child (request body)
+    int pipe_out[2];  // Child → Parent (response)
+    
+    if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
+        std::cerr << "Failed to create pipes for CGI" << std::endl;
+        close(pipe_in[0]);
+        close(pipe_in[1]);
+        close(pipe_out[0]);
+        close(pipe_out[1]);
+        return NULL;
     }
-
-    // Prepare Env
-    std::map<std::string, std::string> env_map =
-        prepareEnvironment(request, script_path);
-    char **envp = createEnvArray(env_map);
-
-    // Prepare Args
-    // If interpreter is set (e.g. /usr/bin/php-cgi), args are [interpreter,
-    // script_path, NULL] If no interpreter (executable script), args are
-    // [script_path, NULL]
-
-    char *args[3];
-    if (!interpreter_path.empty()) {
-      args[0] = strdup(interpreter_path.c_str());
-      args[1] = strdup(script_path.c_str());
-      args[2] = NULL;
-    } else {
-      args[0] = strdup(script_path.c_str());
-      args[1] = NULL;
-      args[2] = NULL;
+    
+    // =========================================================================
+    // Step 2: Make pipes non-blocking
+    // =========================================================================
+    // This prevents the main event loop from blocking on pipe I/O
+    
+    if (!setNonBlocking(pipe_in[1]) || !setNonBlocking(pipe_out[0])) {
+        std::cerr << "Failed to set pipes non-blocking" << std::endl;
+        close(pipe_in[0]);
+        close(pipe_in[1]);
+        close(pipe_out[0]);
+        close(pipe_out[1]);
+        return NULL;
     }
-
-    const char *exec_path = args[0];
-    execve(exec_path, args, envp);
-
-    // If execve fails
-    perror("execve failed");
-    exit(1);
-
-  } else {
-    // PARENT PROCESS
-
-    close(pipe_in[0]);  // Close read end of input pipe
-    close(pipe_out[1]); // Close write end of output pipe
-
-    // Write Request Body to Child
-    std::string body = request.getBody();
-    if (!body.empty()) {
-      write(pipe_in[1], body.c_str(), body.length());
+    
+    // =========================================================================
+    // Step 3: Fork child process
+    // =========================================================================
+    
+    pid_t pid = fork();
+    if (pid == -1) {
+        std::cerr << "Failed to fork CGI process" << std::endl;
+        close(pipe_in[0]);
+        close(pipe_in[1]);
+        close(pipe_out[0]);
+        close(pipe_out[1]);
+        return NULL;
     }
-    close(pipe_in[1]); // Close write end (EOF for child)
-
-    // Read Response from Child
-    std::string obj_response;
-    char buffer[4096];
-    ssize_t bytes;
-    while ((bytes = read(pipe_out[0], buffer, sizeof(buffer))) > 0) {
-      obj_response.append(buffer, bytes);
-    }
-    close(pipe_out[0]);
-
-    // Wait for child
-    int status;
-    waitpid(pid, &status, 0);
-
-    if (WIFSIGNALED(status)) {
-      if (WTERMSIG(status) == SIGALRM) {
-        return HttpResponse(504); // Gateway Timeout
-      }
-      return HttpResponse(500);
-    }
-
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-      return HttpResponse(502); // Bad Gateway (CGI failed)
-    }
-
-    // 3. Parse CGI Output
-    // CGI output normally contains headers separated by \n (or \r\n) and then
-    // body. We need to construct an HttpResponse.
-
-    HttpResponse response(200); // Default, might be overridden by Status header
-
-    size_t header_end = obj_response.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
-      header_end = obj_response.find("\n\n"); // Loose check
-    }
-
-    if (header_end != std::string::npos) {
-      std::string headers = obj_response.substr(0, header_end);
-      std::string body_content = obj_response.substr(
-          header_end + ((obj_response[header_end] == '\r') ? 4 : 2));
-
-      response.setBody(body_content);
-
-      // Parse headers
-      std::istringstream iss(headers);
-      std::string line;
-      while (std::getline(iss, line)) {
-        if (!line.empty() && line[line.length() - 1] == '\r')
-          line.erase(line.length() - 1);
-        if (line.empty())
-          continue;
-
-        size_t colon = line.find(':');
-        if (colon != std::string::npos) {
-          std::string key = line.substr(0, colon);
-          std::string value = line.substr(colon + 1);
-          // Trim value
-          size_t first = value.find_first_not_of(" \t");
-          if (first != std::string::npos)
-            value = value.substr(first);
-
-          std::string key_lower = key;
-          std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(),
-                         ::tolower);
-
-          if (key_lower == "status") {
-            // Parse status code (e.g. "Status: 404 Not Found")
-            int code = std::atoi(value.c_str());
-            response.setStatus(code);
-          } else {
-            response.setHeader(key, value);
-          }
+    
+    if (pid == 0) {
+        // =====================================================================
+        // CHILD PROCESS
+        // =====================================================================
+        
+        // Setup pipes for stdin/stdout
+        dup2(pipe_in[0], STDIN_FILENO);
+        dup2(pipe_out[1], STDOUT_FILENO);
+        
+        // Close all pipe ends in child
+        close(pipe_in[0]);
+        close(pipe_in[1]);
+        close(pipe_out[0]);
+        close(pipe_out[1]);
+        
+        // Set alarm for timeout (5 seconds)
+        alarm(5);
+        
+        // Extract script directory and filename
+        std::string script_dir = ".";
+        std::string script_name = script_path;
+        size_t last_slash = script_path.find_last_of('/');
+        if (last_slash != std::string::npos) {
+            script_dir = script_path.substr(0, last_slash);
+            script_name = script_path.substr(last_slash + 1);
         }
-      }
+        
+        // Change to script directory
+        if (chdir(script_dir.c_str()) == -1) {
+            perror("chdir failed");
+            exit(1);
+        }
+        
+        // Prepare environment variables
+        // Note: Use full path for SCRIPT_FILENAME env var
+        std::map<std::string, std::string> env_map =
+            prepareEnvironment(request, script_path);
+        char** envp = createEnvArray(env_map);
+        
+        // Prepare arguments - use just the script filename after chdir
+        char* args[3];
+        if (!interpreter_path.empty()) {
+            args[0] = strdup(interpreter_path.c_str());
+            args[1] = strdup(script_name.c_str());
+            args[2] = NULL;
+        } else {
+            args[0] = strdup(script_name.c_str());
+            args[1] = NULL;
+            args[2] = NULL;
+        }
+        
+        const char* exec_path = args[0];
+        execve(exec_path, args, envp);
+        
+        // If execve fails
+        perror("execve failed");
+        exit(1);
+        
     } else {
-      // No headers found? treat generic
-      response.setBody(obj_response);
+        // =====================================================================
+        // PARENT PROCESS
+        // =====================================================================
+        
+        // Close unused pipe ends
+        close(pipe_in[0]);   // Don't read from input pipe
+        close(pipe_out[1]);  // Don't write to output pipe
+        
+        // Write request body to child stdin
+        // This is done immediately and synchronously to keep it simple
+        // If the pipe buffer fills, we'll need to handle EAGAIN
+        std::string body = request.getBody();
+        if (!body.empty()) {
+            ssize_t written = write(pipe_in[1], body.c_str(), body.length());
+            if (written == -1) {
+                // TODO: Handle partial write or EAGAIN
+                std::cerr << "Warning: Failed to write request body to CGI" << std::endl;
+            }
+        }
+        close(pipe_in[1]);  // Close write end (signal EOF to child)
+        
+        // Create CgiProcess tracker object
+        // The Client will own this and clean it up when done
+        CgiProcess* proc = new CgiProcess(script_path, interpreter_path,
+                                          -1,  // pipe_in_write is now closed
+                                          pipe_out[0], pid, 5);  // 5 second timeout
+        
+        return proc;
     }
-
-    return response;
-  }
+    
+    return NULL;  // Should not reach here
 }
 
-std::map<std::string, std::string>
-CgiExecutor::prepareEnvironment(const HttpRequest &request,
-                                const std::string &script_path) {
-  std::map<std::string, std::string> env;
-
-  // ============================================================================
-  // Step 1: Core CGI/HTTP Variables
-  // ============================================================================
-  // These are required by CGI/1.1 specification (RFC 3875)
-  
-  env["GATEWAY_INTERFACE"] = "CGI/1.1";
-  env["SERVER_PROTOCOL"] = "HTTP/1.1";
-  env["SERVER_SOFTWARE"] = "Webserv/1.0";
-  env["REQUEST_METHOD"] = request.getMethod();
-
-  // ============================================================================
-  // Step 2: Path and Script Variables
-  // ============================================================================
-  // SCRIPT_FILENAME: Full path to the script being executed
-  // SCRIPT_NAME: The original URI path (without query string or fragments)
-  
-  env["SCRIPT_FILENAME"] = script_path;
-  
-  // Extract SCRIPT_NAME from URI (path component, no query string)
-  std::string uri = request.getUri();
-  size_t question_mark = uri.find('?');
-  std::string script_name = (question_mark != std::string::npos) 
-    ? uri.substr(0, question_mark) 
-    : uri;
-  env["SCRIPT_NAME"] = script_name;
-
-  // ============================================================================
-  // Step 3: Query String
-  // ============================================================================
-  // QUERY_STRING: Everything after the '?' in the URI
-  // Example: URI="/cgi-bin/test.py?foo=bar&baz=qux" → QUERY_STRING="foo=bar&baz=qux"
-  // If no query string, QUERY_STRING must be empty (not unset)
-  // CGI scripts check this to know whether to parse GET parameters
-  
-  std::string query_string = "";
-  if (question_mark != std::string::npos && question_mark + 1 < uri.length()) {
-    query_string = uri.substr(question_mark + 1);
-  }
-  env["QUERY_STRING"] = query_string;
-
-  // ============================================================================
-  // Step 4: Content/Body Information
-  // ============================================================================
-  // CONTENT_LENGTH: Number of bytes in the request body (only for POST/PUT)
-  // CONTENT_TYPE: MIME type of the request body (from Content-Type header)
-  // These allow CGI to know if there's POST data and what format it's in
-  
-  env["CONTENT_LENGTH"] = StringUtils::toString(request.getBody().length());
-  std::string ct = request.getHeader("content-type");
-  if (!ct.empty())
-    env["CONTENT_TYPE"] = ct;
-
-  // ============================================================================
-  // Step 5: Client/Server Connection Information
-  // ============================================================================
-  // REMOTE_ADDR: Client IP address
-  // REQUEST_URI: Original URI with query string and fragments
-  // These let the CGI know who connected and what they requested
-  
-  env["REMOTE_ADDR"] = "127.0.0.1"; // TODO: Extract from socket in Client
-  env["REQUEST_URI"] = uri;
-
-  // ============================================================================
-  // Step 6: HTTP Request Headers
-  // ============================================================================
-  // All HTTP headers are passed as HTTP_* environment variables
-  // Header names are uppercased and dashes converted to underscores
-  // Example: "Content-Type" header becomes HTTP_CONTENT_TYPE
-  // Example: "X-Custom-Header" becomes HTTP_X_CUSTOM_HEADER
-  // This allows CGI to access custom headers sent by the client
-  
-  const std::map<std::string, std::string> &headers = request.getHeaders();
-  for (std::map<std::string, std::string>::const_iterator it = headers.begin();
-       it != headers.end(); ++it) {
-    std::string key = it->first;
-    // Upper case and replace - with _
-    std::string env_key = "HTTP_";
-    for (size_t i = 0; i < key.length(); ++i) {
-      char c = key[i];
-      if (c == '-')
-        env_key += '_';
-      else
-        env_key += toupper(c);
+std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
+    const HttpRequest& request,
+    const std::string& script_path) {
+    
+    std::map<std::string, std::string> env;
+    
+    // =========================================================================
+    // Step 1: Core CGI/HTTP Variables
+    // =========================================================================
+    
+    env["GATEWAY_INTERFACE"] = "CGI/1.1";
+    env["SERVER_PROTOCOL"] = "HTTP/1.1";
+    env["SERVER_SOFTWARE"] = "Webserv/1.0";
+    env["REQUEST_METHOD"] = request.getMethod();
+    
+    // =========================================================================
+    // Step 2: Path and Script Variables
+    // =========================================================================
+    
+    env["SCRIPT_FILENAME"] = script_path;
+    
+    // Extract SCRIPT_NAME from URI (path component, no query string)
+    std::string uri = request.getUri();
+    size_t question_mark = uri.find('?');
+    std::string script_name = (question_mark != std::string::npos) 
+        ? uri.substr(0, question_mark) 
+        : uri;
+    env["SCRIPT_NAME"] = script_name;
+    
+    // =========================================================================
+    // Step 3: Query String
+    // =========================================================================
+    // QUERY_STRING: Everything after the '?' in the URI
+    
+    std::string query_string = "";
+    if (question_mark != std::string::npos && question_mark + 1 < uri.length()) {
+        query_string = uri.substr(question_mark + 1);
     }
-    env[env_key] = it->second;
-  }
-
-  return env;
+    env["QUERY_STRING"] = query_string;
+    
+    // =========================================================================
+    // Step 4: Content/Body Information
+    // =========================================================================
+    
+    env["CONTENT_LENGTH"] = StringUtils::toString(request.getBody().length());
+    std::string ct = request.getHeader("content-type");
+    if (!ct.empty())
+        env["CONTENT_TYPE"] = ct;
+    
+    // =========================================================================
+    // Step 5: Client/Server Connection Information
+    // =========================================================================
+    
+    env["REMOTE_ADDR"] = "127.0.0.1";  // TODO: Extract from socket
+    env["REQUEST_URI"] = uri;
+    
+    // =========================================================================
+    // Step 6: HTTP Request Headers as HTTP_* variables
+    // =========================================================================
+    
+    const std::map<std::string, std::string>& headers = request.getHeaders();
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+         it != headers.end(); ++it) {
+        std::string key = it->first;
+        std::string env_key = "HTTP_";
+        for (size_t i = 0; i < key.length(); ++i) {
+            char c = key[i];
+            if (c == '-')
+                env_key += '_';
+            else
+                env_key += toupper(c);
+        }
+        env[env_key] = it->second;
+    }
+    
+    return env;
 }
 
-char **
-CgiExecutor::createEnvArray(const std::map<std::string, std::string> &env_map) {
-  char **envp = new char *[env_map.size() + 1];
-  int i = 0;
-  for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
-       it != env_map.end(); ++it) {
-    std::string s = it->first + "=" + it->second;
-    envp[i++] = strdup(s.c_str());
-  }
-  envp[i] = NULL;
-  return envp;
+char** CgiExecutor::createEnvArray(
+    const std::map<std::string, std::string>& env_map) {
+    
+    char** envp = new char*[env_map.size() + 1];
+    int i = 0;
+    for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
+         it != env_map.end(); ++it) {
+        std::string s = it->first + "=" + it->second;
+        envp[i++] = strdup(s.c_str());
+    }
+    envp[i] = NULL;
+    return envp;
+}
+
+bool CgiExecutor::setNonBlocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        return false;
+    }
+    return fcntl(fd, F_SETFL, flags | O_NONBLOCK) != -1;
 }

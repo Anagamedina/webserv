@@ -1,8 +1,16 @@
+/**
+ * CgiExecutor.hpp
+ * 
+ * Asynchronous CGI execution
+ * Forks CGI process without blocking, returns immediately
+ * Pipes are monitored via epoll by the main server loop
+ */
+
 #pragma once
 
 #include "../http/HttpRequest.hpp"
-#include "../http/HttpResponse.hpp"
 #include "../config/ServerConfig.hpp"
+#include "CgiProcess.hpp"
 #include <string>
 #include <map>
 
@@ -11,15 +19,47 @@ public:
     CgiExecutor();
     ~CgiExecutor();
 
-    // Executes the CGI script and returns the raw output (headers + body)
-    // Or returns an HttpResponse directly?
-    // Better to return std::string output, and let caller parse it?
-    // Or parse it here? 
-    // Let's return HttpResponse to encapsulate the logic.
-    HttpResponse execute(const HttpRequest& request, const std::string& script_path, const std::string& interpreter_path);
+    /**
+     * Start asynchronous CGI execution
+     * 
+     * Forks child process, sets up pipes, returns immediately
+     * The CGI process output is monitored via epoll
+     * 
+     * @param request: HTTP request from client
+     * @param script_path: Full path to CGI script
+     * @param interpreter_path: Path to interpreter (empty for executable scripts)
+     * @return Pointer to CgiProcess to track execution
+     *         NULL if fork/pipe creation failed
+     */
+    CgiProcess* executeAsync(const HttpRequest& request,
+                             const std::string& script_path,
+                             const std::string& interpreter_path);
 
 private:
-    std::map<std::string, std::string> prepareEnvironment(const HttpRequest& request, const std::string& script_path);
+    /**
+     * Prepare environment variables for CGI
+     * 
+     * @param request: HTTP request
+     * @param script_path: CGI script path
+     * @return Map of environment variables
+     */
+    std::map<std::string, std::string> prepareEnvironment(
+        const HttpRequest& request,
+        const std::string& script_path);
+
+    /**
+     * Convert environment map to C-style array for execve
+     * 
+     * @param env_map: Environment variable map
+     * @return Allocated char** array (caller must free)
+     */
     char** createEnvArray(const std::map<std::string, std::string>& env_map);
-    void freeEnvArray(char** env_array);
+
+    /**
+     * Set up a pipe as non-blocking
+     * 
+     * @param fd: File descriptor
+     * @return true on success, false on error
+     */
+    bool setNonBlocking(int fd);
 };

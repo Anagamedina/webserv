@@ -8,7 +8,7 @@
 #include <ctime>
 #include <algorithm>
 
-RequestProcessor::RequestProcessor() {}
+RequestProcessor::RequestProcessor() : cgi_process_(NULL) {}
 
 RequestProcessor::~RequestProcessor() {}
 
@@ -91,11 +91,17 @@ HttpResponse RequestProcessor::process(const HttpRequest& request, const ServerB
                 ext = path.substr(dot);
             }
             
-
-            
             if (!ext.empty() && location->cgi_handlers.count(ext)) {
                  std::string interpreter = location->cgi_handlers.at(ext);
-                 return cgi_executor_.execute(request, path, interpreter);
+                 // Start async CGI execution
+                 CgiProcess* proc = cgi_executor_.executeAsync(request, path, interpreter);
+                 if (proc == NULL) {
+                     return handleError(500, config);
+                 }
+                 // Store for later (Client will pick it up)
+                 cgi_process_ = proc;
+                 // Return placeholder response - Client will handle from here
+                 return HttpResponse(200);
             }
 
             if (request.getMethod() == "DELETE") {
@@ -151,39 +157,17 @@ const LocationConfig* RequestProcessor::findLocation(const std::string& uri, con
 }
 
 std::string RequestProcessor::resolvePath(const std::string& uri, const LocationConfig& location, const ServerBlock* config) {
-    // root: /var/www/html
-    // location: /img/
-    // uri: /img/logo.png
-    // result: /var/www/html/img/logo.png
+    // Standard Nginx 'root' directive behavior:
+    // root /var/www
+    // location /img { root /var/www; }
+    // request GET /img/logo.png
+    // result: /var/www/img/logo.png (full URI is appended)
     
     std::string root = location.root;
     std::string uri_suffix = uri;
 
-    if (!root.empty()) {
-        // Alias logic:
-        // Nginx: if location is /img/ and request is /img/logo.png
-        // option 1 (root): root /var/www; -> /var/www/img/logo.png
-        // option 2 (alias): alias /var/images/; -> /var/images/logo.png
-        //
-        // Our config has 'root' in location. 
-        // 42 Subject says "root directory or a directory from where the file should be searched".
-        //
-        // Standard Nginx 'root' directive inside location appends the full URI.
-        // Standard Nginx 'alias' directive replaces the location part.
-        //
-        // NOTE: The USER requested behavior: "Strip location.path from uri before concatenation."
-        // This effectively turns 'root' inside location into 'alias'.
-        
-        if (uri.find(location.path) == 0) {
-            uri_suffix = uri.substr(location.path.length());
-        }
-        
-        // Ensure suffix leads with / if needed (or not? usually alias ends with /)
-        if (!uri_suffix.empty() && uri_suffix[0] != '/') {
-            uri_suffix = "/" + uri_suffix;
-        }
-    } else {
-         // Fallback to server root
+    if (root.empty()) {
+        // Fallback to server root
         if (config && !config->root.empty()) {
             root = config->root;
         } else {
@@ -191,9 +175,15 @@ std::string RequestProcessor::resolvePath(const std::string& uri, const Location
         }
     }
     
-    // path = root + suffix
-    // Clean double slashes
+    // Standard root: append full URI to root (NOT stripping location path)
+    // This is more standard Nginx behavior
     std::string path = root + uri_suffix;
+    
+    // Clean double slashes  
+    while (path.find("//") != std::string::npos) {
+        path.replace(path.find("//"), 2, "/");
+    }
+    
     return path;
 }
 
@@ -369,4 +359,12 @@ std::string RequestProcessor::getMimeType(const std::string& path) {
         if (ext == "txt") return "text/plain";
     }
     return "application/octet-stream";
+}
+
+CgiProcess* RequestProcessor::getCgiProcess() const {
+    return cgi_process_;
+}
+
+void RequestProcessor::clearCgiProcess() {
+    cgi_process_ = NULL;
 }

@@ -1,13 +1,20 @@
 #include "Client.hpp"
+#include "../network/ServerManager.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <sstream>
 #include <cerrno>
+#include <cstring>
+#include <sys/wait.h>
+#include <signal.h>
+#include <algorithm>
+#include <cctype>
 
 #define BUFFER_SIZE 4096
 
 Client::Client(int fd, const std::vector<ServerBlock>* configs) 
-    : fd_(fd), configs_(configs), active_config_(NULL), state_(CONNECTED), last_activity_(time(NULL)) {
+    : fd_(fd), configs_(configs), active_config_(NULL), state_(CONNECTED),
+      cgi_process_(NULL), cgi_response_sent_(0), server_manager_(NULL), last_activity_(time(NULL)) {
     if (configs && !configs->empty()) {
         active_config_ = &(*configs)[0]; // Default to first
     }
@@ -52,6 +59,17 @@ void Client::processRequest() {
 
     HttpResponse response = processor_.process(req, active_config_);
     
+    // Check if CGI was started
+    CgiProcess* cgi_proc = processor_.getCgiProcess();
+    if (cgi_proc) {
+        // CGI is running - don't send response yet, wait for output
+        std::cout << "CGI process started (PID: " << cgi_proc->getPid() << ")" << std::endl;
+        setCgiProcess(cgi_proc);
+        // State changed to WAITING_FOR_CGI in setCgiProcess
+        processor_.clearCgiProcess();
+        return;
+    }
+    
     write_buffer_ = response.toString();
     state_ = WRITING;
 }
@@ -59,6 +77,13 @@ void Client::processRequest() {
 Client::~Client() {
     if (fd_ != -1) {
         close(fd_);
+    }
+    if (cgi_process_) {
+        int pipe_fd = cgi_process_->getPipeOut();
+        if (pipe_fd != -1) {
+            close(pipe_fd);
+        }
+        delete cgi_process_;
     }
 }
 
@@ -164,3 +189,125 @@ void Client::handleWrite() {
         }
     }
 }
+
+// ============================================================================
+// CGI Execution Management
+// ============================================================================
+
+void Client::setCgiProcess(CgiProcess* proc) {
+    cgi_process_ = proc;
+    if (proc && server_manager_) {
+        state_ = WAITING_FOR_CGI;
+        cgi_response_sent_ = 0;
+        // Register CGI pipe with ServerManager for epoll monitoring
+        server_manager_->registerCgiPipe(proc->getPipeOut(), this);
+    } else if (proc) {
+        state_ = WAITING_FOR_CGI;
+        cgi_response_sent_ = 0;
+    }
+}
+
+CgiProcess* Client::getCgiProcess() const {
+    return cgi_process_;
+}
+
+void Client::setServerManager(ServerManager* manager) {
+    server_manager_ = manager;
+}
+
+void Client::handleCgiOutput() {
+    if (!cgi_process_) {
+        return;
+    }
+    
+    // Read available data from CGI pipe (non-blocking)
+    int pipe_fd = cgi_process_->getPipeOut();
+    if (pipe_fd == -1) {
+        return;
+    }
+    
+    char buffer[4096];
+    ssize_t n = read(pipe_fd, buffer, sizeof(buffer));
+    
+    if (n > 0) {
+        // Data available
+        cgi_process_->appendResponseData(buffer, n);
+        
+        // Update last activity
+        last_activity_ = time(NULL);
+        
+    } else if (n == 0) {
+        // EOF from CGI pipe - child finished
+        std::cout << "CGI process finished" << std::endl;
+        finalizeCgiResponse();
+        
+    } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        // Error reading
+        std::cerr << "Error reading from CGI pipe: " << strerror(errno) << std::endl;
+        finalizeCgiResponse();
+    }
+    
+    // Check for timeout
+    if (cgi_process_->isTimedOut()) {
+        std::cerr << "CGI process timeout" << std::endl;
+        write_buffer_ = "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\n\r\n";
+        state_ = WRITING;
+        if (cgi_process_) {
+            int pid = cgi_process_->getPid();
+            kill(pid, SIGKILL);
+        }
+    }
+}
+
+void Client::finalizeCgiResponse() {
+    if (!cgi_process_) {
+        return;
+    }
+    
+    // Build HTTP response from CGI output
+    HttpResponse response(cgi_process_->getStatusCode());
+    
+    // Add headers from CGI
+    // Parse response headers manually
+    const std::string& headers_str = cgi_process_->getResponseHeaders();
+    std::istringstream iss(headers_str);
+    std::string line;
+    
+    while (std::getline(iss, line)) {
+        if (!line.empty() && line[line.length() - 1] == '\r') {
+            line.erase(line.length() - 1);
+        }
+        if (line.empty()) continue;
+        
+        size_t colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string key = line.substr(0, colon);
+            std::string value = line.substr(colon + 1);
+            // Trim leading spaces
+            size_t first = value.find_first_not_of(" \t");
+            if (first != std::string::npos) {
+                value = value.substr(first);
+            }
+            
+            // Skip Status header (already handled)
+            std::string key_lower = key;
+            std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+            if (key_lower != "status") {
+                response.setHeader(key, value);
+            }
+        }
+    }
+    
+    // Set response body
+    response.setBody(cgi_process_->getResponseBody());
+    
+    // Send response
+    write_buffer_ = response.toString();
+    state_ = WRITING;
+    
+    // Cleanup
+    close(cgi_process_->getPipeOut());
+    delete cgi_process_;
+    cgi_process_ = NULL;
+}
+

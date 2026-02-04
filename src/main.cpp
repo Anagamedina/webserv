@@ -19,8 +19,11 @@ int main(int argc, char *argv[]) {
 	std::cout << "Starting Webserv..." << std::endl;
 	std::cout << "Loading config: " << config_path << std::endl;
 
-	// Ignore SIGPIPE
+	// Ignore SIGPIPE (broken pipe when client disconnects)
 	signal(SIGPIPE, SIG_IGN);
+	
+	// Ignore SIGCHLD to automatically reap zombie child processes (CGI scripts)
+	signal(SIGCHLD, SIG_IGN);
 
 	try {
 		ConfigParser parser(config_path);
