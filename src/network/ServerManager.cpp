@@ -4,7 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <set>
-#include <sstream>
+
 #include <stdexcept>
 #include <unistd.h>
 
@@ -83,7 +83,6 @@ void ServerManager::run() {
         } else if (clients_.count(fd)) {
           handleClientEvent(fd, event_mask);
         } else if (cgi_pipes_.count(fd)) {
-          // Handle CGI pipe output event
           handleCgiPipeEvent(fd, event_mask);
         }
       }
@@ -135,8 +134,9 @@ void ServerManager::handleNewConnection(int listener_fd) {
     epoll_.addFd(client_fd, EPOLLIN | EPOLLRDHUP);
 
     Client* new_client = new Client(client_fd, configs);
-    new_client->setServerManager(
-        this); // Set server manager reference for CGI pipe registration
+
+    // INFO: Set server manager reference for CGI pipe registration
+    new_client->setServerManager(this);
     clients_[client_fd] = new_client;
 
     std::cout << "New client connected on port " << listener->getPort()
@@ -165,7 +165,14 @@ void ServerManager::handleClientEvent(int client_fd, uint32_t events) {
     return;
   }
 
-  // Update Epoll interest based on state (if needs to read/write)
+  updateClientEvents(client_fd);
+}
+
+void ServerManager::updateClientEvents(int client_fd) {
+  if (!clients_.count(client_fd))
+    return;
+
+  Client* client = clients_[client_fd];
   uint32_t new_events = EPOLLIN | EPOLLRDHUP;
   if (client->needsWrite()) {
     new_events |= EPOLLOUT;
@@ -191,46 +198,25 @@ void ServerManager::handleCgiPipeEvent(int pipe_fd, uint32_t events) {
 
   Client* client = cgi_pipes_[pipe_fd];
 
-  // Handle error conditions on the pipe
-  if (events & (EPOLLERR | EPOLLHUP)) {
-    // CGI pipe closed or error - clean up
-    epoll_.removeFd(pipe_fd);
-    cgi_pipes_.erase(pipe_fd);
-
-    if (client != NULL) {
-      client->finalizeCgiResponse();
-
-      // Update client socket epoll interest to include EPOLLOUT for writing
-      // response
-      int client_fd = client->getFd();
-      if (clients_.count(client_fd)) {
-        uint32_t new_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP;
-        epoll_.modFd(client_fd, new_events);
-      }
-    }
-    return;
-  }
-
-  // Handle readable data on CGI pipe
-  if (events & EPOLLIN) {
-    if (client != NULL) {
-      client->handleCgiOutput();
-    }
+  // Delegate CGI pipe handling to the Client
+  if (client != NULL) {
+    client->handleCgiPipe(pipe_fd, events);
   }
 }
 
-void ServerManager::registerCgiPipe(int pipe_fd, Client* client) {
+void ServerManager::registerCgiPipe(int pipe_fd, uint32_t events,
+                                    Client* client) {
   if (pipe_fd < 0 || client == NULL) {
     return;
   }
 
   // Add pipe to epoll for monitoring
-  epoll_.addFd(pipe_fd, EPOLLIN | EPOLLHUP | EPOLLERR);
+  epoll_.addFd(pipe_fd, events);
 
   // Track mapping from pipe FD to Client
   cgi_pipes_[pipe_fd] = client;
 
-  std::cout << "Registered CGI pipe " << pipe_fd << " for monitoring"
+  std::cout << "Registered CGI pipe " << pipe_fd << " for events " << events
             << std::endl;
 }
 

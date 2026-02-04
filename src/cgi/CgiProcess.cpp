@@ -14,15 +14,17 @@
 
 CgiProcess::CgiProcess(const std::string& script_path,
                        const std::string& interpreter, int pipe_in_write,
-                       int pipe_out_read, pid_t pid, int timeout_secs)
+                       int pipe_out_read, pid_t pid, int timeout_secs,
+                       const std::string& request_body)
     : pid_(pid), script_path_(script_path), interpreter_(interpreter),
       pipe_in_write_(pipe_in_write), pipe_out_read_(pipe_out_read),
+      request_body_(request_body), body_bytes_written_(0),
       headers_complete_(false), status_code_(200), state_(RUNNING),
       start_time_(time(NULL)), timeout_secs_(timeout_secs) {}
 
 CgiProcess::~CgiProcess() {
   // Pipes will be closed by the caller (Client/ServerManager)
-  // We don't close them here to avoid double-close issues
+  // Don't close them here to avoid double-close issues
 }
 
 bool CgiProcess::appendResponseData(const char* data, size_t len) {

@@ -8,6 +8,7 @@
 #include "RequestProcessor.hpp"
 #include <ctime>
 #include <string>
+#include <stdint.h>
 
 // Forward declaration
 class ServerManager;
@@ -29,7 +30,9 @@ public:
   // Core event handlers
   void handleRead();
   void handleWrite();
-  void handleCgiOutput(); // NEW: Handle CGI pipe events
+  void handleCgiOutput(); // Handle CGI output (read)
+  void handleCgiInput();  // Handle CGI input (write)
+  void handleCgiPipe(int pipe_fd, uint32_t events); // Dispatcher
 
   // CGI management
   void setCgiProcess(CgiProcess* proc);

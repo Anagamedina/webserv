@@ -2,7 +2,7 @@
 
 #include "../client/Client.hpp"
 #include "../config/ServerConfig.hpp"
-#include "../http/HttpParser.hpp"
+
 #include "EpollWrapper.hpp"
 #include "TcpListener.hpp"
 #include <map>
@@ -14,9 +14,11 @@ public:
   ~ServerManager();
 
   void run();
-  
+
   // CGI pipe registration (called by Client when starting CGI)
-  void registerCgiPipe(int pipe_fd, Client* client);
+  void updateClientEvents(int client_fd);
+
+  void registerCgiPipe(int pipe_fd, uint32_t events, Client* client);
   void unregisterCgiPipe(int pipe_fd);
 
 private:
@@ -31,7 +33,8 @@ private:
   void handleNewConnection(int listener_fd);
   void handleClientEvent(int client_fd, uint32_t events);
   void handleClientDisconnect(int client_fd);
-  void handleCgiPipeEvent(int pipe_fd, uint32_t events);  // NEW: Handle CGI output
+  void handleCgiPipeEvent(int pipe_fd,
+                          uint32_t events); // NEW: Handle CGI output
   void checkTimeouts();
 
   EpollWrapper epoll_;
@@ -45,7 +48,7 @@ private:
 
   // Active clients
   std::map< int, Client* > clients_;
-  
+
   // Map CGI pipe FD -> Client (for CGI output handling)
-  std::map< int, Client* > cgi_pipes_;  // NEW
+  std::map< int, Client* > cgi_pipes_; // NEW
 };

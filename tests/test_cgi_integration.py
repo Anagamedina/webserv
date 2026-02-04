@@ -49,7 +49,8 @@ class CGITestClient:
         
         if body:
             headers["Content-Length"] = str(len(body))
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            if "Content-Type" not in headers:
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
         
         for key, value in headers.items():
             request += f"{key}: {value}\r\n"
@@ -147,8 +148,8 @@ class CGITests:
         self.assert_status(status, 200, "Should return 200 OK")
         self.assert_in("text/plain", headers.get("Content-Type", ""), 
                        "Response should have Content-Type: text/plain")
-        self.assert_in("REQUEST_METHOD=GET", body, 
-                       "Response body should contain REQUEST_METHOD=GET")
+        self.assert_in("Method: GET", body, 
+                       "Response body should contain Method: GET")
     
     def test_query_string_parsing(self):
         """Test 2: Query string parsing and passing to CGI"""
