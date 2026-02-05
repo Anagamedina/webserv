@@ -2,6 +2,7 @@
 #define WEBSERV_LOCATIONCONFIG_HPP
 
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -9,16 +10,6 @@
 
 class LocationConfig
 {
-private:
-	std::string path_; // /upload, /, /api, etc.
-	std::string root_; // root ./www
-	std::vector<std::string> index_; // index index.html index.htm ...
-	std::vector<std::string> allowed_methods_; // methods GET POST DELETE
-	bool autoindex_; // autoindex on/off
-	std::string upload_store_; // upload_store ./uploads
-	int redirect_code_; // return 301 /new-path (optional)
-	std::string redirect_url_; // /new-path (optional)
-
 public:
 	LocationConfig();
 	LocationConfig(const LocationConfig& other);
@@ -34,6 +25,8 @@ public:
 	void setUploadStore(const std::string& store);
 	void setRedirectCode(int integerCode);
 	void setRedirectUrl(const std::string& redirectUrl);
+	void addCgiHandler(const std::string& extension,
+						const std::string& binaryPath);
 
 	// Getters
 	const std::string& getPath() const;
@@ -44,13 +37,25 @@ public:
 	const std::string& getUploadStore() const;
 	int getRedirectCode() const;
 	const std::string& getRedirectUrl() const;
+	std::string getCgiPath(const std::string& extension) const;
+	const std::map<std::string, std::string>& getCgiHandlers() const;
 
 	// Validation
 	bool isMethodAllowed(const std::string& method) const;
-	// bool isValid() const;
 
 	// Debug
 	void print() const;
+
+private:
+	std::string path_; // /upload, /, /api, etc.
+	std::string root_; // root ./www
+	std::vector<std::string> indexes_; // index index.html index.htm ...
+	std::vector<std::string> allowed_methods_; // methods GET POST DELETE
+	bool autoindex_; // autoindex on/off
+	std::string upload_store_; // upload_store ./uploads
+	int redirect_code_; // return 301 /new-path (optional)
+	std::string redirect_url_; // /new-path (optional)
+	std::map<std::string, std::string> cgi_handlers_;
 };
 
 inline std::ostream& operator<<(std::ostream& os,

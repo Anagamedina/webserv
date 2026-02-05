@@ -85,6 +85,8 @@ namespace config
 
 		static const int default_return_code= 302;
 		static const int max_port = 65535;
+		static const std::string method_get = "GET";
+		static const std::string method_head = "HEAD";
 	}
 
 	enum ParserState
