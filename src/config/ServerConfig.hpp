@@ -24,17 +24,6 @@
  */
 class ServerConfig
 {
-private:
-	int listen_port_; // listen 8080
-	std::string host_address_; // host 127.0.0.1
-	std::string server_name_; // (optional ??)
-	std::string root_; //	root server
-	std::vector<std::string> index_vector_; //	root server
-	size_t max_body_size_; // max is 1048576 (bytes)
-	std::map<int, std::string> error_pages_;
-	// Error pages: error_page 404 /404.html
-	std::vector<LocationConfig> location_; // All location { } blocks
-
 public:
 	typedef std::map<int, std::string> ErrorMap;
 	typedef ErrorMap::const_iterator ErrorIterator;
@@ -43,9 +32,6 @@ public:
 	ServerConfig(const ServerConfig& other);
 	ServerConfig& operator=(const ServerConfig& other);
 	~ServerConfig();
-
-	// Validation
-	// bool isValid() const;
 
 	// Setters
 	void setPort(int port);
@@ -56,6 +42,9 @@ public:
 	void setMaxBodySize(size_t size);
 	void addErrorPage(int code, const std::string& path);
 	void addLocation(const LocationConfig& location);
+	void setAutoIndex(bool autoindex);
+	void setRedirectCode(int code);
+	void setRedirectUrl(const std::string& url);
 
 	// Getters
 	int getPort() const;
@@ -66,9 +55,25 @@ public:
 	size_t getMaxBodySize() const;
 	const std::map<int, std::string>& getErrorPages() const;
 	const std::vector<LocationConfig>& getLocations() const;
+	bool getAutoindex() const;
+	int getRedirectCode() const;
+	const std::string& getRedirectUrl() const;
 
 	// Debug
 	void print() const;
+
+private:
+	int listen_port_;
+	std::string host_address_;
+	std::string server_name_;
+	std::string root_;
+	std::vector<std::string> indexes_;
+	size_t max_body_size_; // max is 1048576 (bytes)
+	std::map<int, std::string> error_pages_;
+	std::vector<LocationConfig> locations_;
+	bool autoindex_;
+	int redirect_code_;
+	std::string redirect_url_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config)

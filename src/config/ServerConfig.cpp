@@ -1,13 +1,12 @@
 #include "ServerConfig.hpp"
 #include "LocationConfig.hpp"
-#include <iostream>
-
 #include "ConfigException.hpp"
 
 ServerConfig::ServerConfig() :
-	listen_port_(80),
-	host_address_("127.0.0.1"),
-	max_body_size_(1000000)
+	listen_port_(config::section::default_port),
+	host_address_(config::section::default_host_name),
+	max_body_size_(config::section::max_body_size), autoindex_(false),
+	redirect_code_(-1)
 {
 }
 
@@ -16,10 +15,12 @@ ServerConfig::ServerConfig(const ServerConfig& other) :
 	host_address_(other.host_address_),
 	server_name_(other.server_name_),
 	root_(other.root_),
-	// index_(other.index_),
+	indexes_(other.indexes_),
 	max_body_size_(other.max_body_size_),
 	error_pages_(other.error_pages_),
-	location_(other.location_)
+	locations_(other.locations_), autoindex_(other.autoindex_),
+	redirect_code_(other.redirect_code_),
+	redirect_url_(other.redirect_url_)
 {
 }
 
@@ -30,10 +31,14 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other)
 		listen_port_ = other.listen_port_;
 		host_address_ = other.host_address_;
 		root_ = other.root_;
-		// index_ = other.index_;
+		indexes_ = other.indexes_;
 		server_name_ = other.server_name_;
 		max_body_size_ = other.max_body_size_;
 		error_pages_ = other.error_pages_;
+		locations_ = other.locations_;
+		autoindex_ = other.autoindex_;
+		redirect_code_ = other.redirect_code_;
+		redirect_url_ = other.redirect_url_;
 	}
 	return *this;
 }
@@ -69,7 +74,7 @@ void ServerConfig::setRoot(const std::string& root)
 
 void ServerConfig::addIndex(const std::string& index)
 {
-	index_vector_.push_back(index);
+	indexes_.push_back(index);
 }
 
 void ServerConfig::setMaxBodySize(size_t size)
@@ -88,7 +93,24 @@ void ServerConfig::addErrorPage(int code, const std::string& path)
 
 void ServerConfig::addLocation(const LocationConfig& location)
 {
-	location_.push_back(location);
+	locations_.push_back(location);
+}
+
+void ServerConfig::setAutoIndex(bool autoindex)
+{
+	autoindex_ = autoindex;
+}
+
+void ServerConfig::setRedirectCode(int code)
+{
+	if (code < 100 || code > 599)
+		throw ConfigException(config::errors::invalid_http_status_code);
+	redirect_code_ = code;
+}
+
+void ServerConfig::setRedirectUrl(const std::string& url)
+{
+	redirect_url_ = url;
 }
 
 //	GETTERS
@@ -115,7 +137,7 @@ const std::string& ServerConfig::getRoot() const
 
 const std::vector<std::string>& ServerConfig::getIndexVector() const
 {
-	return index_vector_;
+	return indexes_;
 }
 
 size_t ServerConfig::getMaxBodySize() const
@@ -130,10 +152,25 @@ const std::map<int, std::string>& ServerConfig::getErrorPages() const
 
 const std::vector<LocationConfig>& ServerConfig::getLocations() const
 {
-	return location_;
+	return locations_;
+}
+
+bool ServerConfig::getAutoindex() const
+{
+	return autoindex_;
+}
+
+int ServerConfig::getRedirectCode() const
+{
+	return redirect_code_;
+}
+
+const std::string& ServerConfig::getRedirectUrl() const
+{
+	return redirect_url_;
 }
 
 void ServerConfig::print() const
 {
-	std::cout << "Print of info in ServerConfig";
+	std::cout << *this;
 }
