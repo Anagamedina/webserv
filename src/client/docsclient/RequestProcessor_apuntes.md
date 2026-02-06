@@ -119,9 +119,7 @@ Apuntes extra sobre el flujo correcto (lo que nos recomendaron y ya corregimos):
 2) ServerConfig por puerto/IP  
    - match por puerto → elegir ServerConfig correcto  
    - si no hay match → usar el primero  
-   Por qué: es obligatorio servir contenido distinto por puerto.
-
-3) Location match  
+   Por qué: es obligatorio servir contenido distinto por puerto.3) Location match  
    - usar server.getLocations() y la URI  
    - elegir la LocationConfig que mejor encaja  
    Por qué: cada location define reglas específicas.

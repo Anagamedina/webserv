@@ -14,6 +14,7 @@ add_executable(manual_client
         ../../src/http/HttpParserBody.cpp
         ../../src/http/HttpRequest.cpp
         ../../src/http/HttpResponse.cpp
+        ../../src/network/ServerManager.cpp
 )
 
 target_include_directories(manual_client PRIVATE
