@@ -2,6 +2,10 @@
 #include <cerrno>
 #include <iostream>
 
+
+
+int EpollWrapper::getFd() const { return epoll_fd_; }
+
 EpollWrapper::EpollWrapper() {
   // epoll_create(size) size is ignored in modern kernels but must be > 0.
   epoll_fd_ = epoll_create(1);
@@ -56,4 +60,3 @@ int EpollWrapper::wait(epoll_event *events, int maxevents, int timeout) {
   return num_events;
 }
 
-int EpollWrapper::getFd() const { return epoll_fd_; }

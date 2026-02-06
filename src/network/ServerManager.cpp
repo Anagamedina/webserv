@@ -196,7 +196,7 @@ void ServerManager::handleCgiPipeEvent(int pipe_fd, uint32_t events) {
     return;
   }
 
-  Client* client = cgi_pipes_[pipe_fd];
+  //Client* client = cgi_pipes_[pipe_fd];
 
   // Delegate CGI pipe handling to the Client
   (void)events;
@@ -226,4 +226,5 @@ void ServerManager::unregisterCgiPipe(int pipe_fd) {
     cgi_pipes_.erase(pipe_fd);
     std::cout << "Unregistered CGI pipe " << pipe_fd << std::endl;
   }
+
 }

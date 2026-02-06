@@ -51,4 +51,5 @@ private:
 
   // Map CGI pipe FD -> Client (for CGI output handling)
   std::map< int, Client* > cgi_pipes_; // NEW
+                                       //
 };

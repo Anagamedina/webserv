@@ -27,4 +27,5 @@ private:
   // Disable copying
   EpollWrapper(const EpollWrapper &);
   EpollWrapper &operator=(const EpollWrapper &);
+
 };
