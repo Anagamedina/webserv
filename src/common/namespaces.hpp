@@ -68,8 +68,8 @@ namespace config
 		static const std::string autoindex = "autoindex";
 		static const std::string autoindex_on = "on";
 		static const std::string autoindex_off = "off";
-		static const std::string upload_bonus = "uploads";
-		static const std::string upload_store_bonus = "upload_store";
+		static const std::string upload_bonus = "/uploads";
+		static const std::string uploads_bonus = "/uploads";
 		static const std::string methods = "methods";
 		static const std::string allow_methods = "allow_methods";
 		static const std::string limit_except = "limit_except";
