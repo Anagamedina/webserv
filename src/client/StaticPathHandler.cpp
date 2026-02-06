@@ -2,7 +2,9 @@
 
 #include "ErrorUtils.hpp"
 
+#include <dirent.h>
 #include <fstream>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -19,6 +21,61 @@ static bool readFileToBody(const std::string& path, std::vector<char>& out)
     while (file.get(c))
         out.push_back(c);
     return true;
+}
+
+static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
+                                               const std::string& requestPath)
+{
+    std::ostringstream html;
+    std::string base = requestPath;
+    if (base.empty())
+        base = "/";
+    if (base[base.size() - 1] != '/')
+        base += "/";
+
+    html << "<!DOCTYPE html>\n"
+         << "<html>\n"
+         << "  <head>\n"
+         << "    <meta charset=\"utf-8\">\n"
+         << "    <title>Index of " << base << "</title>\n"
+         << "  </head>\n"
+         << "  <body>\n"
+         << "    <h1>Index of " << base << "</h1>\n"
+         << "    <ul>\n";
+
+    DIR* dir = opendir(dirPath.c_str());
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != NULL) {
+            std::string name = entry->d_name;
+            if (name == "." || name == "..")
+                continue;
+
+            std::string fullPath = dirPath;
+            if (!fullPath.empty() && fullPath[fullPath.size() - 1] != '/')
+                fullPath += "/";
+            fullPath += name;
+
+            struct stat st;
+            bool isDir = (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+
+            html << "      <li><a href=\"" << base << name;
+            if (isDir)
+                html << "/";
+            html << "\">" << name;
+            if (isDir)
+                html << "/";
+            html << "</a></li>\n";
+        }
+        closedir(dir);
+    }
+
+    html << "    </ul>\n"
+         << "  </body>\n"
+         << "</html>\n";
+
+    std::string content = html.str();
+    return std::vector<char>(content.begin(), content.end());
 }
 
 bool handleStaticPath(const HttpRequest& request,
@@ -92,9 +149,9 @@ bool handleStaticPath(const HttpRequest& request,
         //facilitando la descarga o exploración de directorios. 
         if (location && location->getAutoIndex())
         {
-            // TODO: generar listado de directorio (autoindex).
-            buildErrorResponse(response, request, 501, false, server);
-            return true;
+            body = generateAutoIndexBody(path, request.getPath());
+            response.setHeader("Content-Type", "text/html");
+            return false;
         }
 
         buildErrorResponse(response, request, 403, false, server);
