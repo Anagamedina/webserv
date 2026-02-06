@@ -34,22 +34,25 @@ SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/network/EpollWrapper.cpp \
 			$(SRC_DIR)/network/TcpListener.cpp \
 			$(SRC_DIR)/network/ServerManager.cpp \
-		$(SRC_DIR)/cgi/CgiExecutor.cpp \
-		$(SRC_DIR)/cgi/CgiProcess.cpp \
+			$(SRC_DIR)/cgi/CgiExecutor.cpp \
+			$(SRC_DIR)/cgi/CgiProcess.cpp \
 			$(SRC_DIR)/client/Client.cpp \
-		$(SRC_DIR)/client/ClientCgi.cpp \
+			$(SRC_DIR)/client/ClientCgi.cpp \
 			$(SRC_DIR)/client/ErrorUtils.cpp \
-		$(SRC_DIR)/client/ResponseUtils.cpp \
-		$(SRC_DIR)/client/AutoindexRenderer.cpp \
-		$(SRC_DIR)/client/StaticPathHandler.cpp \
-		$(SRC_DIR)/client/RequestProcessorUtils.cpp \
+			$(SRC_DIR)/client/ResponseUtils.cpp \
+			$(SRC_DIR)/client/AutoindexRenderer.cpp \
+			$(SRC_DIR)/client/StaticPathHandler.cpp \
+			$(SRC_DIR)/client/RequestProcessorUtils.cpp \
 			$(SRC_DIR)/client/RequestProcessor.cpp \
-		$(SRC_DIR)/http/HttpHeaderUtils.cpp \
+			$(SRC_DIR)/http/HttpHeaderUtils.cpp \
 			$(SRC_DIR)/http/HttpParser.cpp \
 			$(SRC_DIR)/http/HttpParserStartLine.cpp \
 			$(SRC_DIR)/http/HttpParserHeaders.cpp \
 			$(SRC_DIR)/config/ServerConfig.cpp \
 			$(SRC_DIR)/config/LocationConfig.cpp \
+			$(SRC_DIR)/config/ConfigParser.cpp \
+			$(SRC_DIR)/config/ConfigException.cpp \
+			$(SRC_DIR)/config/ConfigUtils.cpp \
 			$(SRC_DIR)/http/HttpParserBody.cpp \
 			$(SRC_DIR)/http/HttpRequest.cpp \
 			$(SRC_DIR)/http/HttpResponse.cpp

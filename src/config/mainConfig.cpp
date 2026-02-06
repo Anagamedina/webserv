@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 	if (!config::utils::fileExists(configPath))
 	{
 		std::cerr << "Error: Config file: '" << configPath <<
-			"'\nPlease ensure:\n\t1. The file exists\n\t2. You have read permissions\n\t3. You are running from project root: ./webserver";
+			"'\nPlease ensure:\n\t1. The file exists\n\t2. You have read permissions\n\t3. You are running from project root: ./webserver\n";
 		return 1;
 	}
 	try

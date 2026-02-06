@@ -55,9 +55,10 @@ void RequestProcessor::process(const HttpRequest& request,
 		{
 			if (validationCode == 301 || validationCode == 302)
 			{
+				//TODO revisar redirect
 				body.clear();
 				fillBaseResponse(response, request, validationCode, shouldClose, body);
-				response.setHeader("Location", location->getRedirect());
+				response.setHeader("Location", location->getRedirectUrl());
 				//Header obligatorio: 
 				//Location: http://www.google.com
 				return;

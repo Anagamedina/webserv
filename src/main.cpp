@@ -2,6 +2,11 @@
 #include <iostream>
 #include <signal.h>
 #include <vector>
+#include <fstream>
+#include <string>
+
+#include "config/ConfigException.hpp"
+#include "config/ConfigParser.hpp"
 #include "network/ServerManager.hpp"
 #include "config/ServerConfig.hpp"
 
@@ -14,9 +19,17 @@
  * 3. Inicia el servidor en un puerto
  * 4. Ejecuta el bucle de eventos (bloquea aquí hasta que termine el proceso)
  */
-int main(int argc, char *argv[]) {
-	((void)argc, (void)argv);
-	
+int main(int argc, char* argv[])
+{
+	const std::string configPath = (argc > 1)
+										? argv[1]
+										: config::paths::default_config_path;
+	if (!config::utils::fileExists(configPath))
+	{
+		std::cerr << "Error: Config file: '" << configPath <<
+			"'\nPlease ensure:\n\t1. The file exists\n\t2. You have read permissions\n\t3. You are running from project root: ./webserver\n";
+		return 1;
+	}
 	/**
 	 * Deshabilitar SIGPIPE para evitar crashes
 	 * 
@@ -34,8 +47,12 @@ int main(int argc, char *argv[]) {
 
 	std::cout << "Esto se pone interesante" << std::endl;
 
-	try {
-		// TODO: cuando ConfigParser este listo:
+	try
+	{
+		ConfigParser parser(configPath);
+		std::cout << "Config file path: [" << parser.getConfigFilePath() <<
+			"]\n";
+		parser.parse();
 		// - ConfigParser parser("config/default.conf");
 		// - parser.parse();
 		// - std::vector<ServerConfig> servers = parser.getServers();
@@ -49,7 +66,7 @@ int main(int argc, char *argv[]) {
 
 		// Crear el gestor del servidor con la lista de servers
 		ServerManager server(&servers);
-		
+
 		/**
 		 * Iniciar el servidor en localhost:8080
 		 * 
@@ -77,12 +94,23 @@ int main(int argc, char *argv[]) {
 		 * - Ocurre un error fatal
 		 */
 		server.run();
-		
-	} catch (std::exception& e) {
+	} /*catch (std::exception& e) {
 		// Si algo sale mal durante la inicialización, mostrar el error
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;
+	}*/
+	/*catch (const ConfigException& e)
+	{
+		std::cerr << "Configuration msg_errors: " << e.what() << std::endl;
+		return 1;
+	}*/
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
 	}
+	std::flush(std::cout);
+	return 0;
 
 	return 0;
 }

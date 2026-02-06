@@ -99,7 +99,8 @@ int validateLocation(const HttpRequest& request,
                      const LocationConfig* location)
 {
 	// 1) Redirect -> responder y salir (pendiente de getters de LocationConfig)
-	if (!location->getRedirect().empty())
+	// TODO: check info
+	if (!location->getRedirectCode())
 		return 301;
 
 	// 2) Metodo permitido

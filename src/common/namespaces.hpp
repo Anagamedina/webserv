@@ -24,8 +24,9 @@ namespace config
 
 	namespace paths
 	{
-		// static const std::string default_config_path = "../config/examples/nginx.conf";
-		static const std::string default_config_path = "../config/default.conf";
+		// static const std::string default_config_path = "config/file.conf";
+		static const std::string default_config_path = "config/default.conf";
+
 		static const std::string log_file_config = "../config/logs/config-clean.log";
 		static const std::string log_file_server = "../config/logs/server.log";
 		static const std::string log_file_block = "../config/logs/block.log";
