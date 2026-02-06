@@ -1,7 +1,7 @@
 #include "StaticPathHandler.hpp"
 
 #include "ErrorUtils.hpp"
-#include "TemplateUtils.hpp"
+#include "AutoindexRenderer.hpp"
 
 #include <dirent.h>
 #include <fstream>
@@ -12,23 +12,30 @@
 
 static bool readFileToBody(const std::string& path, std::vector<char>& out)
 {
-    //Binary : los guarda tal cual. Esto permite que el servidor envíe fotos, PDFs o vídeos sin romperlos
     std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
     if (!file.is_open())
         return false;
 
     out.clear();
-    //char mide exactamente 1 byte. Es la unidad perfecta para medir datos binarios.
     char c;
     while (file.get(c))
         out.push_back(c);
     return true;
 }
 
+static bool getPathInfo(const std::string& path, bool& isDir, bool& isReg)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0)
+        return false;
+    isDir = S_ISDIR(st.st_mode);
+    isReg = S_ISREG(st.st_mode);
+    return true;
+}
+
 static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
                                                const std::string& requestPath)
 {
-    std::ostringstream html;
     std::string base = requestPath;
     if (base.empty())
         base = "/";
@@ -64,135 +71,76 @@ static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
         closedir(dir);
     }
 
-    std::string tpl;
-    if (loadTemplateFromFile("./www/templates/autoindex.html", tpl))
-    {
-        std::vector< std::pair<std::string, std::string> > vars;
-        vars.push_back(std::make_pair("{{TITLE}}", std::string("Index of ") + base));
-        vars.push_back(std::make_pair("{{ITEMS}}", items.str()));
-        std::string content = renderTemplate(tpl, vars);
-        return std::vector<char>(content.begin(), content.end());
-    }
-
-    html << "<!DOCTYPE html>\n"
-         << "<html>\n"
-         << "  <head>\n"
-         << "    <meta charset=\"utf-8\">\n"
-         << "    <title>Index of " << base << "</title>\n"
-         << "  </head>\n"
-         << "  <body>\n"
-         << "    <h1>Index of " << base << "</h1>\n"
-         << "    <ul>\n"
-         << items.str()
-         << "    </ul>\n"
-         << "  </body>\n"
-         << "</html>\n";
-
-    std::string content = html.str();
-    return std::vector<char>(content.begin(), content.end());
+    return renderAutoindexHtml(base, items.str());
 }
 
-bool handleStaticPath(const HttpRequest& request,
-                      const ServerConfig* server,
-                      const LocationConfig* location,
-                      const std::string& path,
-                      std::vector<char>& body,
-                      HttpResponse& response)
+static bool handleDirectory(const HttpRequest& request,
+                            const ServerConfig* server,
+                            const LocationConfig* location,
+                            const std::string& path,
+                            std::vector<char>& body,
+                            HttpResponse& response)
 {
-    struct stat st;
-    if (stat(path.c_str(), &st) != 0)
+    std::vector<std::string> indexes;
+    if (location)
+        indexes = location->getIndexes();
+    if (indexes.empty() && server && !server->getIndex().empty())
+        indexes.push_back(server->getIndex());
+    if (indexes.empty())
+        indexes.push_back("index.html");
+
+    bool foundIndex = false;
+    std::string indexPath;
+    for (size_t i = 0; i < indexes.size(); ++i)
     {
-        //si es distinto a cero es que la ruta no existe -> 404 error 
-        buildErrorResponse(response, request, 404, false, server);
-        return true;
+        indexPath = path;
+        if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
+            indexPath += "/";
+        indexPath += indexes[i];
+
+        bool isDir = false;
+        bool isReg = false;
+        if (getPathInfo(indexPath, isDir, isReg) && isReg)
+        {
+            foundIndex = true;
+            break;
+        }
     }
 
-    //Sin barra: El sistema busca un archivo con un nombre largo y extraño.
-    //Con barra: El sistema entiende que lo que sigue es el contenido de esa carpeta.
-    //ES UNA CARPETA? si es asi no se puede leer como un archivo debemos buscar
-    //un index 
-    if (S_ISDIR(st.st_mode))
+    if (foundIndex)
     {
-        std::vector<std::string> indexes;
-        if (location)
-            indexes = location->getIndexes();
-        if (indexes.empty() && server && !server->getIndex().empty())
-            indexes.push_back(server->getIndex());
-        if (indexes.empty())
-            indexes.push_back("index.html");
-
-        bool foundIndex = false;
-        std::string indexPath;
-        for (size_t i = 0; i < indexes.size(); ++i)
+        if (!readFileToBody(indexPath, body))
         {
-            indexPath = path;
-            //distinción entre el contenedor y el contenido.
-            //Si el usuario pidió localhost:8080/perfil/ (con barra), el path ya termina en /. No queremos añadir otra y que quede perfil//index.html.
-            //Si el usuario pidió localhost:8080/perfil (sin barra), tenemos que añadirla nosotros para poder "entrar" en la carpeta.
-            if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
-                indexPath += "/";
-            //Construye la ruta: Pega la carpeta con el nombre del archivo (ej: ./www/perfil/ + index.html).
-            //La carpeta (path): ./www/perfil
-            //El archivo (index): index.html
-            //El sistema operativo buscaría un archivo llamado perfilindex.html dentro de ./www/.
-            indexPath += indexes[i];
-
-            struct stat idx;
-
-            if (stat(indexPath.c_str(), &idx) == 0 && S_ISREG(idx.st_mode)) //es un archivo normal, no otra carpeta".
-            {
-                foundIndex = true;
-                break;
-            }
+            buildErrorResponse(response, request, 403, false, server);
+            return true;
         }
-
-        if (foundIndex)
-        {
-            if (!readFileToBody(indexPath, body))
-            {
-                buildErrorResponse(response, request, 403, false, server);
-                return true;
-            }
-            return false;
-        }
-
-        //encontro algun index? NO -> revisamos si el autoindex esta encendido
-        //si esta ON deberia mostrar la lista de archivos 
-        //si esta OFF 403 forbidden
-        //El autoindex en Nginx se utiliza para generar automáticamente un listado de archivos y carpetas en el navegador cuando se accede a un director        //io que no contiene un archivo de índice (como index.html o index.php). Habilita la visualización de archivos, 
-        //facilitando la descarga o exploración de directorios. 
-        if (location && location->getAutoIndex())
-        {
-            body = generateAutoIndexBody(path, request.getPath());
-            response.setHeader("Content-Type", "text/html");
-            return false;
-        }
-
-        buildErrorResponse(response, request, 403, false, server);
-        return true;
+        return false;
     }
 
-    //es algo "especial" de Linux algo raro ni archivo ni directorio
-    if (!S_ISREG(st.st_mode))
+    if (location && location->getAutoIndex())
     {
-        buildErrorResponse(response, request, 403, false, server);
-        return true;
+        body = generateAutoIndexBody(path, request.getPath());
+        response.setHeader("Content-Type", "text/html");
+        return false;
     }
-    
 
+    buildErrorResponse(response, request, 403, false, server);
+    return true;
+}
 
-    //En una Carpeta (S_ISDIR):
-    //El método casi siempre va a ser GET (queremos ver el índice o la lista de archivos)
-    // Archivos regulares: diferenciar metodo
+static bool handleRegularFile(const HttpRequest& request,
+                              const ServerConfig* server,
+                              const std::string& path,
+                              std::vector<char>& body,
+                              HttpResponse& response)
+{
     if (request.getMethod() == HTTP_METHOD_POST)
     {
-        //Los POST solo deberían ir a los CGIs
         buildErrorResponse(response, request, 405, false, server);
         return true;
     }
     if (request.getMethod() == HTTP_METHOD_DELETE)
     {
-        //Linux para borrar un archivo
         if (unlink(path.c_str()) == 0)
         {
             body.clear();
@@ -202,8 +150,6 @@ bool handleStaticPath(const HttpRequest& request,
         return true;
     }
 
-    //METHOD GET!! 
-
     if (!readFileToBody(path, body))
     {
         buildErrorResponse(response, request, 403, false, server);
@@ -211,4 +157,31 @@ bool handleStaticPath(const HttpRequest& request,
     }
 
     return false;
+}
+
+bool handleStaticPath(const HttpRequest& request,
+                      const ServerConfig* server,
+                      const LocationConfig* location,
+                      const std::string& path,
+                      std::vector<char>& body,
+                      HttpResponse& response)
+{
+    bool isDir = false;
+    bool isReg = false;
+    if (!getPathInfo(path, isDir, isReg))
+    {
+        buildErrorResponse(response, request, 404, false, server);
+        return true;
+    }
+
+    if (isDir)
+        return handleDirectory(request, server, location, path, body, response);
+
+    if (!isReg)
+    {
+        buildErrorResponse(response, request, 403, false, server);
+        return true;
+    }
+
+    return handleRegularFile(request, server, path, body, response);
 }

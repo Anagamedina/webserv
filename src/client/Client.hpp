@@ -2,6 +2,7 @@
 #define CLIENT_HPP
 
 #include <ctime>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,9 @@
 #include "../http/HttpParser.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
+
+class ServerManager;
+class CgiProcess;
 
 // Representa una conexion TCP con un cliente.
 // Se encarga de:
@@ -47,9 +51,21 @@ private:
     int                 _listenPort;
     ClientState         _state;
     time_t              _lastActivity; // para gestionar timeouts
+    ServerManager*      _serverManager;
+    CgiProcess*         _cgiProcess;
+    bool                _closeAfterWrite;
+    struct PendingResponse {
+        std::string data;
+        bool        closeAfter;
+        PendingResponse(const std::string& d, bool c) : data(d), closeAfter(c) {}
+    };
+    std::queue<PendingResponse> _responseQueue;
 
     // Invocado cuando el parser marca una HttpRequest como completa.
-    void handleCompleteRequest();
+    bool handleCompleteRequest();
+    void enqueueResponse(const std::vector<char>& data, bool closeAfter);
+    bool startCgiIfNeeded(const HttpRequest& request);
+    void finalizeCgiResponse();
 
 public:
     Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
@@ -64,6 +80,8 @@ public:
     // Manejo de eventos
     void handleRead(); 
     void handleWrite();
+    void handleCgiPipe(int pipe_fd, uint32_t events);
+    void setServerManager(ServerManager* serverManager);
 
     // Construccion de respuesta
     void buildResponse();

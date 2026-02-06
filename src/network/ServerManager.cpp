@@ -139,6 +139,7 @@ void ServerManager::handleNewConnection(int listener_fd) {
     epoll_.addFd(client_fd, EPOLLIN | EPOLLRDHUP);
 
     Client* new_client = new Client(client_fd, configs_, port);
+    new_client->setServerManager(this);
     clients_[client_fd] = new_client;
 
     std::cout << "New client connected on port " << listener->getPort()
@@ -198,12 +199,12 @@ void ServerManager::handleCgiPipeEvent(int pipe_fd, uint32_t events) {
     return;
   }
 
-  //Client* client = cgi_pipes_[pipe_fd];
-
-  // Delegate CGI pipe handling to the Client
-  (void)events;
-  // TODO: integrar manejo de pipes CGI cuando Client exponga handleCgiPipe.
-  // Por ahora, no hacemos nada para evitar dependencias con Client.
+  Client* client = cgi_pipes_[pipe_fd];
+  if (client)
+  {
+    client->handleCgiPipe(pipe_fd, events);
+    updateClientEvents(client->getFd());
+  }
 }
 
 void ServerManager::registerCgiPipe(int pipe_fd, uint32_t events,

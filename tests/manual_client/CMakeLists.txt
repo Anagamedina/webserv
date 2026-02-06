@@ -4,12 +4,14 @@ set(CLIENT_INC_DIR ${CMAKE_SOURCE_DIR}/src/client)
 add_executable(manual_client
         manual_client.cpp
         ../../src/client/Client.cpp
+        ../../src/client/ClientCgi.cpp
         ../../src/client/ErrorUtils.cpp
         ../../src/client/ResponseUtils.cpp
+        ../../src/client/AutoindexRenderer.cpp
         ../../src/client/StaticPathHandler.cpp
         ../../src/client/RequestProcessorUtils.cpp
-        ../../src/client/TemplateUtils.cpp
         ../../src/client/RequestProcessor.cpp
+        ../../src/http/HttpHeaderUtils.cpp
         ../../src/http/HttpParser.cpp
         ../../src/http/HttpParserStartLine.cpp
         ../../src/http/HttpParserHeaders.cpp

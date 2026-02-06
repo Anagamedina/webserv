@@ -1,52 +1,11 @@
 #include "HttpParser.hpp"
+#include "HttpHeaderUtils.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <cstdlib>
 
 
 
-/**
- * @brief Funciones auxiliares para el parser de headers
- * 
- * @note son funciones auxiliares para el parser de headers
- * y se definen en el namespace para que no interfieran con el resto del codigo
- * ejemplo de value: "   Hello, World!   "
- * trimSpaces devuelve "Hello, World!"
- * ejemplo de value: "   Hello, World!   "
- * trimSpaces devuelve "Hello, World!"
- */
-namespace http_parser_headers_helpers {
-
-std::string trimSpaces(const std::string &value)
-{
-    std::string::size_type start;
-    std::string::size_type end;
-    //busca la primera posicion no vacia de la cadena, ignorando los espacios y tabs al principio y al final de la cadena 
-    start = value.find_first_not_of(" \t");
-    if (start == std::string::npos)
-        return "";
-    end = value.find_last_not_of(" \t");
-    return value.substr(start, end - start + 1);
-}
-
-std::string toLowerCopy(const std::string &value)
-{
-    std::string out = value;
-    std::transform(out.begin(), out.end(), out.begin(), ::tolower);
-    return out;
-}
-
-} // namespace http_parser_headers_helpers
-
-
-/**
- * @brief Alias para el namespace http_parser_headers_helpers
- * 
- * @note es un alias para el namespace http_parser_headers_helpers
- * y se define en el namespace para que no interfieran con el resto del codigo
- */
-namespace headers_helpers = http_parser_headers_helpers;
+// Helpers moved to HttpHeaderUtils
 
 /**
  * @brief Divide una linea de header en key y value
@@ -56,17 +15,7 @@ bool HttpParser::splitHeaderLine(const std::string &line,
                                  std::string &key,
                                  std::string &value)
 {
-    std::string::size_type colon; 
-    std::string rawValue; 
-       
-    colon = line.find(':');
-    if (colon == std::string::npos)
-        return false;
-
-    key = line.substr(0, colon);
-    rawValue = line.substr(colon + 1);
-    value = headers_helpers::trimSpaces(rawValue);
-    return true;
+    return http_header_utils::splitHeaderLine(line, key, value);
 }
 
 
@@ -86,7 +35,7 @@ void HttpParser::handleHeader(const std::string &key, const std::string &value)
     // Normalizamos una sola vez y usamos la misma clave para:
     // 1) guardar en el mapa
     // 2) comparar
-    keyLower = headers_helpers::toLowerCopy(key);
+    keyLower = http_header_utils::toLowerCopy(key);
     _request.addHeaders(keyLower, value);
     if (keyLower == "content-length")
     {
@@ -100,7 +49,7 @@ void HttpParser::handleHeader(const std::string &key, const std::string &value)
     {
         //Esto hará que tu parser ignore el Content-Length y use la lógica 
         //de los "vagones" (hexadecimales) que programaste en parseBodyChunked()
-        valueLower = headers_helpers::toLowerCopy(value);
+        valueLower = http_header_utils::toLowerCopy(value);
         if (valueLower.find("chunked") != std::string::npos)
             _isChunked = true;
     }

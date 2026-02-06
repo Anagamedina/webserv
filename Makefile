@@ -34,13 +34,17 @@ SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/network/EpollWrapper.cpp \
 			$(SRC_DIR)/network/TcpListener.cpp \
 			$(SRC_DIR)/network/ServerManager.cpp \
+		$(SRC_DIR)/cgi/CgiExecutor.cpp \
+		$(SRC_DIR)/cgi/CgiProcess.cpp \
 			$(SRC_DIR)/client/Client.cpp \
+		$(SRC_DIR)/client/ClientCgi.cpp \
 			$(SRC_DIR)/client/ErrorUtils.cpp \
 		$(SRC_DIR)/client/ResponseUtils.cpp \
+		$(SRC_DIR)/client/AutoindexRenderer.cpp \
 		$(SRC_DIR)/client/StaticPathHandler.cpp \
 		$(SRC_DIR)/client/RequestProcessorUtils.cpp \
-		$(SRC_DIR)/client/TemplateUtils.cpp \
 			$(SRC_DIR)/client/RequestProcessor.cpp \
+		$(SRC_DIR)/http/HttpHeaderUtils.cpp \
 			$(SRC_DIR)/http/HttpParser.cpp \
 			$(SRC_DIR)/http/HttpParserStartLine.cpp \
 			$(SRC_DIR)/http/HttpParserHeaders.cpp \

@@ -1,14 +1,7 @@
 #include "HttpResponse.hpp"
+#include "HttpHeaderUtils.hpp"
 
 #include <sstream>
-#include <algorithm>
-
-static std::string toLowerCopy(const std::string& input)
-{
-    std::string result = input;
-    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-    return result;
-}
 
 static std::string reasonPhraseForStatus(int code)
 {
@@ -81,7 +74,7 @@ void HttpResponse::setStatusCode(int code)
 
 void HttpResponse::setHeader(const std::string& key, const std::string& value)
 {
-    _headers[toLowerCopy(key)] = value;
+    _headers[http_header_utils::toLowerCopy(key)] = value;
 }
 
 void HttpResponse::setVersion(const std::string& version)
@@ -129,7 +122,7 @@ std::vector<char> HttpResponse::serialize() const
     for (HeaderMap::const_iterator it = _headers.begin();
             it != _headers.end(); ++it) {
         //evitar duplicar el header content-length
-        if (toLowerCopy(it->first) == "content-length")
+        if (http_header_utils::toLowerCopy(it->first) == "content-length")
             continue;
         buffer << it->first << ": " << it->second << "\r\n";
     }
@@ -158,7 +151,7 @@ void HttpResponse::setContentType(const std::string& filename)
     if (dotPos == std::string::npos)
         ext = "";
     else
-        ext = toLowerCopy(filename.substr(dotPos + 1));
+        ext = http_header_utils::toLowerCopy(filename.substr(dotPos + 1));
 
     std::string contentType = "application/octet-stream";
     if (ext == "html" || ext == "htm")

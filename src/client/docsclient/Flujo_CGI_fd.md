@@ -15,9 +15,10 @@ El que maneja fds y epoll es el **ServerManager**, y el que inicia el CGI es el 
    - El **Client** llama a `CgiExecutor`
    - `CgiExecutor` crea pipes (`pipe_in`, `pipe_out`) y `fork`
    - Devuelve un `CgiProcess` con esos fds
-5) **Client** pide a `ServerManager` registrar `pipe_out` en epoll
+5) **Client** pide a `ServerManager` registrar `pipe_in` (EPOLLOUT) y `pipe_out` (EPOLLIN)
 6) **ServerManager** recibe eventos del pipe y los reenvía al **Client**
-7) **Client** lee salida CGI → construye `HttpResponse` → envía al socket
+7) **Client** escribe el body al CGI y lee la salida
+8) **Client** construye `HttpResponse` → envía al socket
 
 ---
 

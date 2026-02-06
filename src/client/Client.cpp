@@ -13,12 +13,21 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _configs(configs),
       _listenPort(listenPort),
       _state(STATE_IDLE),
-      _lastActivity(std::time(0))
+      _lastActivity(std::time(0)),
+      _serverManager(0),
+      _cgiProcess(0),
+      _closeAfterWrite(false),
+      _responseQueue()
 {
 }
 
 Client::~Client()
 {
+    if (_cgiProcess)
+    {
+        delete _cgiProcess;
+        _cgiProcess = 0;
+    }
 }
 
 int Client::getFd() const
@@ -41,7 +50,6 @@ time_t Client::getLastActivity() const
     return _lastActivity;
 }
 
-
 //MOTOR DE ENTRADA  
 //ESTE METODO SE LLAMARA CUANDO EPOLL NOS AVISE CUANDO HAY EPOLLIN
 
@@ -58,14 +66,28 @@ void Client::handleRead()
     bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
     if (bytesRead > 0)
     {
-    	//TODO crear una macro maxtime
         _lastActivity = std::time(0);
         if (_state == STATE_IDLE)
             _state = STATE_READING_HEADER;
+
         _parser.consume(std::string(buffer, bytesRead));
 
-        if (_parser.getState() == COMPLETE || _parser.getState() == ERROR)
+        while (_parser.getState() == COMPLETE)
+        {
+            bool shouldClose = handleCompleteRequest();
+            if (_cgiProcess)
+                return;
+            if (shouldClose)
+                return;
+            _parser.reset();
+            _parser.consume("");
+        }
+
+        if (_parser.getState() == ERROR)
+        {
             handleCompleteRequest();
+            return;
+        }
     }
     else if (bytesRead == 0)
     {
@@ -103,16 +125,23 @@ void Client::handleWrite() {
     
     if (_outBuffer.empty())
     {
-        const HttpRequest& request = _parser.getRequest();
-        bool shouldClose = (_parser.getState() == ERROR) || request.shouldCloseConnection();
-        if (shouldClose)
-            _state = STATE_CLOSED;
-        else
+        if (_closeAfterWrite)
         {
-            _parser.reset();
-            _inBuffer.clear();
-            _state = STATE_IDLE;
+            _state = STATE_CLOSED;
+            return;
         }
+
+        if (!_responseQueue.empty())
+        {
+            PendingResponse next = _responseQueue.front();
+            _responseQueue.pop();
+            _outBuffer = next.data;
+            _closeAfterWrite = next.closeAfter;
+            _state = STATE_WRITING_RESPONSE;
+            return;
+        }
+
+        _state = STATE_IDLE;
     }
 }
 
@@ -145,14 +174,42 @@ void Client::buildResponse() {
     //     _processor.process(request, _configs, _listenPort,
     //                        _parser.getState() == ERROR, _response);
     // }
+    if (startCgiIfNeeded(request))
+        return;
     _processor.process(request, _configs, _listenPort, _parser.getState() == ERROR, _response);
 }
 
-void Client::handleCompleteRequest()
+bool Client::handleCompleteRequest()
 {
+    const HttpRequest& request = _parser.getRequest();
+    bool shouldClose = (_parser.getState() == ERROR) || request.shouldCloseConnection();
     buildResponse();
+    if (_cgiProcess)
+    {
+        // Esperando respuesta CGI; la respuesta se enviara cuando termine.
+        // Ejemplo (comentado):
+        // if (_cgiProcess->isHeadersComplete()) {
+        //     // Ya tenemos headers+body del CGI en buffers internos.
+        //     finalizeCgiResponse();
+        //     _cgiProcess = 0;
+        // }
+        return true;
+    }
     std::vector<char> serialized = _response.serialize();
-    _outBuffer.assign(serialized.begin(), serialized.end());
-    _state = STATE_WRITING_RESPONSE;
+    enqueueResponse(serialized, shouldClose);
+    return shouldClose;
+}
+
+void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter)
+{
+    std::string payload(data.begin(), data.end());
+    if (_outBuffer.empty())
+    {
+        _outBuffer = payload;
+        _closeAfterWrite = closeAfter;
+        _state = STATE_WRITING_RESPONSE;
+        return;
+    }
+    _responseQueue.push(PendingResponse(payload, closeAfter));
 }
 

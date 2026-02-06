@@ -109,22 +109,16 @@ Apuntes extra sobre el flujo correcto (lo que nos recomendaron y ya corregimos):
   - DELETE: borrar con unlink.
   - POST: normalmente no permitido en estaticos (salvo uploads/CGI).
 
-## Pasos actuales del flujo (y por qué)
-
-1) Inicialización  
+## Pasos actuales del flujo (y por qué)1) Inicialización  
    - status/body por defecto  
    - shouldClose según Connection  
-   Por qué: necesitamos un estado base y saber si cerrar la conexión.
-
-2) ServerConfig por puerto/IP  
+   Por qué: necesitamos un estado base y saber si cerrar la conexión.2) ServerConfig por puerto/IP  
    - match por puerto → elegir ServerConfig correcto  
    - si no hay match → usar el primero  
    Por qué: es obligatorio servir contenido distinto por puerto.3) Location match  
    - usar server.getLocations() y la URI  
    - elegir la LocationConfig que mejor encaja  
-   Por qué: cada location define reglas específicas.
-
-4) Validaciones  
+   Por qué: cada location define reglas específicas.4) Validaciones  
    - método permitido  
    - body size  
    - redirect  
