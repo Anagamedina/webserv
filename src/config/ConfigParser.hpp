@@ -1,6 +1,8 @@
 #ifndef WEBSERV_CONFIGPARSER_HPP
 #define WEBSERV_CONFIGPARSER_HPP
 
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -12,14 +14,13 @@ public:
 	ConfigParser();
 	explicit ConfigParser(const std::string& configFile);
 	~ConfigParser();
-
-	//	Getters and Setters
-	std::string& getConfigFilePath();
+	//	Getters
+	const std::string& getConfigFilePath() const;
 	size_t getServerCount() const;
+	const std::vector<ServerConfig>& getServers() const;
+	// Setters
 
 	void parse();
-
-	const std::vector<ServerConfig>& getServers() const;
 
 private:
 	std::string config_file_path_;
@@ -32,28 +33,41 @@ private:
 	ConfigParser(const ConfigParser& other);
 	ConfigParser& operator=(const ConfigParser& other);
 
-	//	different validations.
-	bool ValidateFileExtension() const;
-	bool ValidateFilePermissions() const;
+	//	validations
+	bool validateFileExtension() const;
+	bool validateFilePermissions() const;
+	bool validateBalancedBrackets() const;
 
-	std::string CleanFileConfig();
-	bool ValidateCurlyBrackets() const;
+	std::string preprocessConfigFile() const;
 
-	//	auxiliar member function
-	static void RemoveComments(std::string& line);
-	void DebugConfigLog() const;
-	static std::string TrimLine(const std::string& line);
-	static std::string RemoveSpacesAndTabs(std::string& line);
-	static std::string NormalizeSpaces(const std::string& line);
+	void loadServerBlocks();
+	void splitContentIntoServerBlocks(const std::string& content,
+									const std::string& typeOfExtraction);
 
-	void MachineStatesOfConfigFile();
-	void extractServerBlock(const std::string& content, const std::string& typeOfExtraction);
-	void parserServerBlocks();
-	
-	ServerConfig parseServerBlock(const std::string& block);
-	LocationConfig parseLocationBlock(const std::string& block);
+	void parseAllServerBlocks();
+	void parseListen(ServerConfig& server,
+					const std::vector<std::string>& tokens);
+	void parseMaxSizeBody(ServerConfig& server,
+						std::vector<std::string>& tokens);
+	void parseErrorPage(ServerConfig& server, std::vector<std::string>& tokens);
+	void parseUploadBonus(LocationConfig& loc,
+						std::vector<std::string>& locTokens);
+	void parseReturn(LocationConfig& loc, std::vector<std::string>& locTokens);
+	void parseRoot(ServerConfig& server,
+					const std::vector<std::string>& tokens);
+	void parseIndex(ServerConfig& server,
+					const std::vector<std::string>& tokens);
+	void parseCgi(LocationConfig& loc, const std::vector<std::string>& tokens);
+	void parseServerName(ServerConfig& server,
+						const std::vector<std::string>& tokens);
+	void parseLocationBlock(ServerConfig& server, std::stringstream& ss,
+							std::string& line,
+							std::vector<std::string>& tokens);
+
+	//	TODO: move to serverconfig like function()
+	ServerConfig parseSingleServerBlock(const std::string& blockContent);
 };
 
-//ostream
+// ostream
 
-#endif //WEBSERV_CONFIGPARSER_HPP
+#endif // WEBSERV_CONFIGPARSER_HPP

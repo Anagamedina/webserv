@@ -95,3 +95,6 @@ webserver
 tests/manual_http_parser
 tests/manual_http_request
 .idea/
+
+/config/logs/
+.cache

@@ -1,20 +1,21 @@
 #include "LocationConfig.hpp"
 #include <iostream>
-#include <algorithm>
 
 LocationConfig::LocationConfig() :
-	autoindex_(false)
+	autoindex_(false), redirect_code_(-1)
 {
 }
 
 LocationConfig::LocationConfig(const LocationConfig& other) :
 	path_(other.path_),
 	root_(other.root_),
-	index_(other.index_),
-	methods_(other.methods_),
+	indexes_(other.indexes_),
+	allowed_methods_(other.allowed_methods_),
 	autoindex_(other.autoindex_),
 	upload_store_(other.upload_store_),
-	redirect_(other.redirect_)
+	redirect_code_(other.redirect_code_),
+	redirect_url_(other.redirect_url_),
+	cgi_handlers_(other.cgi_handlers_)
 {
 }
 
@@ -24,11 +25,13 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other)
 	{
 		path_ = other.path_;
 		root_ = other.root_;
-		index_ = other.index_;
-		methods_ = other.methods_;
+		indexes_ = other.indexes_;
+		allowed_methods_ = other.allowed_methods_;
 		autoindex_ = other.autoindex_;
 		upload_store_ = other.upload_store_;
-		redirect_ = other.redirect_;
+		redirect_code_ = other.redirect_code_;
+		redirect_url_ = other.redirect_url_;
+		cgi_handlers_ = other.cgi_handlers_;
 	}
 	return *this;
 }
@@ -42,35 +45,103 @@ void LocationConfig::setRoot(const std::string& root) { root_ = root; }
 
 void LocationConfig::addIndex(const std::string& index)
 {
-	index_.push_back(index);
+	indexes_.push_back(index);
 }
 
 void LocationConfig::addMethod(const std::string& method)
 {
-	methods_.push_back(method);
+	allowed_methods_.push_back(method);
 }
 
-void LocationConfig::setAutoIndex(bool autoindex) { autoindex_ = autoindex; }
-void LocationConfig::setUploadStore(const std::string& store) { upload_store_ = store; }
-void LocationConfig::setRedirect(const std::string& redirect) { redirect_ = redirect; }
+void LocationConfig::setAutoIndex(const bool autoindex)
+{
+	autoindex_ = autoindex;
+}
+
+void LocationConfig::setUploadStore(const std::string& store)
+{
+	upload_store_ = store;
+}
+
+void LocationConfig::setRedirectCode(const int integerCode)
+{
+	redirect_code_ = integerCode;
+}
+
+void LocationConfig::setRedirectUrl(const std::string& redirectUrl)
+{
+	redirect_url_ = redirectUrl;
+}
+
+void LocationConfig::addCgiHandler(const std::string& extension,
+									const std::string& binaryPath)
+{
+	cgi_handlers_.insert(
+		std::pair<std::string, std::string>(extension, binaryPath));
+}
 
 const std::string& LocationConfig::getPath() const { return path_; }
 const std::string& LocationConfig::getRoot() const { return root_; }
-const std::vector<std::string>& LocationConfig::getIndexes() const { return index_; }
-const std::vector<std::string>& LocationConfig::getMethods() const { return methods_; }
+
+const std::vector<std::string>& LocationConfig::getIndexes() const
+{
+	return indexes_;
+}
+
+const std::vector<std::string>& LocationConfig::getMethods() const
+{
+	return allowed_methods_;
+}
+
 bool LocationConfig::getAutoIndex() const { return autoindex_; }
-const std::string& LocationConfig::getUploadStore() const { return upload_store_; }
-const std::string& LocationConfig::getRedirect() const { return redirect_; }
+
+const std::string& LocationConfig::getUploadStore() const
+{
+	return upload_store_;
+}
+
+int LocationConfig::getRedirectCode() const { return redirect_code_; }
+
+const std::string& LocationConfig::getRedirectUrl() const
+{
+	return redirect_url_;
+}
+
+std::string LocationConfig::getCgiPath(const std::string& extension) const
+{
+	const std::map<std::string, std::string>::const_iterator it =
+		cgi_handlers_.
+		find(extension);
+
+	if (it != cgi_handlers_.end())
+	{
+		return it->second;
+	}
+	return "";
+}
+
+const std::map<std::string, std::string>& LocationConfig::getCgiHandlers() const
+{
+	return cgi_handlers_;
+}
 
 bool LocationConfig::isMethodAllowed(const std::string& method) const
 {
-	if (methods_.empty())
-		return false; // Default safe policy? Or allow all? Usually allow all if empty?
-		// Nginx default is GET only if no limit_except.
-		// For now, let's assume if empty, we might need default, but returning false is safer.
-	for (size_t i = 0; i < methods_.size(); ++i)
+	// Default safe policy? Or allow all? Usually allow all if empty?
+	// Nginx default is GET only if no limit_except.
+	if (!allowed_methods_.empty())
 	{
-		if (methods_[i] == method)
+		if (method == config::section::method_head || method ==
+			config::section::method_get)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	for (size_t i = 0; i < allowed_methods_.size(); ++i)
+	{
+		if (allowed_methods_[i] == method)
 			return true;
 	}
 	return false;
@@ -79,25 +150,4 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const
 void LocationConfig::print() const
 {
 	std::cout << *this << std::endl;
-}
-
-std::ostream& operator<<(std::ostream& os, const LocationConfig& config)
-{
-	os << "  Location: " << config.path_ << "\n"
-	   << "    Root: " << config.root_ << "\n"
-	   << "    AutoIndex: " << (config.autoindex_ ? "on" : "off") << "\n"
-	   << "    Upload Store: " << config.upload_store_ << "\n"
-	   << "    Redirect: " << config.redirect_ << "\n";
-	
-	os << "    Indexes: ";
-	for (size_t i = 0; i < config.index_.size(); ++i)
-		os << config.index_[i] << " ";
-	os << "\n";
-
-	os << "    Methods: ";
-	for (size_t i = 0; i < config.methods_.size(); ++i)
-		os << config.methods_[i] << " ";
-	os << "\n";
-
-	return os;
 }

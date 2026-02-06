@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Webserv",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/webserver",
+            "args": ["../config/examples/upload.conf"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",  // o "lldb" en Mac
+            // "setupCommands": [...]
+        }
+    ]
+}

@@ -1,0 +1,42 @@
+1. Abrir archivo .conf
+    comprobar que el archivo tenga permisos, no este vacio , tenga la extension correcta
+   ↓
+2. Leer línea por línea
+    leer archivo y mirar la sintaxis que ha de existir en el archivo
+   ↓
+
+3. Eliminar comentarios (#)  ?????????????????/
+   ↓
+
+4. Ignorar líneas vacías
+   ↓
+5. Detectar bloques { }
+   ↓
+6. Parsear directivas según contexto (server/location)
+   ↓
+7. Validar valores
+   ↓
+8. Almacenar en estructuras
+
+
+
+
+1.2 ServerConfig.hpp
+Debe almacenar:
+
+Puerto (listen)
+Host (host)
+Server names (server_name)
+Tamaño máximo del body (client_max_body_size)
+Páginas de error (error_page)
+Locations (location {} blocks)
+1.3 LocationConfig.hpp
+Debe almacenar:
+
+Ruta (/upload, /, etc.)
+Root directory
+Index files
+Métodos permitidos (GET, POST, DELETE)
+Autoindex on/off
+Upload directory
+Redirecciones
