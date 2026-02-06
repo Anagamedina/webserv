@@ -23,11 +23,13 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
 
 Client::~Client()
 {
+    /*
     if (_cgiProcess)
     {
         delete _cgiProcess;
         _cgiProcess = 0;
     }
+*/
 }
 
 int Client::getFd() const

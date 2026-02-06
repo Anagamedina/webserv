@@ -80,7 +80,7 @@ public:
     // Manejo de eventos
     void handleRead(); 
     void handleWrite();
-    void handleCgiPipe(int pipe_fd, uint32_t events);
+    void handleCgiPipe(int pipe_fd, size_t events);
     void setServerManager(ServerManager* serverManager);
 
     // Construccion de respuesta

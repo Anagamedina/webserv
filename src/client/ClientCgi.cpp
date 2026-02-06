@@ -90,7 +90,7 @@ void Client::finalizeCgiResponse()
     enqueueResponse(serialized, shouldClose);
 }
 
-void Client::handleCgiPipe(int pipe_fd, uint32_t events)
+void Client::handleCgiPipe(int pipe_fd, size_t events)
 {
     if (_cgiProcess == 0)
         return;
