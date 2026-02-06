@@ -298,12 +298,12 @@ void ConfigParser::parseListen(ServerConfig& server,
 	std::string value = config::utils::removeSemicolon(tokens[1]);
 	size_t pos = value.find(':');
 
-	 /*
-	 std::cout << "current directive: [" << directive << "]" << std::endl;
-	 std::cout << "value [" << value << "]" << std::endl;
+	/*
+	std::cout << "current directive: [" << directive << "]" << std::endl;
+	std::cout << "value [" << value << "]" << std::endl;
 
-		function to check if pattern is correct respect to PORT:IP
-	 8080:192.178.1.1
+			function to check if pattern is correct respect to PORT:IP
+	8080:192.178.1.1
 	*/
 	if (pos != std::string::npos)
 	{
@@ -415,14 +415,14 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
 	// TODO: Opcional: podriamos verificar que el directorio existe o se
 	// puede crear
 	/*
-											if
-		(!config::utils::directoryExists(uploadPath))
-											{
-															std::cerr << "Warning:
-		upload_store directory does not exist: "
-																							<< uploadPath;
-											}
-											*/
+																					if
+			(!config::utils::directoryExists(uploadPath))
+																					{
+																													std::cerr << "Warning:
+			upload_store directory does not exist: "
+																																													<< uploadPath;
+																					}
+																					*/
 	loc.setUploadStore(uploadPathClean);
 }
 
@@ -482,13 +482,118 @@ void ConfigParser::parseIndex(ServerConfig& server,
 	}
 }
 
+void ConfigParser::parseCgi(LocationConfig& loc,
+							const std::vector<std::string>& tokens)
+{
+	if (tokens.size() < 3)
+	{
+		throw ConfigException("Missing arguments for cgi directive");
+	}
+	std::string extension = tokens[1];
+	std::string binaryPath = config::utils::removeSemicolon(tokens[2]);
+
+	if (extension[0] != '.')
+	{
+		throw ConfigException("CGI extension must start with '.' " + extension);
+	}
+
+	loc.addCgiHandler(extension, binaryPath);
+}
+
 void ConfigParser::parseServerName(ServerConfig& server,
 									const std::vector<std::string>& tokens)
 {
 	server.setServerName(config::utils::removeSemicolon(tokens[1]));
 }
 
-ServerConfig ConfigParser::parseSingleServerBlock(const std::string& blockContent)
+void ConfigParser::parseLocationBlock(ServerConfig& server,
+									std::stringstream& ss, std::string& line,
+									std::vector<std::string>& tokens)
+{
+	size_t pathIndex = 1;
+	std::string modifier = ""; // +, ~, ~*, ^~
+
+	if (tokens.size() > 2 &&
+		(tokens[1] == config::section::exact_match_modifier ||
+			tokens[1] == config::section::preferential_prefix_modifier))
+	{
+		modifier = tokens[1];
+		pathIndex = 2;
+	}
+
+	std::string locationPath = tokens[pathIndex];
+	LocationConfig loc;
+	loc.setPath(locationPath);
+
+	while (std::getline(ss, line))
+	{
+		line = config::utils::trimLine(line);
+
+		if (line.empty())
+			continue;
+		std::vector<std::string> locTokens = config::utils::tokenize(line);
+		if (locTokens.empty())
+			continue;
+		const std::string& directive = locTokens[0];
+		if (directive == "}")
+		{
+			break; // End of location block
+		}
+		else if (directive == config::section::location)
+		{
+			throw ConfigException(
+				config::errors::invalid_new_location_block + line);
+		}
+		else if (directive == config::section::root)
+		{
+			loc.setRoot(config::utils::removeSemicolon(locTokens[1]));
+		}
+		else if (directive == config::section::index)
+		{
+			for (size_t i = 1; i < locTokens.size(); ++i)
+			{
+				loc.addIndex(config::utils::removeSemicolon(locTokens[i]));
+			}
+		}
+		else if (directive == config::section::autoindex)
+		{
+			std::string val = config::utils::removeSemicolon(locTokens[1]);
+			if (val != config::section::autoindex_on ||
+				val != config::section::autoindex_off)
+			{
+				throw ConfigException(config::errors::invalid_autoindex);
+			}
+			loc.setAutoIndex(val == config::section::autoindex_on);
+		}
+		else if (directive == config::section::methods ||
+			directive == config::section::allow_methods ||
+			directive == config::section::limit_except)
+		{
+			for (size_t i = 1; i < locTokens.size(); ++i)
+			{
+				loc.addMethod(config::utils::removeSemicolon(locTokens[i]));
+			}
+		}
+		else if (directive == config::section::return_str)
+		{
+			parseReturn(loc, locTokens);
+		}
+		else if (directive == config::section::uploads_bonus ||
+			directive == config::section::upload_bonus)
+		{
+			parseUploadBonus(loc, locTokens);
+		}
+		else if (directive == config::section::cgi ||
+			directive == config::section::cgi_fast)
+		{
+			parseCgi(loc, locTokens);
+		}
+	}
+	server.addLocation(loc);
+}
+
+ServerConfig
+ConfigParser::parseSingleServerBlock(const std::string& blockContent)
 {
 	ServerConfig server;
 	std::stringstream ss(blockContent);
@@ -534,85 +639,7 @@ ServerConfig ConfigParser::parseSingleServerBlock(const std::string& blockConten
 		//	TODO: this case fail(the char '='): location = /50x.html {
 		else if (directive == config::section::location)
 		{
-			size_t pathIndex = 1;
-			std::string modifier = ""; // +, ~, ~*, ^~
-
-			if (tokens.size() > 2 &&
-				(tokens[1] == config::section::exact_match_modifier ||
-					tokens[1] == config::section::preferential_prefix_modifier))
-			{
-				modifier = tokens[1];
-				pathIndex = 2;
-			}
-
-			std::string locationPath = tokens[pathIndex];
-			LocationConfig loc;
-			loc.setPath(locationPath);
-
-			while (std::getline(ss, line))
-			{
-				// config::utils::removeComments(line); // Tokenize handles comments
-				line = config::utils::trimLine(line);
-
-				if (!line.empty())
-				{
-					std::vector<std::string> locTokens =
-						config::utils::tokenize(line);
-					if (locTokens.empty())
-					{
-						continue;
-					}
-					if (locTokens[0] == "}")
-					{
-						break; // End of location block
-					}
-					if (locTokens[0] == config::section::root)
-					{
-						loc.setRoot(
-							config::utils::removeSemicolon(locTokens[1]));
-					}
-					else if (locTokens[0] == config::section::index)
-					{
-						for (size_t i = 1; i < locTokens.size(); ++i)
-						{
-							loc.addIndex(
-								config::utils::removeSemicolon(locTokens[i]));
-						}
-					}
-					else if (locTokens[0] == config::section::autoindex)
-					{
-						std::string val = config::utils::removeSemicolon(
-							locTokens[1]);
-						if (val != config::section::autoindex_on ||
-							val != config::section::autoindex_off)
-						{
-							throw ConfigException(
-								config::errors::invalid_autoindex);
-						}
-						loc.setAutoIndex(val == config::section::autoindex_on);
-					}
-					else if (locTokens[0] == config::section::methods ||
-						locTokens[0] == config::section::allow_methods ||
-						locTokens[0] == config::section::limit_except)
-					{
-						for (size_t i = 1; i < locTokens.size(); ++i)
-						{
-							loc.addMethod(
-								config::utils::removeSemicolon(locTokens[i]));
-						}
-					}
-					else if (locTokens[0] == config::section::return_str)
-					{
-						parseReturn(loc, locTokens);
-					}
-					else if (locTokens[0] == config::section::uploads_bonus ||
-						locTokens[0] == config::section::upload_bonus)
-					{
-						parseUploadBonus(loc, locTokens);
-					}
-				}
-			}
-			server.addLocation(loc);
+			parseLocationBlock(server, ss, line, tokens);
 		}
 		++indexTokens;
 	}

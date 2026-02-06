@@ -53,6 +53,7 @@ namespace config
 		static const std::string invalid_http_status_code = "Invalid HTTP status code.";
 		static const std::string invalid_autoindex= "autoindex must be 'on' or 'off'.";
 		static const std::string missing_args_in_index= "Missing arguments in 'index' directive.";
+		static const std::string invalid_new_location_block= "Invalid nested new 'location' directive.";
 	}
 
 	namespace section
@@ -90,6 +91,8 @@ namespace config
 		static const int max_port = 65535;
 		static const std::string method_get = "GET";
 		static const std::string method_head = "HEAD";
+		static const std::string cgi= "cgi";
+		static const std::string cgi_fast= "fastcgi_pass";
 	}
 
 	enum ParserState
