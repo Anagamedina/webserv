@@ -1,15 +1,10 @@
 #include "ConfigParser.hpp"
 #include "LocationConfig.hpp"
-
-#include <fstream>
-#include <iostream>
-#include <iterator>
-#include <sstream>
-#include <string>
-
 #include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
 #include "ConfigUtils.hpp"
+
+#include <sstream>
 
 ConfigParser::ConfigParser() : servers_count_(0U)
 {
@@ -24,10 +19,22 @@ ConfigParser::~ConfigParser()
 {
 }
 
+//	===================== Getters
+
+const std::string& ConfigParser::getConfigFilePath() const { return config_file_path_; }
+
+size_t ConfigParser::getServerCount() const { return servers_count_; }
+
+const std::vector<ServerConfig>& ConfigParser::getServers() const
+{
+	return servers_;
+}
+
 //	============= PRIVATE CONSTRUCTORS ===============
 
 ConfigParser::ConfigParser(const ConfigParser& other)
 	: config_file_path_(other.config_file_path_),
+	clean_file_str_(other.clean_file_str_),
 	servers_count_(other.servers_count_),
 	raw_server_blocks_(other.raw_server_blocks_), servers_(other.servers_)
 {
@@ -47,19 +54,19 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other)
 	return *this;
 }
 
-//	Getters and Setters
-
-std::string& ConfigParser::getConfigFilePath() { return config_file_path_; }
-
-size_t ConfigParser::getServerCount() const { return servers_count_; }
-
+/**
+ * manage if config_file_path_:
+ * has valid size of length
+ * has extension '.conf'
+ * @return true or false
+ */
 /**
  * main function of parsing
  *
  */
 void ConfigParser::parse()
 {
-	if (!ValidateFileExtension())
+	if (!validateFileExtension())
 	{
 		throw ConfigException(config::errors::invalid_extension +
 			config_file_path_);
@@ -68,7 +75,7 @@ void ConfigParser::parse()
 	{
 		std::cout << "VALID FILE EXTENSION: ✅\n";
 	}
-	if (!ValidateFilePermissions())
+	if (!validateFilePermissions())
 	{
 		throw ConfigException(
 			config::errors::cannot_open_file + config_file_path_);
@@ -78,12 +85,13 @@ void ConfigParser::parse()
 		std::cout << "VALID FILE PERMISSIONS: ✅\n";
 	}
 
-	clean_file_str_ = CleanFileConfig();
+	clean_file_str_ = preprocessConfigFile();
 	config::utils::exportContentToLogFile(clean_file_str_,
 										config::paths::log_file_config);
+	std::cout << "Exporting config file to config-clean.log";
 
 	// TODO: need to fix error order of brackets: '} {' should be error but now is
-	if (!ValidateCurlyBrackets())
+	if (!validateBalancedBrackets())
 	{
 		throw ConfigException("Invalid number of curly brackets " +
 			config_file_path_);
@@ -93,22 +101,12 @@ void ConfigParser::parse()
 		std::cout << "VALID CURLY BRACKETS PAIRS: ✅\n";
 	}
 
-	extractServerBlocks();
-	parseServers();
+	loadServerBlocks();
+	parseAllServerBlocks();
 }
 
-const std::vector<ServerConfig>& ConfigParser::getServers() const
-{
-	return servers_;
-}
-
-/**
- * manage if config_file_path_:
- * has valid size of length
- * has extension '.conf'
- * @return true or false
- */
-bool ConfigParser::ValidateFileExtension() const
+//	VALIDATIONS
+bool ConfigParser::validateFileExtension() const
 {
 	if (config_file_path_.size() < 5 ||
 		config_file_path_.substr(config_file_path_.size() - 5) !=
@@ -119,7 +117,7 @@ bool ConfigParser::ValidateFileExtension() const
 	return true;
 }
 
-bool ConfigParser::ValidateFilePermissions() const
+bool ConfigParser::validateFilePermissions() const
 {
 	std::ifstream ifs(config_file_path_.c_str());
 	if (!ifs.is_open())
@@ -127,43 +125,6 @@ bool ConfigParser::ValidateFilePermissions() const
 	ifs.close();
 	return true;
 }
-
-/**
- * RemoveComments(): if line start with '#' skip line
- * TrimLine(): if line find "\t\n\r" remove character
- * NormalizeSpaces(): replace 'X' spaces for one space ' '
- * iterate through each line of file.
- * @return
- */
-std::string ConfigParser::CleanFileConfig() const
-{
-	std::ifstream ifs(config_file_path_.c_str());
-	if (!ifs.is_open())
-	{
-		throw ConfigException(
-			config::errors::cannot_open_file + config_file_path_ +
-			" in CleanFileConfig()");
-	}
-
-	std::ostringstream logBuffer;
-	std::string line;
-	// size_t lineNumber = 0;
-
-	while (std::getline(ifs, line))
-	{
-		// ++lineNumber;
-		config::utils::removeComments(line);
-		line = config::utils::trimLine(line);
-		line = config::utils::normalizeSpaces(line);
-		if (line.empty())
-			continue;
-		// logBuffer << "|" << lineNumber << "|" << line << "\n";
-		logBuffer << line << "\n";
-	}
-	ifs.close();
-	return logBuffer.str();
-}
-
 /**
  * Usar un contador dinámico (incrementa con {, decrementa con }) que nunca baje
 de 0
@@ -180,7 +141,7 @@ de valores)
  * Mejorar mensajes de error (línea + descripción)
  * Opcional: devolver también el nivel máximo de anidamiento o lista de errores
  */
-bool ConfigParser::ValidateCurlyBrackets() const
+bool ConfigParser::validateBalancedBrackets() const
 {
 	int countBrackets = 0;
 
@@ -202,6 +163,40 @@ bool ConfigParser::ValidateCurlyBrackets() const
 	return countBrackets == 0;
 }
 
+
+/**
+ * RemoveComments(): if line start with '#' skip line
+ * TrimLine(): if line find "\t\n\r" remove character
+ * NormalizeSpaces(): replace 'X' spaces for one space ' '
+ * iterate through each line of file.
+ * @return
+ */
+std::string ConfigParser::preprocessConfigFile() const
+{
+	std::ifstream ifs(config_file_path_.c_str());
+	if (!ifs.is_open())
+	{
+		throw ConfigException(
+			config::errors::cannot_open_file + config_file_path_ +
+			" in CleanFileConfig()");
+	}
+
+	std::ostringstream logBuffer;
+	std::string line;
+
+	while (std::getline(ifs, line))
+	{
+		config::utils::removeComments(line);
+		line = config::utils::trimLine(line);
+		line = config::utils::normalizeSpaces(line);
+		if (line.empty())
+			continue;
+		logBuffer << line << "\n";
+	}
+	ifs.close();
+	return logBuffer.str();
+}
+
 /**
  * la idea es que dependiendo de que estado se encuentre se actualize el enum,
  * asi saber cuando esta en un bloque de server o location o fuera de bloque
@@ -210,12 +205,12 @@ bool ConfigParser::ValidateCurlyBrackets() const
  * the function extractServerBlock() search all the occurrences to fill the
  * vector raw_server_block_
  */
-void ConfigParser::extractServerBlocks()
+void ConfigParser::loadServerBlocks()
 {
 	if (clean_file_str_.empty())
 		return;
 
-	extractRawBlocks(clean_file_str_, config::section::server);
+	splitContentIntoServerBlocks(clean_file_str_, config::section::server);
 }
 
 /**
@@ -224,7 +219,7 @@ void ConfigParser::extractServerBlocks()
  * @param content The entire config file content
  * @param typeOfExtraction
  */
-void ConfigParser::extractRawBlocks(const std::string& content,
+void ConfigParser::splitContentIntoServerBlocks(const std::string& content,
 									const std::string& typeOfExtraction)
 {
 	size_t currentPos = 0;
@@ -244,10 +239,9 @@ void ConfigParser::extractRawBlocks(const std::string& content,
 		while (braceEnd < content.size() - 1 && countBrackets > 0)
 		{
 			if (content[braceEnd] == '\n')
+			{
 				braceEnd++;
-			// std::cout << "inside loop position [" << braceEnd << "]";
-			// std::cout << "\ncontent: [" << content[braceEnd] << "]\n" <<
-			// std::endl;
+			}
 			if (content[braceEnd] == '{')
 			{
 				countBrackets++;
@@ -271,15 +265,14 @@ void ConfigParser::extractRawBlocks(const std::string& content,
 		currentPos = braceEnd;
 		++countServers;
 	}
-
 	servers_count_ = raw_server_blocks_.size();
 }
 
-void ConfigParser::parseServers()
+void ConfigParser::parseAllServerBlocks()
 {
 	for (size_t i = 0; i < raw_server_blocks_.size(); ++i)
 	{
-		ServerConfig server = parseServer(raw_server_blocks_[i]);
+		ServerConfig server = parseSingleServerBlock(raw_server_blocks_[i]);
 		servers_.push_back(server);
 		// std::cout << "Parsing Block " << i + 1 << " [OK]\n";
 	}
@@ -293,7 +286,7 @@ void ConfigParser::parseServers()
 	}
 }
 
-ServerConfig ConfigParser::parseServer(const std::string& blockContent)
+ServerConfig ConfigParser::parseSingleServerBlock(const std::string& blockContent)
 {
 	ServerConfig server;
 	std::stringstream ss(blockContent);
@@ -495,21 +488,25 @@ ServerConfig ConfigParser::parseServer(const std::string& blockContent)
 						if (locTokens.size() == 2)
 						{
 							// Caso: return URL; (default 302)
-							std::string cleanUrl = config::utils::removeSemicolon(locTokens[1]);
+							std::string cleanUrl =
+								config::utils::removeSemicolon(locTokens[1]);
 
-							loc.setRedirectCode(config::section::default_return_code);
+							loc.setRedirectCode(
+								config::section::default_return_code);
 							loc.setRedirectUrl(cleanUrl);
 						}
 						else if (locTokens.size() == 3)
 						{
 							// Caso: return CODE URL;
 							int code = config::utils::stringToInt(locTokens[1]);
-							std::string cleanUrl = config::utils::removeSemicolon(locTokens[2]);
+							std::string cleanUrl =
+								config::utils::removeSemicolon(locTokens[2]);
 
 							// Validamos que el codigo sea de redireccion (3XX) (relaxed to
 							// 100-599)
 							if ((code < 300 || code > 399) && code != 404 &&
-								code != 200 && code != 403 && code != 500 && code != 405)
+								code != 200 && code != 403 && code != 500 &&
+								code != 405)
 							{
 								if (code < 100 || code > 599)
 								{

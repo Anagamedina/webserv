@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
+#include <iterator>
 
 #include "ServerConfig.hpp"
 
@@ -12,16 +14,13 @@ public:
 	ConfigParser();
 	explicit ConfigParser(const std::string& configFile);
 	~ConfigParser();
-
-	//	Getters and Setters
-	std::string& getConfigFilePath();
+	//	Getters
+	const std::string& getConfigFilePath() const;
 	size_t getServerCount() const;
+	const std::vector<ServerConfig>& getServers() const;
+	// Setters
 
 	void parse();
-
-	const std::vector<ServerConfig>& getServers() const;
-	void exportContentToLogFile(const std::string& fileContent,
-								const std::string& pathToExport);
 
 private:
 	std::string config_file_path_;
@@ -34,19 +33,21 @@ private:
 	ConfigParser(const ConfigParser& other);
 	ConfigParser& operator=(const ConfigParser& other);
 
-	//	different validations.
-	bool ValidateFileExtension() const;
-	bool ValidateFilePermissions() const;
+	//	validations
+	bool validateFileExtension() const;
+	bool validateFilePermissions() const;
+	bool validateBalancedBrackets() const;
 
-	std::string CleanFileConfig() const;
-	bool ValidateCurlyBrackets() const;
+	std::string preprocessConfigFile() const;
 
-	void extractServerBlocks();
-	void extractRawBlocks(const std::string& content,
+	void loadServerBlocks();
+	void splitContentIntoServerBlocks(const std::string& content,
 						const std::string& typeOfExtraction);
-	void parseServers();
 
-	ServerConfig parseServer(const std::string& blockContent);
+	void parseAllServerBlocks();
+
+	//	TODO: move to serverconfig like function()
+	ServerConfig parseSingleServerBlock(const std::string& blockContent);
 
 	// LocationConfig parseLocationBlock(const std::string& block);
 };
