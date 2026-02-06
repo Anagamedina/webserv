@@ -1,7 +1,9 @@
 #include <exception>
 #include <iostream>
 #include <signal.h>
+#include <vector>
 #include "network/ServerManager.hpp"
+#include "config/ServerConfig.hpp"
 
 /**
  * Función principal del servidor web
@@ -36,12 +38,17 @@ int main(int argc, char *argv[]) {
 		// TODO: cuando ConfigParser este listo:
 		// - ConfigParser parser("config/default.conf");
 		// - parser.parse();
-		// - server.setConfigs(&parser.getServers());
-		// Crear el gestor del servidor
-		// Esto crea:
-		// - Un TcpListener (socket de escucha)
-		// - Un EpollWrapper (mecanismo de eventos)
-		ServerManager server;
+		// - std::vector<ServerConfig> servers = parser.getServers();
+		// - ServerManager server(&servers);
+
+		// Config mínima temporal (un solo server en 8080)
+		std::vector<ServerConfig> servers;
+		ServerConfig defaultServer;
+		defaultServer.setPort(8080);
+		servers.push_back(defaultServer);
+
+		// Crear el gestor del servidor con la lista de servers
+		ServerManager server(&servers);
 		
 		/**
 		 * Iniciar el servidor en localhost:8080
@@ -54,8 +61,6 @@ int main(int argc, char *argv[]) {
 		 * 
 		 * El puerto 8080 coincide con el default.conf
 		 */
-		server.start("127.0.0.1", 8080);
-		
 		/**
 		 * Ejecutar el bucle principal de eventos
 		 * 

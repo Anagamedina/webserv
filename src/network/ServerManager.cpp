@@ -1,222 +1,229 @@
 #include "ServerManager.hpp"
-#include <unistd.h>
-#include <iostream>
-#include <vector>
-#include <sys/epoll.h>
-#include <sys/socket.h>
+#include <cerrno>
+#include <cstdio>
 #include <cstring>
+#include <iostream>
+#include <set>
 
-ServerManager::ServerManager() : configs_(0), listen_port_(0) {
+#include <stdexcept>
+#include <unistd.h>
+
+ServerManager::ServerManager(const std::vector< ServerConfig >* configs)
+    : configs_(configs) {
+  std::set< int > bound_ports;
+
+  if (configs_ == NULL || configs_->empty()) {
+    throw std::runtime_error("No servers provided in config list");
+  }
+
+  for (size_t i = 0; i < configs_->size(); ++i) {
+    const ServerConfig& server = (*configs_)[i];
+    int port = server.getPort();
+
+    if (bound_ports.count(port)) {
+      continue;
+    }
+    bound_ports.insert(port);
+
+    TcpListener* listener = new TcpListener(port);
+    try {
+      listener->listen();
+      int fd = listener->getFd();
+
+      listeners_[fd] = listener;
+      listener_ports_[fd] = port;
+
+      // El servidor no lee ni escribe datos solo acepta conexiones. (EPOLLIN)
+      // Por defecto epoll esta en modo Level Trigger, y para listeners
+      // usualmente es lo correcto/seguro.
+      epoll_.addFd(fd, EPOLLIN);
+
+      std::cout << "Server listening on port " << port << std::endl;
+    } catch (const std::exception& e) {
+      delete listener;
+      throw;
+    }
+  }
+
+  if (listeners_.empty()) {
+    throw std::runtime_error(
+        "No servers could be started (check config ports)");
+  }
 }
 
 ServerManager::~ServerManager() {
-	// Cerrar todas las conexiones de clientes al destruir el servidor
-	for (std::map<int, Client*>::iterator it = clients_.begin(); it != clients_.end(); ++it) {
-		close(it->first);
-		delete it->second;
-	}
-	clients_.clear();
+
+  for (std::map< int, Client* >::iterator it = clients_.begin();
+       it != clients_.end(); ++it) {
+    delete it->second;
+  }
+  clients_.clear();
+
+  for (std::map< int, TcpListener* >::iterator it = listeners_.begin();
+       it != listeners_.end(); ++it) {
+    delete it->second;
+  }
+
+  std::cout << "ServerManager shut down" << std::endl;
 }
 
-/**
- * Inicia el servidor: crea el socket de escucha y lo registra en epoll
- * 
- * Proceso:
- * 1. listener_.bindAndListen(): Crea y configura el socket de escucha
- * 2. epoll_.addFd(): Registra el socket en epoll para monitorear conexiones nuevas
- * 
- * EPOLLIN: Queremos ser notificados cuando haya datos para leer
- *          En el socket de escucha, esto significa "hay una conexión nueva"
- * 
- * Level-triggered (LT):
- *          - Notifica mientras el socket siga listo
- *          - Mas simple de manejar para lectura/escritura incremental
- */
-void ServerManager::start(const std::string& host, int port) {
-	// Bind and listen
-	listener_.bindAndListen(host, port);
-	listen_port_ = port;
-	
-	// Agregar el socket de escucha a epoll (level-triggered)
-	// EPOLLIN: Notificar cuando haya conexiones nuevas
-	epoll_.addFd(listener_.getFd(), EPOLLIN);
-	
-	std::cout << "Server started and ready to accept connections" << std::endl;
-}
-
-void ServerManager::setConfigs(const std::vector<ServerConfig>* configs) {
-	configs_ = configs;
-}
-
-/**
- * BUCLE PRINCIPAL DEL SERVIDOR - El corazón de todo
- * 
- * Este es el bucle de eventos que hace que el servidor funcione.
- * Es la implementación del patrón "event loop" o "reactor pattern".
- * 
- * ¿Cómo funciona?
- * 
- * 1. ESPERAR EVENTOS (epoll_wait):
- *    - Bloquea aquí hasta que ocurra algo (conexión nueva, datos recibidos, etc.)
- *    - El kernel despierta nuestro proceso cuando hay eventos
- *    - Retorna una lista de TODOS los eventos que ocurrieron
- * 
- * 2. PROCESAR EVENTOS:
- *    - Iteramos sobre cada evento recibido
- *    - Identificamos qué socket es (listener o cliente)
- *    - Llamamos a la función apropiada para manejar ese evento
- * 
- * 3. REPETIR:
- *    - Volvemos a esperar más eventos
- *    - El ciclo continúa indefinidamente
- * 
- * ¿Por qué es eficiente?
- * - Solo bloquea cuando NO hay nada que hacer (ahorra CPU)
- * - Cuando hay eventos, los procesa rápidamente (todo no bloqueante)
- * - Puede manejar miles de clientes con un solo hilo
- * 
- * ¿Qué tipos de eventos procesamos?
- * - EPOLLIN en listener: Nueva conexión entrante
- * - EPOLLIN en cliente: Datos recibidos del cliente
- * - EPOLLERR/EPOLLHUP: Error o cliente desconectado
- */
 void ServerManager::run() {
-	std::vector<struct epoll_event> events;
-	
-	std::cout << "Entering event loop..." << std::endl;
-	
-	// BUCLE INFINITO - El servidor corre hasta que se termine el proceso
-	while (true) {
-		// PASO 1: ESPERAR EVENTOS
-		// Esta es la ÚNICA línea que bloquea en todo el servidor
-		// timeout = -1 significa "esperar indefinidamente hasta que haya eventos"
-		int numEvents = epoll_.wait(events, -1);
-		
-		if (numEvents == 0) {
-			continue; // Timeout (no debería pasar con timeout=-1, pero por si acaso)
-		}
-		
-		// PASO 2: PROCESAR CADA EVENTO
-		// Puede haber múltiples eventos listos al mismo tiempo
-		for (int i = 0; i < numEvents; ++i) {
-			int fd = events[i].data.fd;  // El fd que generó este evento
-			
-			// ¿Es el socket de escucha? → Nueva conexión
-			if (fd == listener_.getFd()) {
-				handleNewConnection();
-			}
-			// ¿Hubo error o el cliente cerró? → Limpiar conexión
-			if (events[i].events & (EPOLLERR | EPOLLHUP)) {
-				handleClientDisconnect(fd);
-				continue;
-			}
-			// ¿Es un cliente con datos para leer? → Leer datos
-			if (events[i].events & EPOLLIN) {
-				handleClientData(fd);
-			}
-			// ¿Es un cliente con datos para escribir? → Enviar respuesta
-			if (events[i].events & EPOLLOUT) {
-				std::map<int, Client*>::iterator it = clients_.find(fd);
-				if (it != clients_.end())
-					it->second->handleWrite();
-			}
+  epoll_event events[MAX_EVENTS];
 
-			// Si el cliente cerró, limpiar
-			std::map<int, Client*>::iterator it = clients_.find(fd);
-			if (it != clients_.end() && it->second->getState() == STATE_CLOSED) {
-				handleClientDisconnect(fd);
-			}
-		}
-		
-		// PASO 3: Volver a esperar más eventos (vuelta al inicio del while)
-	}
+  std::cout << "Server started. Waiting for events..." << std::endl;
+
+  while (true) {
+    try {
+      int num_events = epoll_.wait(events, MAX_EVENTS,
+                                   3000); // TODO: 3s timeout for maintenance
+                                          // tasks. make it configurable.
+
+      for (int i = 0; i < num_events; ++i) {
+        int fd = events[i].data.fd;
+        uint32_t event_mask = events[i].events;
+
+        if (listeners_.count(fd)) {
+          handleNewConnection(fd);
+        } else if (clients_.count(fd)) {
+          handleClientEvent(fd, event_mask);
+        } else if (cgi_pipes_.count(fd)) {
+          handleCgiPipeEvent(fd, event_mask);
+        }
+      }
+
+      if (num_events == 0) {
+        // Idle cycle or timeout, good time to check timeouts
+        // TODO: remove debug comment
+        std::cout << " Server idle..." << std::endl;
+      }
+      checkTimeouts();
+    } catch (const std::exception& e) {
+      std::cerr << "Error in event loop: " << e.what() << std::endl;
+    }
+  }
 }
 
-/**
- * Maneja nuevas conexiones entrantes
- * 
- * Se llama cuando epoll detecta EPOLLIN en el socket de escucha.
- * Esto significa que hay al menos una conexión nueva esperando ser aceptada.
- * 
- * En level-triggered basta con aceptar una conexion por evento.
- */
-void ServerManager::handleNewConnection() {
-	int clientFd = listener_.acceptConnection();
-	if (clientFd == -1)
-		return;
+void ServerManager::checkTimeouts() {
+  time_t now = time(NULL);
+  std::vector< int > timeout_fds;
 
-	// Registrar el nuevo cliente en epoll para monitorear sus datos
-	// EPOLLIN: Notificar cuando el cliente envíe datos
-	// EPOLLRDHUP: Notificar cuando el cliente cierre la conexión
-	epoll_.addFd(clientFd, EPOLLIN | EPOLLRDHUP);
+  // Iterate over all clients and identify those who timed out
+  // TODO: Make timeout configurable via ServerBlock
+  double timeout_seconds = 60.0;
 
-	// Guardar el fd del cliente para poder rastrearlo
-	clients_[clientFd] = new Client(clientFd, configs_, listen_port_);
+  for (std::map< int, Client* >::iterator it = clients_.begin();
+       it != clients_.end(); ++it) {
+    if (difftime(now, it->second->getLastActivity()) > timeout_seconds) {
+      timeout_fds.push_back(it->first);
+    }
+  }
+
+  for (size_t i = 0; i < timeout_fds.size(); ++i) {
+    std::cout << "Client " << timeout_fds[i] << " timed out." << std::endl;
+    handleClientDisconnect(timeout_fds[i]);
+  }
 }
 
-/**
- * Maneja datos recibidos de un cliente
- * 
- * Se llama cuando epoll detecta EPOLLIN en un socket de cliente.
- * Esto significa que el cliente envió datos y están listos para leer.
- * 
- * ¿Qué hace recv()?
- * - Lee datos del socket del cliente
- * - En modo no bloqueante:
- *   - bytesRead > 0: Leyó datos (puede ser menos que el tamaño del buffer)
- *   - bytesRead == 0: Cliente cerró la conexión
- *   - bytesRead == -1: Error de lectura
- */
-void ServerManager::handleClientData(int clientFd) {
-	std::map<int, Client*>::iterator it = clients_.find(clientFd);
-	if (it == clients_.end())
-		return;
+void ServerManager::handleNewConnection(int listener_fd) {
+  TcpListener* listener = listeners_[listener_fd];
+  int port = listener_ports_[listener_fd];
 
-	it->second->handleRead();
+  while (true) {
+    int client_fd = listener->acceptConnection();
+    if (client_fd == -1)
+      break;
 
-	if (it->second->getState() == STATE_CLOSED) {
-		handleClientDisconnect(clientFd);
-		return;
-	}
+    // INFO: Add to Epoll - Level Triggered (no EPOLLET) for safety
+    epoll_.addFd(client_fd, EPOLLIN | EPOLLRDHUP);
 
-	uint32_t events = EPOLLIN | EPOLLRDHUP;
-	if (it->second->needsWrite())
-		events |= EPOLLOUT;
-	epoll_.modifyFd(clientFd, events);
+    Client* new_client = new Client(client_fd, configs_, port);
+    clients_[client_fd] = new_client;
+
+    std::cout << "New client connected on port " << listener->getPort()
+              << " (FD: " << client_fd << ")" << std::endl;
+  }
 }
 
-/**
- * Maneja la desconexión de un cliente
- * 
- * Se llama cuando:
- * - El cliente cierra la conexión (read() retorna 0)
- * - Hay un error en el socket (EPOLLERR)
- * - El cliente cierra su extremo (EPOLLRDHUP)
- * 
- * Proceso de limpieza:
- * 1. Remover el socket de epoll (ya no queremos monitorearlo)
- * 2. Cerrar el file descriptor (liberar recursos del kernel)
- * 3. Remover del mapa de clientes (limpiar nuestra estructura de datos)
- * 
- * ¿Por qué es importante limpiar?
- * - Los file descriptors son recursos limitados del sistema
- * - Si no los cerramos, se agotan (límite típico: 1024 por proceso)
- * - Si no los removemos de epoll, epoll seguirá monitoreando sockets muertos
- */
-void ServerManager::handleClientDisconnect(int clientFd) {
-	std::cout << "Client " << clientFd << " disconnected" << std::endl;
-	
-	// Remover de epoll (ya no queremos monitorear este socket)
-	epoll_.removeFd(clientFd);
-	
-	// Cerrar el socket (liberar el file descriptor)
-	close(clientFd);
-	
-	// Remover del mapa de clientes (limpiar nuestra estructura de datos)
-	std::map<int, Client*>::iterator it = clients_.find(clientFd);
-	if (it != clients_.end()) {
-		delete it->second;
-		clients_.erase(it);
-	}
+void ServerManager::handleClientEvent(int client_fd, uint32_t events) {
+  Client* client = clients_[client_fd];
+
+  if (events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+    handleClientDisconnect(client_fd);
+    return;
+  }
+
+  if (events & EPOLLIN) {
+    client->handleRead();
+  }
+
+  if (events & EPOLLOUT) {
+    client->handleWrite();
+  }
+
+  if (client->getState() == STATE_CLOSED) {
+    handleClientDisconnect(client_fd);
+    return;
+  }
+
+  updateClientEvents(client_fd);
 }
 
+void ServerManager::updateClientEvents(int client_fd) {
+  if (!clients_.count(client_fd))
+    return;
+
+  Client* client = clients_[client_fd];
+  uint32_t new_events = EPOLLIN | EPOLLRDHUP;
+  if (client->needsWrite()) {
+    new_events |= EPOLLOUT;
+  }
+  epoll_.modFd(client_fd, new_events);
+}
+
+void ServerManager::handleClientDisconnect(int client_fd) {
+  epoll_.removeFd(client_fd);
+
+  if (clients_.count(client_fd)) {
+    delete clients_[client_fd];
+    clients_.erase(client_fd);
+  }
+
+  std::cout << "Client " << client_fd << " disconnected." << std::endl;
+}
+
+void ServerManager::handleCgiPipeEvent(int pipe_fd, uint32_t events) {
+  if (!cgi_pipes_.count(pipe_fd)) {
+    return;
+  }
+
+  Client* client = cgi_pipes_[pipe_fd];
+
+  // Delegate CGI pipe handling to the Client
+  (void)events;
+  // TODO: integrar manejo de pipes CGI cuando Client exponga handleCgiPipe.
+  // Por ahora, no hacemos nada para evitar dependencias con Client.
+}
+
+void ServerManager::registerCgiPipe(int pipe_fd, uint32_t events,
+                                    Client* client) {
+  if (pipe_fd < 0 || client == NULL) {
+    return;
+  }
+
+  // Add pipe to epoll for monitoring
+  epoll_.addFd(pipe_fd, events);
+
+  // Track mapping from pipe FD to Client
+  cgi_pipes_[pipe_fd] = client;
+
+  std::cout << "Registered CGI pipe " << pipe_fd << " for events " << events
+            << std::endl;
+}
+
+void ServerManager::unregisterCgiPipe(int pipe_fd) {
+  if (cgi_pipes_.count(pipe_fd)) {
+    epoll_.removeFd(pipe_fd);
+    cgi_pipes_.erase(pipe_fd);
+    std::cout << "Unregistered CGI pipe " << pipe_fd << std::endl;
+  }
+}

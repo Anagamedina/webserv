@@ -1,310 +1,406 @@
 #include "TcpListener.hpp"
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "utils/StringUtils.hpp"
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <iostream>
-#include <stdexcept>
-#include <cstring>
-#include <sstream>
 #include <cerrno>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
+#include <netinet/in.h>
+#include <stdexcept>
+#include <strings.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
-
-TcpListener::TcpListener() : listenFd_(-1), isBound_(false) {
+TcpListener::TcpListener(int port) : socket_fd_(-1), port_(port) {
+  createSocket();
+  setSocketOptions();
+  bindSocket();
 }
 
 TcpListener::~TcpListener() {
-	if (listenFd_ != -1) {
-		close(listenFd_);
-	}
+  if (socket_fd_ != -1) {
+    close(socket_fd_);
+  }
 }
 
-/**
- * Crea el socket TCP y lo configura
- * 
- * socket(AF_INET, SOCK_STREAM, 0):
- * - AF_INET: IPv4
- * - SOCK_STREAM: TCP (conexión confiable, ordenada)
- * - 0: Protocolo por defecto (TCP para SOCK_STREAM)
- * 
- * Retorna un file descriptor que usaremos para todas las operaciones
- */
+/// Creates a TCP socket for accepting client connections.
+///
+/// Uses AF_INET (IPv4) with SOCK_STREAM (TCP) to establish a reliable,
+/// connection-oriented communication channel. When SOCK_STREAM is
+/// specified with AF_INET, the kernel automatically selects IPPROTO_TCP.
+///
+/// Socket characteristics:
+/// - Ordered delivery: bytes arrive in send order
+/// - No duplication: duplicate TCP segments are discarded by the kernel
+/// - Flow control: sliding window prevents receiver saturation
+/// - Congestion control: TCP Cubic dynamically adjusts the send window
+///
+/// Alternatives not used:
+/// - AF_INET6: IPv6 not required by the 42 subject
+/// - AF_UNIX: local IPC only; not applicable for a web server
+/// - SOCK_DGRAM: UDP is unreliable and incompatible with HTTP semantics
+///
+/// Returns a file descriptor (typically ≥ 3) representing this socket
+/// in the kernel file descriptor table. The initial state is blocking;
+/// O_NONBLOCK must be enabled separately via fcntl().
+///
+/// @throws std::runtime_error if socket creation fails
+///         (EMFILE, ENFILE, ENOMEM, etc.)
 void TcpListener::createSocket() {
-	listenFd_ = socket(AF_INET, SOCK_STREAM, 0);
-	if (listenFd_ == -1) {
-		throw std::runtime_error("Failed to create socket");
-	}
-	
-	setSocketOptions();
-	setNonBlocking();
+  socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (socket_fd_ == -1) {
+    throw std::runtime_error("Failed to create socket");
+  }
+  std::cout << "Socket created (fd: " << socket_fd_ << ")" << std::endl;
 }
 
-/**
- * Configura opciones del socket
- * 
- * SO_REUSEADDR: Permite reutilizar la dirección aunque esté en TIME_WAIT
- * 
- * ¿Por qué es necesario?
- * - Cuando cierras un servidor, el socket entra en estado TIME_WAIT (~30 seg)
- * - Sin SO_REUSEADDR, no puedes reabrir el servidor inmediatamente
- * - Con SO_REUSEADDR, puedes reutilizar la dirección inmediatamente
- * 
- * Esto es especialmente útil durante desarrollo cuando reinicias el servidor
- */
+/// Configures socket options for optimal server operation.
+///
+/// Sets two critical flags:
+///
+/// 1. SO_REUSEADDR (socket-level option):
+///    Allows immediate rebinding to the same port after server restart.
+///
+///    Problem it solves: TIME_WAIT state
+///    - When server closes, TCP enters TIME_WAIT for 2×MSL (~60s on Linux)
+///    - Without SO_REUSEADDR: bind() fails with EADDRINUSE
+///    - With SO_REUSEADDR: kernel marks TIME_WAIT entry as reusable
+///
+///    Safety considerations:
+///    - Safe for servers: same port, different client ephemeral ports
+///    - Collision probability of (IP_local, port_local, IP_remote, port_remote)
+///    ≈ 0
+///
+///    Level: SOL_SOCKET (generic, not TCP-specific)
+///
+/// 2. O_NONBLOCK (file status flag):
+///    Enables non-blocking I/O on the socket.
+///
+///    Behavior change:
+///    - Blocking (default): read/write/accept suspend execution until ready
+///    - Non-blocking: return immediately with EAGAIN/EWOULDBLOCK
+///
+///    Why this is critical:
+///    - Single-threaded event loop: one slow client cannot block others
+///    - Epoll integration: readiness checked before actual I/O
+///    - No process suspension: preserves responsiveness under load
+///
+///    Implementation: fcntl() read–modify–write
+///    - F_GETFL: read current flags (preserves O_LARGEFILE, etc.)
+///    - OR with O_NONBLOCK: add flag without clearing others
+///    - F_SETFL: write modified flags back
+///
+///    Alternative not used:
+///    - socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)  // Linux ≥ 2.6.27
+///    - Reason: portability; read–modify–write is safer
+///
+/// @throws std::runtime_error if setsockopt() fails (EBADF, ENOPROTOOPT, …)
+/// @throws std::runtime_error if fcntl(F_GETFL) fails
+/// @throws std::runtime_error if fcntl(F_SETFL) fails
 void TcpListener::setSocketOptions() {
-	int opt = 1;
-	// Allow address reuse to avoid "Address already in use" errors
-	if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to set socket options");
-	}
+  int opt = 1;
+  if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to set socket options");
+  }
+
+  // INFO: El subject prohibe usar otros flags que no sean F_SETFL
+  // O_NONBLOCK, FD_CLOEXEC, sin embargo la buena practica para c++ es recuperar
+  // los flags antes de añadir uno nuevo por que si solapa alguno de los flags
+  // se sobreescribira. aplicando F_GETFL -> | <NEW_FLAG> se evita el problema
+  int flags = fcntl(socket_fd_, F_GETFL, 0);
+  if (flags == -1) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to get socket flags");
+  }
+  if (fcntl(socket_fd_, F_SETFL, flags | O_NONBLOCK) == -1) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to set socket to non-blocking");
+  }
+  // if (fcntl(socket_fd_, F_SETFL, O_NONBLOCK) == -1) {
+  //	close(socket_fd_);
+  //	throw std::runtime_error("Failed to set socket to non-blocking");
+  // }
 }
 
-/**
- * Configura el socket en modo NO BLOQUEANTE usando fcntl
- * 
- * ¿Cómo funciona fcntl?
- * 1. F_GETFL: Obtiene los flags actuales del fd
- * 2. Agregamos O_NONBLOCK a esos flags
- * 3. F_SETFL: Aplica los nuevos flags
- * 
- * O_NONBLOCK: Hace que todas las operaciones I/O sean no bloqueantes
- * - accept() retorna inmediatamente (EAGAIN si no hay conexiones)
- * - read() retorna inmediatamente (EAGAIN si no hay datos)
- * - write() retorna inmediatamente (EAGAIN si el buffer está lleno)
- */
-void TcpListener::setNonBlocking() {
-	// Obtener flags actuales
-	int flags = fcntl(listenFd_, F_GETFL, 0);
-	if (flags == -1) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to get socket flags");
-	}
-	
-	// Agregar flag O_NONBLOCK y aplicar
-	if (fcntl(listenFd_, F_SETFL, flags | O_NONBLOCK) == -1) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to set socket to non-blocking");
-	}
+/// Binds the socket to a specific port on all network interfaces.
+///
+/// Associates the socket with a local address (IP + port) so the kernel
+/// knows where to route incoming connections. Uses sockaddr_in structure
+/// for IPv4 addressing.
+///
+/// Address configuration:
+///
+/// 1. sin_family = AF_INET:
+///    Specifies IPv4 address family (matches socket() domain)
+///
+/// 2. sin_addr.s_addr = INADDR_ANY (0.0.0.0):
+///    Listens on ALL network interfaces simultaneously:
+///    - lo (127.0.0.1): localhost connections
+///    - eth0 (192.168.1.X): LAN connections
+///    - wlan0 (10.0.0.X): WiFi connections
+///
+///    Alternative not used:
+///    - Specific IP (e.g., inet_addr("127.0.0.1")): restricts to one interface
+///    - Reason: server must be externally accessible
+///
+/// 3. sin_port = htons(port_):
+///    Port number in network byte order (big-endian).
+///
+///    htons() necessity:
+///    - Little-endian (x86): 8080 = 0x1F90 → memory [0x90, 0x1F]
+///    - Big-endian (network): 8080 = 0x1F90 → memory [0x1F, 0x90]
+///    - TCP/IP standard: network byte order = big-endian (RFC 1700)
+///    - htons(): converts host order → network order (no-op on big-endian)
+///
+///    Without conversion: server would listen on port 36895 (0x901F) instead of
+///    8080
+///
+/// Kernel operations on bind():
+/// 1. Verifies port is not in use (unless SO_REUSEADDR)
+/// 2. Registers socket in global port hash table
+/// 3. Socket gains identity: (0.0.0.0:port_)
+/// 4. Subsequent packets to this port route to this socket
+///
+/// Error conditions:
+/// - EADDRINUSE: port already bound (check SO_REUSEADDR, kill other process)
+/// - EACCES: port < 1024 requires root (use port >= 1024)
+/// - EINVAL: socket already bound or invalid address
+///
+/// @throws std::runtime_error if bind() fails
+void TcpListener::bindSocket() {
+  struct sockaddr_in address;
+  std::memset(&address, 0, sizeof(address));
+
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = INADDR_ANY;
+
+  // Convierte un entero de 16 bits del orden de bytes del host (tu CPU) al
+  // orden de bytes de red (estándar TCP/IP).
+  address.sin_port = htons(port_);
+
+  if (bind(socket_fd_, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to bind socket to port " +
+                             StringUtils::toString(port_));
+  }
+
+  std::cout << "Socket bound to port " << port_ << std::endl;
 }
 
-/**
- * Enlaza el socket a una dirección IP:puerto y comienza a escuchar
- * 
- * Proceso completo:
- * 1. Crea el socket (createSocket)
- * 2. Prepara la estructura sockaddr_in con la IP y puerto
- * 3. bind(): Enlaza el socket a esa dirección
- *    - Le dice al kernel: "Este socket escuchará en esta IP:puerto"
- * 4. listen(): Pone el socket en modo "escucha"
- *    - Le dice al kernel: "Acepta conexiones entrantes en este socket"
- *    - SOMAXCONN: Máximo número de conexiones en cola (típicamente 128)
- * 
- * Después de esto, el socket está listo para aceptar conexiones
- * epoll nos avisará cuando llegue una conexión nueva
- */
-void TcpListener::bindAndListen(const std::string& host, int port)
-{
-	//Estás intentando inicializar algo que ya está inicializado
-	if (isBound_) {
-		throw std::runtime_error("Socket already bound");
-	}
-	
-	createSocket();
-	
-	// ============================================================
-	// OPCIÓN 1: Usando getaddrinfo
-	// ============================================================
-	// getaddrinfo es una función que convierte una dirección (IP o nombre)
-	// a una estructura que el socket puede usar.
-	// 
-	// Ventajas:
-	// - Puede resolver nombres como "localhost" a "127.0.0.1"
-	// - Puede trabajar con direcciones IP directamente como "127.0.0.1"
-	// - Es más flexible y portable
-	
-	// Paso 1: Preparar las "pistas" (hints) para getaddrinfo
-	// Le decimos qué tipo de dirección queremos
-	struct addrinfo hints;
-	struct addrinfo *result = NULL;  // Aquí guardará el resultado
-	
-	// Limpiar la estructura hints (poner todo en cero)
-	std::memset(&hints, 0, sizeof(hints));
-	
-	// Configurar qué queremos:
-	hints.ai_family = AF_INET;        // Solo IPv4 (no IPv6)
-	hints.ai_socktype = SOCK_STREAM;  // TCP (no UDP)
-	hints.ai_flags = AI_PASSIVE;      // Para servidor
-	
-	// Convertir el puerto de número a string
-	// getaddrinfo necesita el puerto como string, no como número
-
-	std::ostringstream oss;
-	oss << port;
-	std::string portStr = oss.str();
-
-
-
-	// Preparar el hostname
-	// Si host está vacío, usamos NULL (significa "todas las interfaces")
-	// Si host tiene valor, usamos ese valor
-	const char *hostname = NULL;
-	if (!host.empty()) {
-		hostname = host.c_str();
-	}
-	
-	// Llamar a getaddrinfo
-	// Esta función hace la "magia": convierte el hostname/IP a una estructura
-	// que el socket puede usar
-	int status = getaddrinfo(hostname, portStr.c_str(), &hints, &result);
-	
-	// Verificar si funcionó
-	// Si status != 0, hubo un error
-	if (status != 0) {
-		close(listenFd_);
-		listenFd_ = -1;
-		// gai_strerror convierte el código de error a un mensaje legible
-		std::string errorMsg = "getaddrinfo failed: ";
-		errorMsg += gai_strerror(status);
-		throw std::runtime_error(errorMsg);
-	}
-	
-	// Usar el resultado para hacer bind
-	// getaddrinfo nos da una estructura con la dirección lista para usar
-	// Solo necesitamos pasarla a bind()
-	if (bind(listenFd_, result->ai_addr, result->ai_addrlen) == -1) {
-		// Si falla, liberar la memoria ANTES de lanzar el error
-		freeaddrinfo(result);
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to bind socket");
-	}
-	
-	// Liberar la memoria que getaddrinfo asignó
-	// IMPORTANTE: Siempre hay que liberar con freeaddrinfo
-	freeaddrinfo(result);
-	
-	// ============================================================
-	// OPCIÓN 2: Usando inet_pton (CÓDIGO COMENTADO - NO SE USA)
-	// ============================================================
-	// Esta es una forma MÁS SIMPLE pero MENOS FLEXIBLE
-	// 
-	// Ventajas:
-	// - Código más corto y directo
-	// - Más fácil de entender para principiantes
-	// 
-	// Desventajas:
-	// - Solo funciona con direcciones IP directas (ej: "127.0.0.1")
-	// - NO puede resolver nombres como "localhost"
-	// - Si le pasas "localhost", fallará
-	//
-	// Si quieres usar esta opción, descomenta el código de abajo
-	// y comenta la OPCIÓN 1 (getaddrinfo)
-	/*
-	// Paso 1: Crear una estructura para guardar la dirección
-	struct sockaddr_in addr;
-	
-	// Paso 2: Limpiar la estructura (poner todo en cero)
-	std::memset(&addr, 0, sizeof(addr));
-	
-	// Paso 3: Configurar el tipo de dirección (IPv4)
-	addr.sin_family = AF_INET;
-	
-	// Paso 4: Configurar el puerto
-	// htons() convierte el número del puerto al formato que usa la red
-	addr.sin_port = htons(port);
-	
-	// Paso 5: Convertir la IP de string a número
-	// inet_pton() convierte "127.0.0.1" a un número que el socket entiende
-	// Retorna 1 si éxito, 0 si formato inválido, -1 si error
-	if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) <= 0) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Invalid host address");
-	}
-	
-	// Paso 6: Hacer bind con la dirección preparada
-	if (bind(listenFd_, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to bind socket");
-	}
-	*/
-	
-	// LISTEN: Poner el socket en modo escucha
-	// SOMAXCONN: Máximo de conexiones pendientes en la cola
-	if (listen(listenFd_, SOMAXCONN) == -1) {
-		close(listenFd_);
-		listenFd_ = -1;
-		throw std::runtime_error("Failed to listen on socket");
-	}
-	
-	isBound_ = true;
-	std::cout << "Server listening on " << host << ":" << port << std::endl;
+/// Activates listening mode on the socket, enabling it to accept connections.
+///
+/// Marks the socket as passive (listening for incoming connections) rather
+/// than active (initiating connections). Transitions the socket state from
+/// UNCONNECTED to LISTEN.
+///
+/// Backlog parameter: SOMAXCONN
+///
+/// Definition:
+/// Maximum size of the accept queue (completed connections).
+/// - Typical Linux value: 128 (see /proc/sys/net/core/somaxconn)
+/// - Can be increased system-wide via sysctl
+///
+/// Purpose:
+/// Buffers completed connections that have not yet been accept()'ed,
+/// protecting the server from bursts of simultaneous connection attempts.
+///
+/// Linux maintains two internal queues:
+///
+/// 1. SYN queue (incomplete connections):
+///    - Connections in TCP handshake (SYN_RECV state)
+///    - Size: tcp_max_syn_backlog (default: 256)
+///    - Client sent SYN, server sent SYN-ACK, awaiting final ACK
+///
+/// 2. Accept queue (completed connections):
+///    - Connections in ESTABLISHED state
+///    - Size: min(backlog, somaxconn)
+///    - Handshake complete; waiting for accept()
+///    - Controlled by SOMAXCONN
+///
+/// Queue overflow behavior:
+/// - Accept queue full and a new connection completes the handshake:
+///   → Connection is dropped silently (no RST sent)
+///   → Client retransmits SYN (interpreting loss)
+///   → Provides basic protection against SYN flood attacks
+///
+/// Why SOMAXCONN instead of a fixed value:
+///
+/// - Small value (e.g., 10):
+///   - Issue: burst of 50 connections → 40 dropped
+///   - Suitable only for low-traffic internal services
+///
+/// - Large value (e.g., 100000):
+///   - Issue: unnecessary memory consumption; facilitates DoS
+///   - Suitable use case: none (kernel limits exist for safety)
+///
+/// - SOMAXCONN (128):
+///   - Balanced default for typical workloads
+///   - Tunable by system administrators via sysctl
+///   - Kernel-enforced upper bound limits abuse
+///
+/// After listen(), the socket can:
+/// - Receive SYN packets from clients
+/// - Complete TCP three-way handshakes automatically
+/// - Queue established connections for accept()
+///
+/// State transition:
+/// - Before: bind()  → socket bound to 0.0.0.0:8080
+/// - After:  listen() → socket in TCP_LISTEN state
+///
+/// Kernel actions:
+/// 1. Transitions sk->sk_state to TCP_LISTEN
+/// 2. Allocates the SYN and accept queues
+/// 3. Registers the socket in the listening hash table
+/// 4. Begins processing SYN packets for this port
+///
+/// Error conditions:
+/// - EADDRINUSE: another socket is already listening on this port
+/// - EOPNOTSUPP: socket type does not support listen() (e.g., SOCK_DGRAM)
+///
+/// @throws std::runtime_error if listen() fails
+void TcpListener::listen() {
+  if (::listen(socket_fd_, SOMAXCONN) < 0) {
+    throw std::runtime_error("Failed to listen on socket");
+  }
+  std::cout << "Listening for connections..." << std::endl;
 }
 
-/**
- * Acepta una nueva conexión de cliente
- * 
- * ¿Cómo funciona accept()?
- * - Toma una conexión de la cola de conexiones pendientes
- * - Crea un NUEVO socket para comunicarse con ese cliente
- * - Retorna el file descriptor de ese nuevo socket
- * 
- * ¿Por qué retorna -1 en modo no bloqueante?
- * - Si no hay conexiones en la cola, accept() no puede esperar (no bloquea)
- * - Retorna -1 y errno = EAGAIN/EWOULDBLOCK
- * - Esto es NORMAL, no es un error
- * 
- * ¿Cuándo hay conexiones disponibles?
- * - Cuando epoll nos notifica EPOLLIN en el socket de escucha
- * - Significa que hay al menos una conexión esperando ser aceptada
- * 
- * IMPORTANTE: El nuevo socket del cliente también se pone en modo no bloqueante
- * para que read()/write() no bloqueen
- */
+/// Accepts a pending client connection from the accept queue.
+///
+/// Extracts the first completed connection from the kernel's accept queue
+/// (populated by listen()) and creates a new socket for bidirectional
+/// communication with the client. The original listening socket remains
+/// active to accept additional connections.
+///
+/// Accept mechanics:
+///
+/// 1. Kernel state before accept():
+///    - Listening socket: fd 3, state TCP_LISTEN, queue: [conn1, conn2, ...]
+///    - Each queued connection has completed the TCP three-way handshake
+///    - Client connections waiting to be extracted by the application
+///
+/// 2. accept() operation:
+///    - Dequeues the oldest connection from the accept queue (FIFO)
+///    - Allocates a NEW socket (distinct file descriptor)
+///    - Copies peer address into client_addr (IP + ephemeral port)
+///    - Returns new socket fd in ESTABLISHED state
+///
+/// 3. After accept():
+///    - Listening socket: fd 3, remains in TCP_LISTEN (unchanged)
+///    - New socket: fd N, state TCP_ESTABLISHED, connected to specific client
+///    - Two independent sockets: one listens, one communicates
+///
+/// Non-blocking behavior:
+///
+/// - Accept queue empty:
+///   → accept() returns -1 immediately
+///   → errno set to EAGAIN or EWOULDBLOCK
+///   → Caller must retry after epoll_wait() indicates readiness
+///
+/// - Accept queue has connections:
+///   → accept() returns instantly with client_fd
+///   → No blocking, even if new connections arrive concurrently
+///
+/// Why O_NONBLOCK on the new socket is CRITICAL:
+///
+/// - accept() does NOT inherit flags from the listening socket
+/// - New client_fd starts in blocking mode (kernel default)
+/// - Without fcntl(O_NONBLOCK): read/write on client_fd would block
+/// - Consequence: one slow client stalls the entire server
+///
+/// Implementation: fcntl() read–modify–write pattern
+/// - F_GETFL: read current flags (preserves O_LARGEFILE, etc.)
+/// - OR with O_NONBLOCK: atomically add flag
+/// - F_SETFL: write modified flags back
+///
+/// Alternative (Linux ≥ 2.6.28):
+/// - accept4(fd, addr, len, SOCK_NONBLOCK | SOCK_CLOEXEC)
+/// - Reason not used: portability; POSIX compliance
+///
+/// sockaddr_in extraction:
+///
+/// 1. sin_addr.s_addr:
+///    Client IP address in network byte order (big-endian).
+///    - Example: 192.168.1.100 → 0xC0A80164 in memory
+///    - inet_ntop() converts to human-readable "192.168.1.100"
+///
+/// 2. sin_port:
+///    Client ephemeral port in network byte order.
+///    - Range: 32768–60999 (Linux default
+///    /proc/sys/net/ipv4/ip_local_port_range)
+///    - ntohs() converts to host order for logging
+///
+/// 3. addr_len (value-result parameter):
+///    - Input: size of client_addr buffer
+///    - Output: actual size written (unchanged for IPv4)
+///    - Needed for IPv6 (larger sockaddr_in6) or protocol flexibility
+///
+/// Security considerations:
+///
+/// - bzero() before use: ensures uninitialized memory doesn't leak
+/// - inet_ntop() with INET_ADDRSTRLEN: buffer overflow protection
+/// - Failed fcntl() doesn't abort: graceful degradation
+///
+/// Why client IP/port logging is useful:
+/// - Debugging: correlate requests with specific clients
+/// - Security: identify attack sources (rate limiting, ban lists)
+/// - Analytics: geographic distribution, connection patterns
+///
+/// Error conditions and handling:
+///
+/// - accept() returns -1:
+///   → EAGAIN/EWOULDBLOCK: no connections available (non-blocking)
+///   → EMFILE/ENFILE: process/system file descriptor limit reached
+///   → ENOMEM: kernel out of memory
+///   → EINTR: interrupted by signal (handled by retry)
+///   → Function returns -1; caller must check and handle
+///
+/// - fcntl() failure:
+///   → Client socket remains blocking (degraded, but functional)
+///   → Server can still communicate; performance impact only
+///   → Silent failure (no exception); logged implicitly
+///
+/// Resource management:
+///
+/// - Caller MUST close(client_fd) when done
+/// - Failure to close causes file descriptor leak
+/// - Leak consequence: eventually hits EMFILE → server stops accepting
+///
+/// State after successful accept():
+/// - Listening socket: UNCHANGED, can accept more connections
+/// - New socket: fd = client_fd, state = ESTABLISHED, peer = client_addr
+/// - TCP connection: fully established, ready for send/recv
+///
+/// @return New socket file descriptor (≥ 0) on success
+///         -1 on failure (check errno: EAGAIN, EMFILE, ENOMEM, etc.)
 int TcpListener::acceptConnection() {
-	if (!isBound_) {
-		return -1;
-	}
-	
-	// Estructura para guardar la dirección del cliente
-	struct sockaddr_in clientAddr;
-	socklen_t clientLen = sizeof(clientAddr);
-	
-	// ACCEPT: Acepta una conexión pendiente
-	// En modo no bloqueante:
-	// - Si hay conexión: retorna el fd del cliente
-	// - Si NO hay conexión: retorna -1, errno = EAGAIN
-	int clientFd = accept(listenFd_, (struct sockaddr*)&clientAddr, &clientLen);
-	
-	if (clientFd == -1) {
-		// EAGAIN or EWOULDBLOCK means no connection available (non-blocking)
-		// Esto es NORMAL, no es un error
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			return -1;
-		}
-		// Other errors are real problems
-		return -1;
-	}
-	
-	// CRUCIAL: El nuevo socket del cliente también debe ser no bloqueante
-	// Si no, read()/write() en ese socket bloquearían el servidor
-	int flags = fcntl(clientFd, F_GETFL, 0);
-	if (flags != -1) {
-		fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
-	}
-	
-	// Mostrar información del cliente (opcional)
-	char clientIp[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &clientAddr.sin_addr, clientIp, INET_ADDRSTRLEN);
-	std::cout << "New client connected from " << clientIp << std::endl;
-	
-	return clientFd;
+  struct sockaddr_in client_addr;
+  socklen_t addr_len = sizeof(client_addr);
+
+  bzero(&client_addr, size_t(addr_len));
+  int client_fd =
+      accept(socket_fd_, (struct sockaddr *)&client_addr, &addr_len);
+
+  if (client_fd < 0)
+    return -1;
+
+  int flags = fcntl(client_fd, F_GETFL, 0);
+  if (flags != -1) {
+    fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
+  }
+
+  char client_ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+  std::cout << "New connection from " << client_ip << ":"
+            << ntohs(client_addr.sin_port) << " (fd: " << client_fd << ")"
+            << std::endl;
+
+  return client_fd;
 }
 
+int TcpListener::getFd() const { return socket_fd_; }
+
+int TcpListener::getPort() const { return port_; }
