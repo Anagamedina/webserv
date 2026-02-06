@@ -258,6 +258,8 @@ void RequestProcessor::process(const HttpRequest& request,
 		if (isCgi)
 		{
 			// TODO: integrar CGI: delegar en CgiHandler (Carles).
+			// TODO tengo que llamar a una funcion que recoja el fd del
+			// cliente? o ya deberia hacerlo en la funcion de cgiHnadler? 
 			buildErrorResponse(response, request, 501, true, server);
 			return;
 		}
@@ -271,12 +273,5 @@ void RequestProcessor::process(const HttpRequest& request,
 		return;
 	}
 
-	// TODO: pseudologica de decision estatica vs CGI (cuando LocationConfig tenga getters):
-	// if (location) {
-	//   if (!location->getRedirect().empty()) -> 301/302
-	//   if (!location->isMethodAllowed(request.getMethod())) -> 405
-	//   if (existe CGI para la extension) -> CgiHandler
-	//   else -> servir estatico (root + uri)
-	// }
 	fillBaseResponse(response, request, statusCode, shouldClose, body);
 }
