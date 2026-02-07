@@ -1,0 +1,52 @@
+server
+{
+        listen       192.168.1.1:8080;
+        server_name  localhost;
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+#            return        101      302 http://example.com;
+            return 404 "Page not found";    # ✅ VÁLIDO
+        }
+
+        #error_page  404              /404.html;
+        # redirect server error pages to the static page /50x.html
+        error_page   500 502 503 504  /50x.html;
+#         error_page   501 ;
+        location = /50x.html {
+            root   html;
+            limit_except GET POST PUT DELETE;
+        }
+
+        location /uploads {
+            # Sintaxis: upload_store [ruta];
+            upload_store /var/www/uploads;
+
+            # OJO: Asegúrate de que este directorio exista y tenga permisos de escritura
+        }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+}
+# Segundo bloque server para probar multiples puertoss
+server {
+    listen 127.0.0.1:8081;
+    server_name test_server;
+
+    location / {
+        root ./www;
+        index index.html;
+    }
+}
