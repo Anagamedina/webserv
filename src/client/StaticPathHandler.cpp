@@ -2,6 +2,7 @@
 
 #include "AutoindexRenderer.hpp"
 #include "ErrorUtils.hpp"
+#include "HttpResponse.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "common/StringUtils.hpp"
 
@@ -108,7 +109,7 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
 
     if (foundIndex) {
         if (!readFileToBody(indexPath, body)) {
-            buildErrorResponse(response, request, 403, false, server);
+            buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
             return true;
         }
         return false;
@@ -120,7 +121,7 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
         return false;
     }
 
-    buildErrorResponse(response, request, 403, false, server);
+    buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
     return true;
 }
 
@@ -128,7 +129,7 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
                               const std::string& path, std::vector< char >& body,
                               HttpResponse& response) {
     if (request.getMethod() == HTTP_METHOD_POST) {
-        buildErrorResponse(response, request, 405, false, server);
+        buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
         return true;
     }
     if (request.getMethod() == HTTP_METHOD_DELETE) {
@@ -136,12 +137,12 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
             body.clear();
             return false;
         }
-        buildErrorResponse(response, request, 500, true, server);
+        buildErrorResponse(response, request, HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);
         return true;
     }
 
     if (!readFileToBody(path, body)) {
-        buildErrorResponse(response, request, 403, false, server);
+        buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
         return true;
     }
 
@@ -155,7 +156,7 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
     (void)body;
     std::string uploadStore = location->getUploadStore();
     if (uploadStore.empty()) {
-        buildErrorResponse(response, request, 405, false, server);
+        buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
         return true;
     }
 
@@ -175,7 +176,7 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
 
     std::ofstream outFile(fullPath.c_str(), std::ios::out | std::ios::binary);
     if (!outFile.is_open()) {
-        buildErrorResponse(response, request, 500, true, server);
+        buildErrorResponse(response, request, HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);
         return true;
     }
 
@@ -186,9 +187,6 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
     outFile.close();
 
     response.setStatusCode(HTTP_STATUS_CREATED);
-	// como algo informativo esta bien pero hay que devolver el codigo de estado 201
-	// que significa que el recurso se ha creado satisfactoriamente
-	// response.setBody("File uploaded successfully");
 
     return true;
 }
@@ -201,7 +199,7 @@ bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
         if (location && !location->getUploadStore().empty()) {
              return handleUpload(request, server, location, path, body, response);
         } else {
-             buildErrorResponse(response, request, 405, false, server);
+             buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
              return true;
         }
     }
@@ -209,7 +207,7 @@ bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
     bool isDir = false;
     bool isReg = false;
     if (!getPathInfo(path, isDir, isReg)) {
-        buildErrorResponse(response, request, 404, false, server);
+        buildErrorResponse(response, request, HTTP_STATUS_NOT_FOUND, false, server);
         return true;
     }
 
@@ -217,7 +215,7 @@ bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
         return handleDirectory(request, server, location, path, body, response);
 
     if (!isReg) {
-        buildErrorResponse(response, request, 403, false, server);
+        buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
         return true;
     }
 
