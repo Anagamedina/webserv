@@ -99,13 +99,13 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
             }
         }
         if (_cgiProcess->isRequestBodySent()) {
-            _cgiProcess->closePipeIn();
             _serverManager->unregisterCgiPipe(pipe_fd);
+            _cgiProcess->closePipeIn();
         }
         return;
     }
 
-    if (pipe_fd == _cgiProcess->getPipeOut() && (events & EPOLLIN)) {
+    if (pipe_fd == _cgiProcess->getPipeOut() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
         char buffer[4096];
         ssize_t bytes = read(pipe_fd, buffer, sizeof(buffer));
         if (bytes > 0) {
@@ -113,9 +113,9 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
             _lastActivity = std::time(0);
             return;
         }
-        if (bytes == 0) {
-            _cgiProcess->closePipeOut();
+        if (bytes == 0 || bytes < 0) {
             _serverManager->unregisterCgiPipe(pipe_fd);
+            _cgiProcess->closePipeOut();
             finalizeCgiResponse();
             delete _cgiProcess;
             _cgiProcess = 0;
