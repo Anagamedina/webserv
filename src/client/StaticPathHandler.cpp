@@ -2,6 +2,8 @@
 
 #include "AutoindexRenderer.hpp"
 #include "ErrorUtils.hpp"
+#include "RequestProcessorUtils.hpp"
+#include "common/StringUtils.hpp"
 
 #include <dirent.h>
 #include <fstream>
@@ -9,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
+#include <ctime>
 
 static bool readFileToBody(const std::string& path, std::vector< char >& out) {
     std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
@@ -145,9 +148,64 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
     return false;
 }
 
+
+static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
+                         const LocationConfig* location, const std::string& path,
+                         std::vector< char >& body, HttpResponse& response) {
+    (void)body;
+    std::string uploadStore = location->getUploadStore();
+    if (uploadStore.empty()) {
+        buildErrorResponse(response, request, 405, false, server);
+        return true;
+    }
+
+    std::string filename;
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash != std::string::npos && lastSlash < path.length() - 1) {
+        filename = path.substr(lastSlash + 1);
+    } else {
+        filename = "uploaded_file_" + string_utils::toString(std::time(NULL)); 
+    }
+
+    if (uploadStore[uploadStore.length() - 1] != '/') {
+        uploadStore += "/";
+    }
+
+    std::string fullPath = uploadStore + filename;
+
+    std::ofstream outFile(fullPath.c_str(), std::ios::out | std::ios::binary);
+    if (!outFile.is_open()) {
+        buildErrorResponse(response, request, 500, true, server);
+        return true;
+    }
+
+    std::vector< char > reqBody = request.getBody();
+    if (!reqBody.empty()) {
+        outFile.write(&reqBody[0], reqBody.size());
+    }
+    outFile.close();
+
+    response.setStatusCode(HTTP_STATUS_CREATED);
+	// como algo informativo esta bien pero hay que devolver el codigo de estado 201
+	// que significa que el recurso se ha creado satisfactoriamente
+	// response.setBody("File uploaded successfully");
+
+    return true;
+}
+
 bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
                       const LocationConfig* location, const std::string& path,
                       std::vector< char >& body, HttpResponse& response) {
+
+    if (request.getMethod() == HTTP_METHOD_POST) {
+        if (location && !location->getUploadStore().empty()) {
+             return handleUpload(request, server, location, path, body, response);
+        } else {
+             buildErrorResponse(response, request, 405, false, server);
+             return true;
+        }
+    }
+
     bool isDir = false;
     bool isReg = false;
     if (!getPathInfo(path, isDir, isReg)) {

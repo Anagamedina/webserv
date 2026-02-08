@@ -55,7 +55,9 @@ SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/config/ConfigUtils.cpp \
 			$(SRC_DIR)/http/HttpParserBody.cpp \
 			$(SRC_DIR)/http/HttpRequest.cpp \
-			$(SRC_DIR)/http/HttpResponse.cpp
+			$(SRC_DIR)/http/HttpResponse.cpp \
+			$(SRC_DIR)/common/StringUtils.cpp
+			
 
 
 #OBJ_FILES = $(SRC_FILES:%.cpp=$(BUILD_DIR)/%.o) # works with vpath
