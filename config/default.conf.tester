@@ -1,0 +1,56 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    # ------------------------------------------------------------
+    # 1. "/" → GET only
+    # ------------------------------------------------------------
+    location = / {
+        limit_except GET {
+            return 405;
+        }
+
+        root /var/www/html;
+        index index.html;
+    }
+
+    # ------------------------------------------------------------
+    # 2. "*.bla" → POST only → cgi_test
+    # ------------------------------------------------------------
+    location ~ \.bla$ {
+        limit_except POST {
+            return 405;
+        }
+
+        include fastcgi_params;
+        fastcgi_pass unix:/run/fcgiwrap.socket;
+        fastcgi_param SCRIPT_FILENAME /usr/local/bin/cgi_test;
+    }
+
+    # ------------------------------------------------------------
+    # 3. "/post_body" → POST only, max body 100 bytes
+    # ------------------------------------------------------------
+    location = /post_body {
+        limit_except POST {
+            return 405;
+        }
+
+        client_max_body_size 100;
+        return 200 "POST accepted\n";
+    }
+
+    # ------------------------------------------------------------
+    # 4. "/directory/" → GET only
+    #    root = YoupiBanane
+    #    default file = youpi.bad_extension
+    # ------------------------------------------------------------
+    location /directory/ {
+        limit_except GET {
+            return 405;
+        }
+
+        root /var/www;
+        index youpi.bad_extension;
+        try_files $uri $uri/ = 404;
+    }
+}
