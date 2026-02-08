@@ -149,7 +149,11 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
     return false;
 }
 
-
+/// Handles POST uploads for locations with `upload_store`:
+/// - Validates upload store is configured
+/// - Derives a filename (from URL or timestamp fallback)
+/// - Writes request body to the upload directory
+/// - Returns 200 Created on success, error response otherwise
 static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
                          const LocationConfig* location, const std::string& path,
                          std::vector< char >& body, HttpResponse& response) {
