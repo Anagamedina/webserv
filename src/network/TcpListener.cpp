@@ -1,5 +1,5 @@
 #include "TcpListener.hpp"
-// #include "utils/StringUtils.hpp"
+#include "common/StringUtils.hpp"
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstddef>
@@ -185,9 +185,8 @@ void TcpListener::bindSocket() {
 
     if (bind(socket_fd_, (struct sockaddr*)&address, sizeof(address)) < 0) {
         close(socket_fd_);
-        // throw std::runtime_error("Failed to bind socket to port " +
-        //                          StringUtils::toString(port_));
-        throw std::runtime_error("Failed to bind socket to port ");
+         throw std::runtime_error("Failed to bind socket to port " +
+                                  string_utils::toString(port_));
     }
 
     std::cout << "Socket bound to port " << port_ << std::endl;
