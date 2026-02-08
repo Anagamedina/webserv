@@ -2,7 +2,7 @@
 
 #include "AutoindexRenderer.hpp"
 #include "ErrorUtils.hpp"
-#include "HttpResponse.hpp"
+#include "http/HttpResponse.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "common/StringUtils.hpp"
 
