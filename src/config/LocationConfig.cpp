@@ -3,7 +3,8 @@
 
 LocationConfig::LocationConfig() :
       autoindex_(false),
-      redirect_code_(-1) {
+      redirect_code_(-1),
+      redirect_param_count_(0) {
 }
 
 LocationConfig::LocationConfig(const LocationConfig& other) :
@@ -15,6 +16,7 @@ LocationConfig::LocationConfig(const LocationConfig& other) :
       upload_store_(other.upload_store_),
       redirect_code_(other.redirect_code_),
       redirect_url_(other.redirect_url_),
+      redirect_param_count_(other.redirect_param_count_),
       cgi_handlers_(other.cgi_handlers_) {
 }
 
@@ -28,6 +30,7 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other) {
         upload_store_ = other.upload_store_;
         redirect_code_ = other.redirect_code_;
         redirect_url_ = other.redirect_url_;
+        redirect_param_count_ = other.redirect_param_count_;
         cgi_handlers_ = other.cgi_handlers_;
     }
     return *this;
@@ -67,6 +70,10 @@ void LocationConfig::setRedirectUrl(const std::string& redirectUrl) {
     redirect_url_ = redirectUrl;
 }
 
+void LocationConfig::setRedirectParamCount(const int count) {
+    redirect_param_count_ = count;
+}
+
 void LocationConfig::addCgiHandler(const std::string& extension, const std::string& binaryPath) {
     cgi_handlers_.insert(std::pair< std::string, std::string >(extension, binaryPath));
 }
@@ -102,6 +109,10 @@ const std::string& LocationConfig::getRedirectUrl() const {
     return redirect_url_;
 }
 
+int LocationConfig::getRedirectParamCount() const {
+    return redirect_param_count_;
+}
+
 std::string LocationConfig::getCgiPath(const std::string& extension) const {
     const std::map< std::string, std::string >::const_iterator it = cgi_handlers_.find(extension);
 
@@ -115,14 +126,20 @@ const std::map< std::string, std::string >& LocationConfig::getCgiHandlers() con
     return cgi_handlers_;
 }
 
+/**
+ * this function are doing two actions is possible we need to refactor the impplementation ?
+ * @param method
+ * @return true or false
+ */
 bool LocationConfig::isMethodAllowed(const std::string& method) const {
-    // Default safe policy? Or allow all? Usually allow all if empty?
-    // Nginx default is GET only if no limit_except.
-    if (!allowed_methods_.empty()) {
-        if (method == config::section::method_head || method == config::section::method_get) {
-            return true;
-        }
+    //	TODO: what happen if method parameter is "" empty?
+    //	we need to introudce default case that is: GET
+    //	and this get insert in vector.
+    if (method.empty()) {
         return false;
+    }
+    if (allowed_methods_.empty()) {
+        return (method == config::section::method_get);
     }
 
     for (size_t i = 0; i < allowed_methods_.size(); ++i) {
