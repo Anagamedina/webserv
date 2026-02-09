@@ -1,0 +1,33 @@
+
+// Test 1: Sin argumentos
+location /upload {
+    upload_store;  // ❌ Debe lanzar "Missing path"
+}
+
+// Test 2: Vacío
+location /upload {
+    upload_store ;  // ❌ Debe lanzar "Empty path"
+}
+
+// Test 3: Demasiados argumentos
+location /upload {
+    upload_store /uploads extra;  // ❌ Debe lanzar "Too many arguments"
+}
+
+// Test 4: Correcto - ruta absoluta
+location /upload {
+    upload_store /var/www/uploads;  // ✅ OK
+}
+
+// Test 5: Correcto - ruta relativa
+location /upload {
+    upload_store ./uploads;  // ✅ OK
+}
+
+// Test 6: Correcto - ruta relativa sin ./
+location /upload {
+    upload_store uploads;  // ✅ OK
+}
+
+------------------------------------------------------------
+

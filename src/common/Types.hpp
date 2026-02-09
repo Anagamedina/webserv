@@ -1,4 +1,4 @@
 #ifndef WEBSERV_TYPES_HPP
 #define WEBSERV_TYPES_HPP
 
-#endif //WEBSERV_TYPES_HPP
+#endif // WEBSERV_TYPES_HPP
