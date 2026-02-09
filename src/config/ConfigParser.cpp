@@ -258,15 +258,23 @@ void ConfigParser::parseListen(ServerConfig& server, const std::vector< std::str
     */
     if (pos != std::string::npos) {
         // Case: IP:PORT (127.0.0.1:8080)
-        std::string ip = value.substr(0, pos);
-        std::string port = value.substr(pos + 1);
+        std::string first = value.substr(0, pos);
+        std::string second = value.substr(pos + 1);
 
-        if (ip.find_first_not_of("0123456789") == std::string::npos) {
-            server.setPort(config::utils::stringToInt(ip));
-            server.setHost(port);
+        if (first.find_first_not_of("0123456789") == std::string::npos) {
+            server.setPort(config::utils::stringToInt(first));
+            if (!config::utils::isValidHost(second)) {
+                throw ConfigException(config::errors::invalid_ip_format + ": " + second);
+            }
+            server.setHost(second);
         } else {
-            server.setHost(ip);
-            server.setPort(config::utils::stringToInt(port));
+            // First part has non-digits - it's a host
+            // Validate host format
+            if (!config::utils::isValidHost(first)) {
+                throw ConfigException(config::errors::invalid_ip_format + ": " + first);
+            }
+            server.setHost(first);
+            server.setPort(config::utils::stringToInt(second));
         }
     } else {
         // Case: PORT (8080) or only HOST (localhost)
@@ -274,7 +282,9 @@ void ConfigParser::parseListen(ServerConfig& server, const std::vector< std::str
         if (value.find_first_not_of("0123456789") == std::string::npos) {
             server.setPort(config::utils::stringToInt(value));
         } else {
-            // TODO: move to cosntant
+            if (!config::utils::isValidHost(value)) {
+                throw ConfigException(config::errors::invalid_ip_format + ": " + value);
+            }
             server.setHost(value);
             server.setPort(80); // DEFAULT ?
         }
@@ -417,6 +427,11 @@ void ConfigParser::parseLocationBlock(ServerConfig& server, std::stringstream& s
     }
 
     std::string locationPath = tokens[pathIndex];
+    
+    if (!config::utils::isValidLocationPath(locationPath)) {
+        throw ConfigException(config::errors::invalid_location_path + ": " + locationPath);
+    }
+    
     LocationConfig loc;
     loc.setPath(locationPath);
 
@@ -449,7 +464,11 @@ void ConfigParser::parseLocationBlock(ServerConfig& server, std::stringstream& s
                    directive == config::section::allow_methods ||
                    directive == config::section::limit_except) {
             for (size_t i = 1; i < locTokens.size(); ++i) {
-                loc.addMethod(config::utils::removeSemicolon(locTokens[i]));
+                std::string method = config::utils::removeSemicolon(locTokens[i]);
+                if (!config::utils::isValidHttpMethod(method)) {
+                    throw ConfigException(config::errors::invalid_http_method + ": " + method);
+                }
+                loc.addMethod(method);
             }
         } else if (directive == config::section::return_str) {
             parseReturn(loc, locTokens);

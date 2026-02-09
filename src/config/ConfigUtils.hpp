@@ -21,6 +21,15 @@ void exportContentToLogFile(const std::string& fileContent, const std::string& p
 bool isValidPath(const std::string& path);
 long parseSize(const std::string& str);
 
+// New validation functions for TDD
+bool isValidIPv4(const std::string& ip);
+bool isValidHostname(const std::string& hostname);
+bool isValidHost(const std::string& host);
+bool isValidLocationPath(const std::string& path);
+bool isValidHttpMethod(const std::string& method);
+std::string checkRootPath(const std::string& path);
+void ensureUploadStorePath(const std::string& path);
+
 } // namespace utils
 
 } // namespace config

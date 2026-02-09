@@ -52,6 +52,17 @@ static const std::string invalid_http_status_code = "Invalid HTTP status code.";
 static const std::string invalid_autoindex = "autoindex must be 'on' or 'off'.";
 static const std::string missing_args_in_index = "Missing arguments in 'index' directive.";
 static const std::string invalid_new_location_block = "Invalid nested new 'location' directive.";
+
+// New validation error messages (TDD)
+static const std::string invalid_ip_format = "Invalid IP address or hostname format";
+static const std::string invalid_location_path = "Location path must start with '/' and not be empty";
+static const std::string missing_semicolon = "Directive must end with semicolon";
+static const std::string invalid_http_method = "HTTP method must be GET, POST, or DELETE";
+static const std::string body_size_overflow = "Max body size exceeds limit (2GB)";
+static const std::string body_size_negative = "Max body size cannot be negative";
+static const std::string upload_store_creation_failed = "Failed to create upload directory";
+static const std::string duplicate_cgi_extension = "CGI extension already registered";
+static const std::string root_path_warning = "Root path does not exist or is not accessible";
 } // namespace errors
 
 namespace section {

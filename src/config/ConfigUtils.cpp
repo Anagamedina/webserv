@@ -7,6 +7,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <cerrno>
+#include <cstring>
 
 #include "ConfigException.hpp"
 
@@ -209,6 +213,10 @@ long parseSize(const std::string& str) {
         throw ConfigException(config::errors::invalid_characters + str);
     }
 
+    if (value < 0) {
+        throw ConfigException(config::errors::body_size_negative);
+    }
+
     std::string suffix = end;
     if (!suffix.empty()) {
         if (suffix.length() > 1) {
@@ -216,18 +224,231 @@ long parseSize(const std::string& str) {
         }
 
         char s = std::tolower(suffix[0]);
+        // Check for overflow before multiplication
+        const long MAX_SIZE = std::numeric_limits<int>::max(); // 2GB limit (INT_MAX)
+        
         if (s == 'k') {
+            if (value > MAX_SIZE / 1024) {
+                throw ConfigException(config::errors::body_size_overflow);
+            }
             value *= 1024;
         } else if (s == 'm') {
+            if (value > MAX_SIZE / (1024 * 1024)) {
+                throw ConfigException(config::errors::body_size_overflow);
+            }
             value *= 1024 * 1024;
         } else if (s == 'g') {
+            if (value > MAX_SIZE / (1024 * 1024 * 1024)) {
+                throw ConfigException(config::errors::body_size_overflow);
+            }
             value *= 1024 * 1024 * 1024;
         } else {
             throw ConfigException("Invalid size suffix: " + suffix);
         }
     }
 
+    if (value < 0 || value > std::numeric_limits<int>::max()) {
+        throw ConfigException(config::errors::body_size_overflow);
+    }
+
     return value;
+}
+
+// ============================================================================
+// New validation functions for TDD
+// ============================================================================
+
+// Validates IPv4 address format (xxx.xxx.xxx.xxx where xxx is 0-255)
+bool isValidIPv4(const std::string& ip) {
+    if (ip.empty()) {
+        return false;
+    }
+
+    std::vector<std::string> octets = split(ip, '.');
+    if (octets.size() != 4) {
+        return false;
+    }
+
+    for (size_t i = 0; i < octets.size(); ++i) {
+        const std::string& octet = octets[i];
+        
+        // Check if empty or has invalid length
+        if (octet.empty() || octet.length() > 3) {
+            return false;
+        }
+
+        // Check all characters are digits
+        for (size_t j = 0; j < octet.length(); ++j) {
+            if (!std::isdigit(static_cast<unsigned char>(octet[j]))) {
+                return false;
+            }
+        }
+
+        // Convert to int and check range
+        int val = 0;
+        for (size_t j = 0; j < octet.length(); ++j) {
+            val = val * 10 + (octet[j] - '0');
+        }
+        
+        // Check range 0-255
+        if (val > 255) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Validates hostname format following RFC 952 and RFC 1123
+// - Can contain alphanumeric characters, dots, and hyphens
+// - Cannot start or end with hyphen or dot
+// - Hyphens cannot be immediately before or after dots
+// - No consecutive dots
+bool isValidHostname(const std::string& hostname) {
+    if (hostname.empty()) {
+        return false;
+    }
+
+    // Check for invalid starting/ending characters
+    if (hostname[0] == '-' || hostname[0] == '.' ||
+        hostname[hostname.length() - 1] == '-' || hostname[hostname.length() - 1] == '.') {
+        return false;
+    }
+
+    // Check each character and for consecutive dots and hyphens near dots
+    for (size_t i = 0; i < hostname.length(); ++i) {
+        char c = hostname[i];
+        
+        // Valid characters: alphanumeric, dot, hyphen
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '.' && c != '-') {
+            return false;
+        }
+
+        // Check for consecutive dots
+        if (c == '.' && i + 1 < hostname.length() && hostname[i + 1] == '.') {
+            return false;
+        }
+        
+        // Check for hyphen immediately before a dot (e.g., "example-.com")
+        if (c == '-' && i + 1 < hostname.length() && hostname[i + 1] == '.') {
+            return false;
+        }
+        
+        // Check for hyphen immediately after a dot (e.g., "example.-com")
+        if (c == '-' && i > 0 && hostname[i - 1] == '.') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Validates a host string (either IPv4 or hostname)
+bool isValidHost(const std::string& host) {
+    if (host.empty()) {
+        return false;
+    }
+
+    bool looksLikeIPv4 = true;
+    int dotCount = 0;
+    for (size_t i = 0; i < host.length(); ++i) {
+        if (host[i] == '.') {
+            dotCount++;
+        } else if (!std::isdigit(static_cast<unsigned char>(host[i]))) {
+            looksLikeIPv4 = false;
+            break;
+        }
+    }
+    
+    if (looksLikeIPv4 && dotCount == 3) {
+        return isValidIPv4(host);
+    }
+
+    return isValidHostname(host);
+}
+
+// Validates location path format:
+// - Must start with '/'
+// - Cannot be empty
+// - No leading/trailing whitespace
+// - No double slashes
+bool isValidLocationPath(const std::string& path) {
+    if (path.empty()) {
+        return false;
+    }
+
+    // Must start with '/'
+    if (path[0] != '/') {
+        return false;
+    }
+
+    // Check for whitespace
+    if (path.find(' ') != std::string::npos ||
+        path.find('\t') != std::string::npos) {
+        return false;
+    }
+
+    // Check for double slashes (except at position 0)
+    for (size_t i = 1; i < path.length(); ++i) {
+        if (path[i] == '/' && path[i - 1] == '/') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Validates HTTP method against whitelist (GET, POST, DELETE only)
+bool isValidHttpMethod(const std::string& method) {
+    return (method == "GET" || method == "POST" || method == "DELETE");
+}
+
+// Checks if a root path exists and is accessible.
+// Returns empty string if OK, warning message if not.
+// Following NGINX behavior: warns but does not fail at startup.
+std::string checkRootPath(const std::string& path) {
+    if (path.empty()) {
+        return config::errors::root_path_warning + ": path is empty";
+    }
+
+    // Use stat to check if path exists and is a directory
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        return config::errors::root_path_warning + ": " + path + " does not exist";
+    }
+
+    if (!(info.st_mode & S_IFDIR)) {
+        return config::errors::root_path_warning + ": " + path + " is not a directory";
+    }
+
+    return "";
+}
+
+// Ensures upload store path exists, creating it if necessary.
+// Throws ConfigException if creation fails.
+// Following NGINX behavior: creates directory or fails at startup.
+void ensureUploadStorePath(const std::string& path) {
+    if (path.empty()) {
+        throw ConfigException(config::errors::upload_store_creation_failed + ": path is empty");
+    }
+
+    struct stat info;
+    if (stat(path.c_str(), &info) == 0) {
+        if (!(info.st_mode & S_IFDIR)) {
+            throw ConfigException(config::errors::upload_store_creation_failed + 
+                                ": " + path + " exists but is not a directory");
+        }
+        return;
+    }
+
+    // Directory doesn't exist, try to create it
+    // Note: mkdir creates only the last component, not parent directories
+    // For simplicity, we'll create just the final directory
+    // In production, you might want to create parent directories too
+    if (mkdir(path.c_str(), 0755) != 0) {
+        throw ConfigException(config::errors::upload_store_creation_failed + 
+                            ": " + path + " (" + std::string(strerror(errno)) + ")");
+    }
 }
 } // namespace utils
 
