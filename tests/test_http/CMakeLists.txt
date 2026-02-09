@@ -10,10 +10,17 @@ add_executable(test_http_parser
         ../../src/http/HttpParserHeaders.cpp
         ../../src/http/HttpParserBody.cpp
         ../../src/http/HttpRequest.cpp
+        ../../src/http/HttpHeaderUtils.cpp
+)
+
+# Link against the http library which contains all dependencies
+target_link_libraries(test_http_parser PRIVATE
+        http
 )
 
 # Esto es vital para que manual_http_parser.cpp encuentre "HttpParser.hpp"
 target_include_directories(test_http_parser PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
         ${HTTP_INC_DIR}
 )
 
@@ -25,5 +32,6 @@ add_executable(test_http_request
 
 # Esto es vital para que manual_http_parser.cpp encuentre "HttpParser.hpp"
 target_include_directories(test_http_request PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
         ${HTTP_INC_DIR}
 )

@@ -19,8 +19,15 @@ target_link_libraries(unit_tests PRIVATE
         config
 )
 
-# Includes needed
+# Includes needed for all source files and tests
 target_include_directories(unit_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/config
+        ${CMAKE_SOURCE_DIR}/src/http
+        ${CMAKE_SOURCE_DIR}/src/network
+        ${CMAKE_SOURCE_DIR}/src/client
+        ${CMAKE_SOURCE_DIR}/src/cgi
+        ${CMAKE_SOURCE_DIR}/src/common
+        ${CMAKE_SOURCE_DIR}/src/utils
         ${CMAKE_SOURCE_DIR}/lib/catch2
 )
