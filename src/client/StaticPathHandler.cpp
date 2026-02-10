@@ -5,7 +5,6 @@
 #include "http/HttpResponse.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "common/StringUtils.hpp"
-#include "RequestProcessorUtils.hpp"
 #include "ResponseUtils.hpp"
 
 #include <dirent.h>
@@ -112,7 +111,7 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
             break;
         }
     }
-//
+
     if (foundIndex) {
         // Double check: si el index es CGI segun config, no servir como estatico.
         if (isCgiRequestByConfig(location, indexPath)) {
@@ -129,10 +128,8 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
             return true;
         }
         if (!readFileToBody(indexPath, body)) {
+            // No se puede abrir el archivo (no existe o sin permisos) -> 403.
             buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
-            // Si no se puede abrir el archivo (no existe o sin permisos de lectura),
-            // devolvemos 403. No hace falta comprobar permisos con stat/access aparte.
-            buildErrorResponse(response, request, 403, false, server);
             return true;
         }
         // El index es un archivo estatico normal: fijamos el Content-Type
@@ -169,9 +166,6 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
     }
 
     if (!readFileToBody(path, body)) {
-        // Mismo criterio que para el index: si ifstream no puede abrir el archivo
-        // (por permisos o porque ha desaparecido), respondemos 403 Forbidden.
-        //buildErrorResponse(response, request, 403, false, server);
         buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
         return true;
     }
@@ -231,17 +225,7 @@ bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
                       const LocationConfig* location, const std::string& path,
                       std::vector< char >& body, HttpResponse& response) {
 
-    //if (request.getMethod() == HTTP_METHOD_POST) {
-    //    if (location && !location->getUploadStore().empty()) {
-    //         return handleUpload(request, server, location, path, body, response);
-    //    } else {
-    //         buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
-    //         return true;
-    //    }
-    //}
-
-    // Si es un POST y la location tiene configurado un upload_store, manejamos
-    // la subida de archivo en lugar de servir un recurso estatico normal.
+    // POST con upload_store: subida de archivo.
     if (request.getMethod() == HTTP_METHOD_POST && location &&
         !location->getUploadStore().empty()) {
         return handleUpload(request, server, location, path, body, response);
