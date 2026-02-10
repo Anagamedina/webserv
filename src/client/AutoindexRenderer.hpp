@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
-std::vector< char > renderAutoindexHtml(const std::string& base, const std::string& itemsHtml);
+std::vector<char> renderAutoindexHtml(const std::string& base,
+                                      const std::string& itemsHtml);
 
-#endif // AUTOINDEX_RENDERER_HPP
+#endif  // AUTOINDEX_RENDERER_HPP

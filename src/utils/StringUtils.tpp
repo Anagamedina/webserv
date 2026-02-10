@@ -6,9 +6,9 @@
 
 template <typename T>
 std::string StringUtils::toString(const T& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
 }
 
 #endif

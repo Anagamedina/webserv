@@ -5,13 +5,13 @@
 #include <string>
 
 class ConfigException : public std::exception {
-  private:
-    std::string message_;
+ private:
+  std::string message_;
 
-  public:
-    explicit ConfigException(const std::string& msg);
-    virtual ~ConfigException() throw();
-    virtual const char* what() const throw();
+ public:
+  explicit ConfigException(const std::string& msg);
+  virtual ~ConfigException() throw();
+  virtual const char* what() const throw();
 };
 
-#endif // WEBSERV_CONFIGEXCEPTION_HPP
+#endif  // WEBSERV_CONFIGEXCEPTION_HPP

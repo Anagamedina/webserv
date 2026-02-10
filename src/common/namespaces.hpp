@@ -17,7 +17,7 @@ static const char* const blue = "\033[34m";
 static const char* const magenta = "\033[35m";
 static const char* const cyan = "\033[36m";
 static const char* const white = "\033[37m";
-} // namespace colors
+}  // namespace colors
 
 namespace paths {
 // static const std::string default_config_path = "config/file.conf";
@@ -27,17 +27,19 @@ static const std::string log_file_config = "../config/logs/config-clean.log";
 static const std::string log_file_server = "../config/logs/server.log";
 static const std::string log_file_block = "../config/logs/block.log";
 static const std::string extension_file = ".conf";
-} // namespace paths
+}  // namespace paths
 
 namespace errors {
 static const char* const invalid_extension = "Invalid file extension: ";
 static const std::string cannot_open_file = "Cannot open config file: ";
 static const std::string number_out_of_range = "Number out of range.";
-static const std::string invalid_characters = "Invalid Characters in stringToInt().";
+static const std::string invalid_characters =
+    "Invalid Characters in stringToInt().";
 static const std::string invalid_num_args_return_directive =
     "Invalid number of arguments in 'return' directive";
 static const std::string invalid_redirect_code = "Invalid redirect code.";
-static const std::string missing_args_in_return = "Missing arguments after 'return' directive";
+static const std::string missing_args_in_return =
+    "Missing arguments after 'return' directive";
 
 static const std::string invalid_min_num_args_upload_directive =
     "Missing path in 'upload_store' directive";
@@ -46,24 +48,36 @@ static const std::string invalid_max_num_args_upload_directive =
 static const std::string invalid_characters_in_upload_directive =
     "Invalid characters in upload_store path: ";
 
-static const std::string empty_path_in_upload_directive = "Empty path in 'upload_store' directive";
+static const std::string empty_path_in_upload_directive =
+    "Empty path in 'upload_store' directive";
 static const std::string invalid_port_range = "Invalid port: must be 1 - 65535";
 static const std::string invalid_http_status_code = "Invalid HTTP status code.";
 static const std::string invalid_autoindex = "autoindex must be 'on' or 'off'.";
-static const std::string missing_args_in_index = "Missing arguments in 'index' directive.";
-static const std::string invalid_new_location_block = "Invalid nested new 'location' directive.";
+static const std::string missing_args_in_index =
+    "Missing arguments in 'index' directive.";
+static const std::string invalid_new_location_block =
+    "Invalid nested new 'location' directive.";
 
 // New validation error messages (TDD)
-static const std::string invalid_ip_format = "Invalid IP address or hostname format";
-static const std::string invalid_location_path = "Location path must start with '/' and not be empty";
-static const std::string missing_semicolon = "Directive must end with semicolon";
-static const std::string invalid_http_method = "HTTP method must be GET, POST, or DELETE";
-static const std::string body_size_overflow = "Max body size exceeds limit (2GB)";
-static const std::string body_size_negative = "Max body size cannot be negative";
-static const std::string upload_store_creation_failed = "Failed to create upload directory";
-static const std::string duplicate_cgi_extension = "CGI extension already registered";
-static const std::string root_path_warning = "Root path does not exist or is not accessible";
-} // namespace errors
+static const std::string invalid_ip_format =
+    "Invalid IP address or hostname format";
+static const std::string invalid_location_path =
+    "Location path must start with '/' and not be empty";
+static const std::string missing_semicolon =
+    "Directive must end with semicolon";
+static const std::string invalid_http_method =
+    "HTTP method must be GET, POST, or DELETE";
+static const std::string body_size_overflow =
+    "Max body size exceeds limit (2GB)";
+static const std::string body_size_negative =
+    "Max body size cannot be negative";
+static const std::string upload_store_creation_failed =
+    "Failed to create upload directory";
+static const std::string duplicate_cgi_extension =
+    "CGI extension already registered";
+static const std::string root_path_warning =
+    "Root path does not exist or is not accessible";
+}  // namespace errors
 
 namespace section {
 static const std::string server = "server";
@@ -88,8 +102,8 @@ static const std::string return_str = "return";
 // location = /exact/path { ... }
 static const std::string exact_match_modifier = "=";
 
-// 2. Preferential prefix (prefix más largo, pero detiene la búsqueda de regex si coincide)
-// location ^~ /images/ { ... } → no chequea regex después
+// 2. Preferential prefix (prefix más largo, pero detiene la búsqueda de regex
+// si coincide) location ^~ /images/ { ... } → no chequea regex después
 static const std::string preferential_prefix_modifier = "^~";
 
 static const int default_return_code = 302;
@@ -101,17 +115,13 @@ static const std::string method_get = "GET";
 static const std::string method_head = "HEAD";
 static const std::string cgi = "cgi";
 static const std::string cgi_fast = "fastcgi_pass";
-} // namespace section
+}  // namespace section
 
-enum ParserState {
-    OUTSIDE_BLOCK,
-    IN_SERVER,
-    IN_LOCATION
-};
+enum ParserState { OUTSIDE_BLOCK, IN_SERVER, IN_LOCATION };
 
 namespace debug {
 void debugConfigLog(const std::string& config_file_path);
 }
-} // namespace config
+}  // namespace config
 
 #endif

@@ -2,29 +2,28 @@
 
 #include <sstream>
 
-std::vector< char > renderAutoindexHtml(const std::string& base, const std::string& itemsHtml) {
-    std::ostringstream html;
-    std::string safeBase = base;
-    if (safeBase.empty())
-        safeBase = "/";
+std::vector<char> renderAutoindexHtml(const std::string& base,
+                                      const std::string& itemsHtml) {
+  std::ostringstream html;
+  std::string safeBase = base;
+  if (safeBase.empty()) safeBase = "/";
 
-    html << "<!DOCTYPE html>\n"
-         << "<html>\n"
-         << "  <head>\n"
-         << "    <meta charset=\"utf-8\">\n"
-         << "    <title>Index of " << safeBase << "</title>\n"
-         << "  </head>\n"
-         << "  <body>\n"
-         << "    <h1>Index of " << safeBase << "</h1>\n"
-         << "    <ul>\n"
-         << itemsHtml << "    </ul>\n"
-         << "  </body>\n"
-         << "</html>\n";
+  html << "<!DOCTYPE html>\n"
+       << "<html>\n"
+       << "  <head>\n"
+       << "    <meta charset=\"utf-8\">\n"
+       << "    <title>Index of " << safeBase << "</title>\n"
+       << "  </head>\n"
+       << "  <body>\n"
+       << "    <h1>Index of " << safeBase << "</h1>\n"
+       << "    <ul>\n"
+       << itemsHtml << "    </ul>\n"
+       << "  </body>\n"
+       << "</html>\n";
 
-    std::string content = html.str();
-    return std::vector< char >(content.begin(), content.end());
+  std::string content = html.str();
+  return std::vector<char>(content.begin(), content.end());
 }
-
 
 /*#include "ErrorUtils.hpp"
 #include "ResponseUtils.hpp"
@@ -41,13 +40,15 @@ static std::vector<char> getFallbackErrorBody(int statusCode) {
          << "    <meta charset=\"utf-8\">\n"
          << "    <title>Error " << statusCode << "</title>\n"
          << "    <style>\n"
-         << "      body { font-family: sans-serif; text-align: center; padding: 50px; }\n"
+         << "      body { font-family: sans-serif; text-align: center; padding:
+50px; }\n"
          << "      h1 { color: #333; }\n"
          << "      hr { width: 50%; border: 0; border-top: 1px solid #eee; }\n"
          << "    </style>\n"
          << "  </head>\n"
          << "  <body>\n"
-         << "    <h1>" << statusCode << " " << getStatusText(statusCode) << "</h1>\n"
+         << "    <h1>" << statusCode << " " << getStatusText(statusCode) <<
+"</h1>\n"
          << "    <hr>\n"
          << "    <p>Webserv/1.0 (42 Barcelona)</p>\n"
          << "  </body>\n"
@@ -57,16 +58,16 @@ static std::vector<char> getFallbackErrorBody(int statusCode) {
     return std::vector<char>(content.begin(), content.end());
 }
 
-void buildErrorResponse(HttpResponse& response, const HttpRequest& request, int statusCode,
-                        bool shouldClose, const ServerConfig* server) {
+void buildErrorResponse(HttpResponse& response, const HttpRequest& request, int
+statusCode, bool shouldClose, const ServerConfig* server) {
 
     std::vector<char> body;
     bool customPageFound = false;
 
     // 1. Intentamos buscar la página personalizada en la configuración de Daru
     if (server) {
-        // Asumiendo que Daru implementa este método que devuelve el path del .html
-        std::string customPath = server->getErrorPagePath(statusCode);
+        // Asumiendo que Daru implementa este método que devuelve el path del
+.html std::string customPath = server->getErrorPagePath(statusCode);
 
         if (!customPath.empty()) {
             // Intentamos leer el archivo físico (www/errors/404.html, etc.)
@@ -76,9 +77,8 @@ void buildErrorResponse(HttpResponse& response, const HttpRequest& request, int 
         }
     }
 
-    // 2. Si no hay página personalizada o no se pudo leer el archivo, usamos el fallback
-    if (!customPageFound) {
-        body = getFallbackErrorBody(statusCode);
+    // 2. Si no hay página personalizada o no se pudo leer el archivo, usamos el
+fallback if (!customPageFound) { body = getFallbackErrorBody(statusCode);
     }
 
     // 3. Rellenamos la respuesta final
