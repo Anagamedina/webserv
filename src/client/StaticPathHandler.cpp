@@ -96,7 +96,6 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
     std::string indexPath;
     std::string indexName;
     for (size_t i = 0; i < indexes.size(); ++i) {
-        //indexPath = path + "/" + indexes[i];????
         indexPath = path;
         if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
             indexPath += "/";
@@ -127,6 +126,8 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
             return true;
         }
         if (!readFileToBody(indexPath, body)) {
+            // Si no se puede abrir el archivo (no existe o sin permisos de lectura),
+            // devolvemos 403. No hace falta comprobar permisos con stat/access aparte.
             buildErrorResponse(response, request, 403, false, server);
             return true;
         }
@@ -164,6 +165,8 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
     }
 
     if (!readFileToBody(path, body)) {
+        // Mismo criterio que para el index: si ifstream no puede abrir el archivo
+        // (por permisos o porque ha desaparecido), respondemos 403 Forbidden.
         buildErrorResponse(response, request, 403, false, server);
         return true;
     }
