@@ -1,30 +1,31 @@
 #include "TcpListener.hpp"
-#include "common/StringUtils.hpp"
+
 #include <arpa/inet.h>
-#include <cerrno>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
 #include <fcntl.h>
-#include <iostream>
 #include <netinet/in.h>
-#include <stdexcept>
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-TcpListener::TcpListener(int port) :
-      socket_fd_(-1),
-      port_(port) {
-    createSocket();
-    setSocketOptions();
-    bindSocket();
+#include <cerrno>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
+
+#include "common/StringUtils.hpp"
+
+TcpListener::TcpListener(int port) : socket_fd_(-1), port_(port) {
+  createSocket();
+  setSocketOptions();
+  bindSocket();
 }
 
 TcpListener::~TcpListener() {
-    if (socket_fd_ != -1) {
-        close(socket_fd_);
-    }
+  if (socket_fd_ != -1) {
+    close(socket_fd_);
+  }
 }
 
 /// Creates a TCP socket for accepting client connections.
@@ -51,11 +52,11 @@ TcpListener::~TcpListener() {
 /// @throws std::runtime_error if socket creation fails
 ///         (EMFILE, ENFILE, ENOMEM, etc.)
 void TcpListener::createSocket() {
-    socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_fd_ == -1) {
-        throw std::runtime_error("Failed to create socket");
-    }
-    std::cout << "Socket created (fd: " << socket_fd_ << ")" << std::endl;
+  socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (socket_fd_ == -1) {
+    throw std::runtime_error("Failed to create socket");
+  }
+  std::cout << "Socket created (fd: " << socket_fd_ << ")" << std::endl;
 }
 
 /// Configures socket options for optimal server operation.
@@ -102,29 +103,29 @@ void TcpListener::createSocket() {
 /// @throws std::runtime_error if fcntl(F_GETFL) fails
 /// @throws std::runtime_error if fcntl(F_SETFL) fails
 void TcpListener::setSocketOptions() {
-    int opt = 1;
-    if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        close(socket_fd_);
-        throw std::runtime_error("Failed to set socket options");
-    }
+  int opt = 1;
+  if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to set socket options");
+  }
 
-    // INFO: El subject prohibe usar otros flags que no sean F_SETFL
-    // O_NONBLOCK, FD_CLOEXEC, sin embargo la buena practica para c++ es recuperar
-    // los flags antes de añadir uno nuevo por que si solapa alguno de los flags
-    // se sobreescribira. aplicando F_GETFL -> | <NEW_FLAG> se evita el problema
-    int flags = fcntl(socket_fd_, F_GETFL, 0);
-    if (flags == -1) {
-        close(socket_fd_);
-        throw std::runtime_error("Failed to get socket flags");
-    }
-    if (fcntl(socket_fd_, F_SETFL, flags | O_NONBLOCK) == -1) {
-        close(socket_fd_);
-        throw std::runtime_error("Failed to set socket to non-blocking");
-    }
-    // if (fcntl(socket_fd_, F_SETFL, O_NONBLOCK) == -1) {
-    //	close(socket_fd_);
-    //	throw std::runtime_error("Failed to set socket to non-blocking");
-    // }
+  // INFO: El subject prohibe usar otros flags que no sean F_SETFL
+  // O_NONBLOCK, FD_CLOEXEC, sin embargo la buena practica para c++ es recuperar
+  // los flags antes de añadir uno nuevo por que si solapa alguno de los flags
+  // se sobreescribira. aplicando F_GETFL -> | <NEW_FLAG> se evita el problema
+  int flags = fcntl(socket_fd_, F_GETFL, 0);
+  if (flags == -1) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to get socket flags");
+  }
+  if (fcntl(socket_fd_, F_SETFL, flags | O_NONBLOCK) == -1) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to set socket to non-blocking");
+  }
+  // if (fcntl(socket_fd_, F_SETFL, O_NONBLOCK) == -1) {
+  //	close(socket_fd_);
+  //	throw std::runtime_error("Failed to set socket to non-blocking");
+  // }
 }
 
 /// Binds the socket to a specific port on all network interfaces.
@@ -173,23 +174,23 @@ void TcpListener::setSocketOptions() {
 ///
 /// @throws std::runtime_error if bind() fails
 void TcpListener::bindSocket() {
-    struct sockaddr_in address;
-    std::memset(&address, 0, sizeof(address));
+  struct sockaddr_in address;
+  std::memset(&address, 0, sizeof(address));
 
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = INADDR_ANY;
 
-    // Convierte un entero de 16 bits del orden de bytes del host (tu CPU) al
-    // orden de bytes de red (estándar TCP/IP).
-    address.sin_port = htons(port_);
+  // Convierte un entero de 16 bits del orden de bytes del host (tu CPU) al
+  // orden de bytes de red (estándar TCP/IP).
+  address.sin_port = htons(port_);
 
-    if (bind(socket_fd_, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        close(socket_fd_);
-         throw std::runtime_error("Failed to bind socket to port " +
-                                  string_utils::toString(port_));
-    }
+  if (bind(socket_fd_, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    close(socket_fd_);
+    throw std::runtime_error("Failed to bind socket to port " +
+                             string_utils::toString(port_));
+  }
 
-    std::cout << "Socket bound to port " << port_ << std::endl;
+  std::cout << "Socket bound to port " << port_ << std::endl;
 }
 
 /// Activates listening mode on the socket, enabling it to accept connections.
@@ -264,10 +265,10 @@ void TcpListener::bindSocket() {
 ///
 /// @throws std::runtime_error if listen() fails
 void TcpListener::listen() {
-    if (::listen(socket_fd_, SOMAXCONN) < 0) {
-        throw std::runtime_error("Failed to listen on socket");
-    }
-    std::cout << "Listening for connections..." << std::endl;
+  if (::listen(socket_fd_, SOMAXCONN) < 0) {
+    throw std::runtime_error("Failed to listen on socket");
+  }
+  std::cout << "Listening for connections..." << std::endl;
 }
 
 /// Accepts a pending client connection from the accept queue.
@@ -379,32 +380,28 @@ void TcpListener::listen() {
 /// @return New socket file descriptor (≥ 0) on success
 ///         -1 on failure (check errno: EAGAIN, EMFILE, ENOMEM, etc.)
 int TcpListener::acceptConnection() {
-    struct sockaddr_in client_addr;
-    socklen_t addr_len = sizeof(client_addr);
+  struct sockaddr_in client_addr;
+  socklen_t addr_len = sizeof(client_addr);
 
-    bzero(&client_addr, size_t(addr_len));
-    int client_fd = accept(socket_fd_, (struct sockaddr*)&client_addr, &addr_len);
+  bzero(&client_addr, size_t(addr_len));
+  int client_fd = accept(socket_fd_, (struct sockaddr*)&client_addr, &addr_len);
 
-    if (client_fd < 0)
-        return -1;
+  if (client_fd < 0) return -1;
 
-    int flags = fcntl(client_fd, F_GETFL, 0);
-    if (flags != -1) {
-        fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
-    }
+  int flags = fcntl(client_fd, F_GETFL, 0);
+  if (flags != -1) {
+    fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
+  }
 
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    std::cout << "New connection from " << client_ip << ":" << ntohs(client_addr.sin_port)
-              << " (fd: " << client_fd << ")" << std::endl;
+  char client_ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+  std::cout << "New connection from " << client_ip << ":"
+            << ntohs(client_addr.sin_port) << " (fd: " << client_fd << ")"
+            << std::endl;
 
-    return client_fd;
+  return client_fd;
 }
 
-int TcpListener::getFd() const {
-    return socket_fd_;
-}
+int TcpListener::getFd() const { return socket_fd_; }
 
-int TcpListener::getPort() const {
-    return port_;
-}
+int TcpListener::getPort() const { return port_; }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb — Ana / The Architect</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/about.html">THE SQUAD</a>
+            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/images/">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>Ana Gabriela Burgos — The Architect</h2>
+            <p class="back-row"><a href="/about.html" class="btn btn-back">&larr; Volver a Command Staff</a></p>
+
+            <p class="page-title">Informe de misión: Cliente HTTP y procesamiento de peticiones</p>
+
+            <div class="doc-block">
+                <p class="doc-p">
+                    Esta consola documenta la parte de <strong>cliente HTTP</strong> y <strong>procesamiento de peticiones</strong>: la lógica que recibe la señal entrante, la parsea, la enruta (estático o CGI), construye la respuesta y la devuelve por el socket. Todo manteniendo HTTP/1.1, I/O no bloqueante y sin bloquear el bucle de epoll.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">1. Client: la conexión y sus estados</h3>
+                <p class="doc-p">
+                    <strong>Client</strong> representa una conexión TCP con un navegador. Guarda el fd del socket, un buffer de entrada (<code>_inBuffer</code>), un buffer de salida (<code>_outBuffer</code>), una cola de respuestas pendientes (<code>_responseQueue</code>), el parser HTTP, la respuesta construida y una referencia a la configuración. También puede tener asociado un <code>CgiProcess*</code> cuando la petición se deriva a CGI.
+                </p>
+                <p class="doc-p">
+                    Los <strong>estados</strong> (<code>ClientState</code>) indican en qué fase está la conexión: <code>STATE_IDLE</code>, <code>STATE_READING_HEADER</code>, <code>STATE_READING_BODY</code>, <code>STATE_WRITING_RESPONSE</code>, <code>STATE_CLOSED</code>. El bucle principal usa estos estados para saber si debe esperar lectura, escritura o ambos (por ejemplo cuando hay que leer del pipe de CGI y escribir al cliente). También se usa <code>_lastActivity</code> para timeouts y <code>_closeAfterWrite</code> para cerrar la conexión tras enviar la respuesta cuando corresponde.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">2. Flujo de una petición (señal entrante → respuesta)</h3>
+                <ol class="flow-list">
+                    <li><strong>Lectura</strong> — <code>handleRead()</code> lee bytes del socket, los añade a <code>_inBuffer</code> y los pasa al <code>HttpParser</code> con <code>consume()</code>.</li>
+                    <li><strong>Parseo</strong> — El parser va por fases: start line → headers → body (tamaño fijo o chunked). Cuando marca la petición como completa, el <code>Client</code> llama a <code>handleCompleteRequest()</code>.</li>
+                    <li><strong>Decisión CGI</strong> — Si la ruta y la config indican CGI (<code>startCgiIfNeeded</code>), se lanza el script con <code>CgiExecutor::executeAsync</code>, se registra el pipe en epoll y el cliente espera datos del CGI. Si no, se construye la respuesta estática o de error de inmediato.</li>
+                    <li><strong>Procesamiento</strong> — <code>RequestProcessor::process()</code> recibe la <code>HttpRequest</code> y la config, resuelve la location, comprueba método y límites, y rellena un <code>HttpResponse</code> (archivo estático, autoindex, error, redirect o indicación de que la respuesta vendrá de CGI).</li>
+                    <li><strong>Envío</strong> — La respuesta (o cada trozo de la respuesta CGI) se serializa y se encola o se escribe en <code>_outBuffer</code>. <code>handleWrite()</code> envía por el socket; cuando no hay más datos pendientes y corresponde, se cierra la conexión.</li>
+                </ol>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">3. HttpParser: descomposición de la señal</h3>
+                <p class="doc-p">
+                    El <strong>HttpParser</strong> descompone el flujo de bytes en una <code>HttpRequest</code> válida. Estados: <code>PARSING_START_LINE</code>, <code>PARSING_HEADERS</code>, <code>PARSING_BODY</code>, <code>COMPLETE</code>, <code>ERROR</code>. Para el body usa <code>Content-Length</code> (tamaño fijo) o <code>Transfer-Encoding: chunked</code> (subestados <code>CHUNK_SIZE</code>, <code>CHUNK_DATA</code>, <code>CHUNK_END</code>). Extrae método, URI, versión, query string, path info, cabeceras y cuerpo; valida cabeceras y marca la petición como lista para que el <code>RequestProcessor</code> y, si toca, el CGI la procesen.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">4. RequestProcessor: el cerebro del enrutado</h3>
+                <p class="doc-p">
+                    El <strong>RequestProcessor</strong> no envía nada por la red: solo transforma una <code>HttpRequest</code> en un <code>HttpResponse</code> según la configuración. Su método principal es <code>process(request, configs, listenPort, parseError, response)</code>. Hace lo siguiente:
+                </p>
+                <ul class="target-list">
+                    <li>Si hubo error de parseo → respuesta de error (400, etc.).</li>
+                    <li>Resuelve el servidor y la <strong>location</strong> que hace match con la URI (puerto y path).</li>
+                    <li>Comprueba si el método está permitido en esa location; si no → 405.</li>
+                    <li>Comprueba <code>client_max_body_size</code>; si se supera → 413.</li>
+                    <li>Si la location tiene CGI para esa extensión → la respuesta se delegará al módulo CGI (el Client lanza el script y luego empaqueta la salida como respuesta HTTP).</li>
+                    <li>Si no es CGI: sirve archivo estático (con <code>StaticPathHandler</code>), autoindex, upload o página de error según corresponda; o aplica redirect si está configurado.</li>
+                </ul>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">5. Integración con CGI (Client + pipes)</h3>
+                <p class="doc-p">
+                    Cuando el procesador determina que la petición debe ir a CGI, el <code>Client</code> inicia el script de forma asíncrona y registra el pipe de salida del CGI en el <code>ServerManager</code>. Cuando epoll avisa de que hay datos en ese pipe, se llama a <code>handleCgiPipe(pipe_fd, events)</code>: se lee la salida del script, se va acumulando en el <code>CgiProcess</code> y cuando la respuesta CGI está completa (<code>finalizeCgiResponse</code>), se empaqueta como HTTP y se encola para enviarla al cliente. El body de la petición se escribe en el stdin del proceso CGI de forma no bloqueante cuando epoll indica que el pipe de entrada es escribible. Así el cliente HTTP y el flujo CGI comparten el mismo bucle de eventos sin bloquear.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <p class="doc-p" style="margin:0; color:var(--text-dim); font-size:0.9rem;">
+                    Objetivo: que cada petición sea una señal que atraviese los filtros de parsing, validación, permisos y selección de handler (estático o CGI), y salga como un haz de respuesta HTTP/1.1 bien formado, manteniendo el servidor estable y no bloqueante.
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

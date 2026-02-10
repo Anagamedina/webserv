@@ -3,27 +3,27 @@
 #include <string>
 
 class TcpListener {
-  public:
-    TcpListener(int port);
-    ~TcpListener();
+ public:
+  TcpListener(int port);
+  ~TcpListener();
 
-    void listen();
+  void listen();
 
-    int acceptConnection();
+  int acceptConnection();
 
-    int getFd() const;
+  int getFd() const;
 
-    int getPort() const;
+  int getPort() const;
 
-  private:
-    int socket_fd_;
-    int port_;
+ private:
+  int socket_fd_;
+  int port_;
 
-    void createSocket();
-    void setSocketOptions();
-    void bindSocket();
+  void createSocket();
+  void setSocketOptions();
+  void bindSocket();
 
-    // Disable copying
-    TcpListener(const TcpListener&);
-    TcpListener& operator=(const TcpListener&);
+  // Disable copying
+  TcpListener(const TcpListener&);
+  TcpListener& operator=(const TcpListener&);
 };

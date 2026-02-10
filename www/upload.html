@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb — The Armory</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/about.html">THE SQUAD</a>
+            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/images/">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>The Armory — Cargar y destruir láseres</h2>
+            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+            <form action="/images/" method="POST" enctype="multipart/form-data">
+                <div class="form-row">
+                    <label for="file">Selecciona archivo para transferencia</label>
+                    <div class="port-input">
+                        <input type="file" id="file" name="file" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Cargar láser</button>
+            </form>
+            <p style="margin-top:1rem; font-size:0.85rem; color:#808090;">Los archivos se almacenan en el directorio configurado (upload_store).</p>
+
+            <hr style="margin:2rem 0; border:0; border-top:1px solid #1a1a2e;">
+
+            <h3 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.15em; color:#ff073a; margin-bottom:0.8rem;">
+                Destruir láser cargado
+            </h3>
+            <form action="/cgi-bin/delete.py" method="GET">
+                <div class="form-row">
+                    <label for="delete-file">Nombre del archivo a destruir</label>
+                    <input type="text" id="delete-file" name="file" placeholder="ej: objetivo_alfa.txt">
+                </div>
+                <button type="submit" class="btn btn-danger">Disparar láser</button>
+            </form>
+            <p style="margin-top:0.8rem; font-size:0.8rem; color:#808090;">
+                Este formulario envía un GET a <code>/cgi-bin/delete.py?file=...</code>. El borrado real depende de que exista
+                un CGI que procese ese parámetro y elimine el archivo en el servidor.
+            </p>
+        </main>
+    </div>
+</body>
+</html>

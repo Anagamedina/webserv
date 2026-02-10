@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb — Carles / The Executor</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/about.html">THE SQUAD</a>
+            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/images/">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>Carles Pujades — The Executor</h2>
+            <p class="back-row"><a href="/about.html" class="btn btn-back">&larr; Volver a Command Staff</a></p>
+
+            <p class="page-title">Informe de misión: Epoll y CGI</p>
+
+            <div class="doc-block">
+                <p class="doc-p">
+                    Esta consola documenta la capa de <strong>multiplexación I/O (epoll)</strong> y la <strong>ejecución CGI</strong> del servidor.
+                    Epoll es el radar que vigila todos los canales de comunicación; CGI es el protocolo que dispara scripts externos como si fueran disparos controlados del láser.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">1. ¿Qué es Epoll?</h3>
+            <p class="doc-p">
+                <strong>Epoll</strong> es el mecanismo del kernel Linux para esperar eventos en muchos descriptores de archivo a la vez (sockets de clientes, listeners, pipes de CGI) sin bloquear el servidor. En lugar de preguntar uno por uno “¿hay datos?”, el núcleo avisa: “en este fd hay actividad”.
+            </p>
+            <p class="doc-p">
+                En LaserWeb, <code>EpollWrapper</code> encapsula la API de epoll: crea la instancia (<code>epoll_create</code>), añade o modifica descriptores (<code>epoll_ctl</code> con <code>EPOLL_CTL_ADD</code> / <code>EPOLL_CTL_MOD</code>), los elimina cuando se cierra la conexión (<code>EPOLL_CTL_DEL</code>) y espera eventos con <code>epoll_wait</code>. El bucle principal del <code>ServerManager</code> llama a <code>wait()</code> y, según el fd que despierte, delega en “nueva conexión”, “cliente listo para leer/escribir” o “pipe de CGI con salida”.
+            </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">2. Level Triggered vs Edge Triggered</h3>
+                <p class="doc-p">
+                    Epoll puede notificar de dos formas: <strong>Level Triggered (LT)</strong> —avisa mientras el socket siga listo— o <strong>Edge Triggered (ET)</strong> —avisa solo cuando el estado pasa de “no listo” a “listo”. En este proyecto usamos <strong>LT</strong>: si no lees o escribes todo en un evento, epoll vuelve a avisar. Así se evita perder datos y la lógica del <code>Client</code> y de los pipes CGI se mantiene                 más simple y estable.
+                </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">3. ¿Qué es CGI y cómo está estructurado?</h3>
+                <p class="doc-p">
+                <strong>CGI (Common Gateway Interface)</strong> es un estándar para ejecutar programas externos (scripts o binarios) en respuesta a una petición HTTP. El servidor prepara variables de entorno (método, URI, cabeceras, etc.), pasa el body por stdin al proceso y lee la respuesta por stdout (cabeceras + cuerpo). En LaserWeb, eso se hace de forma <strong>asíncrona</strong>: no bloqueamos el bucle principal esperando al script.
+            </p>
+            <ul class="target-list">
+                <li><strong>CgiExecutor</strong> — Orquesta el disparo: recibe la petición HTTP y la ruta del script (y opcionalmente el intérprete). Prepara el entorno (variables CGI), crea pipes para stdin/stdout del hijo, pone los pipes en no bloqueante, hace <code>fork</code> y en el hijo redirige stdin/stdout a los pipes y llama a <code>execve</code>. Devuelve un <code>CgiProcess*</code> y el bucle sigue; la salida del script se lee más tarde cuando epoll marque el pipe como legible.</li>
+                <li><strong>CgiProcess</strong> — Representa un proceso CGI en curso: guarda los fd de los pipes, el PID, el body pendiente de enviar al script, el buffer de salida (cabeceras + body), estados (<code>RUNNING</code>, <code>DATA_READY</code>, <code>COMPLETED</code>, <code>FAILED</code>, <code>SENT</code>) y el timeout. Métodos como <code>appendResponseData</code> van acumulando la salida y detectando el fin de cabeceras (<code>\r\n\r\n</code>); el <code>Client</code> escribe el body en el pipe de entrada y lee del pipe de salida cuando epoll lo indica.</li>
+            </ul>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">4. Variables de entorno CGI</h3>
+            <p class="doc-p">
+                Antes del <code>execve</code>, el <code>CgiExecutor</code> construye un mapa con las variables estándar: <code>REQUEST_METHOD</code>, <code>PATH_INFO</code>, <code>QUERY_STRING</code>, <code>CONTENT_LENGTH</code>, <code>CONTENT_TYPE</code>, <code>SCRIPT_FILENAME</code>, etc. Ese mapa se convierte en un array <code>char*</code> para pasarlo al proceso hijo. Así el script se comporta como en un servidor real.
+            </p>
+            </div>
+
+            <div class="doc-block">
+                <h3 class="doc-h3">5. Integración con el bucle del servidor</h3>
+            <p class="doc-p">
+                Cuando una petición debe ejecutar un CGI, el <code>Client</code> pide al <code>ServerManager</code> que registre el pipe de salida del CGI en epoll (<code>registerCgiPipe</code>). Cuando epoll dispara ese fd, se llama a <code>handleCgiPipeEvent</code> y se delega en el <code>Client</code> asociado (<code>handleCgiPipe</code>), que lee del pipe, actualiza el <code>CgiProcess</code> y, cuando la respuesta CGI está completa, la encola para enviarla al navegador. Todo sin bloquear el resto de conexiones.
+            </p>
+            </div>
+
+            <div class="doc-block">
+                <p class="doc-p" style="margin:0; color:var(--text-dim); font-size:0.9rem;">
+                    Objetivo: que cada script CGI sea un disparo controlado: se prepara el entorno, se ejecuta en un proceso hijo, se monitorean los pipes con epoll y se recoge la salida de forma asíncrona, sin comprometer la estabilidad del núcleo del servidor.
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

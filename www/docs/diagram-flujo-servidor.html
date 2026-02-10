@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb — Diagrama Simple del Servidor</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/about.html">THE SQUAD</a>
+            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/images/">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>Diagrama simple del flujo del servidor</h2>
+            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+            <p style="margin-top:0.8rem; color:#808090; font-size:0.9rem;">
+                Este diagrama ASCII viene de la documentación interna (<code>docs/DIAGRAMA_SIMPLE.md</code>)
+                y muestra la vista rápida del ciclo principal del servidor (inicialización + bucle con epoll).
+            </p>
+
+            <pre style="margin-top:1.2rem; font-size:0.8rem; background:#050505; border:1px solid #1a1a2e; padding:1rem; overflow:auto;">
+┌─────────────────────────────────────────────────────────────┐
+│                         INICIO                                │
+│                    (main.cpp línea 15)                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+            ┌───────────────────────────────┐
+            │  1. Configurar señales        │
+            │     signal(SIGPIPE, SIG_IGN)  │
+            └───────────────┬───────────────┘
+                            │
+                            ▼
+            ┌───────────────────────────────┐
+            │  2. Crear ServerManager       │
+            │     ServerManager server;     │
+            │     ├─> TcpListener          │
+            │     └─> EpollWrapper         │
+            └───────────────┬───────────────┘
+                            │
+                            ▼
+            ┌───────────────────────────────┐
+            │  3. Iniciar servidor          │
+            │     server.start("127.0.0.1", 8080) │
+            │     ├─> Crear socket          │
+            │     ├─> bind() a puerto       │
+            │     ├─> listen()              │
+            │     └─> Registrar en epoll    │
+            └───────────────┬───────────────┘
+                            │
+                            ▼
+            ┌───────────────────────────────┐
+            │  4. BUCLE PRINCIPAL           │
+            │     server.run()              │
+            │                              │
+            │     ┌────────────────────┐   │
+            │     │  A) ESPERAR        │   │
+            │     │  epoll_wait()      │◄──┼──┐
+            │     │  (BLOQUEA AQUÍ)    │   │  │
+            │     └─────────┬──────────┘   │  │
+            │               │              │  │
+            │               ▼              │  │
+            │     ┌────────────────────┐  │  │
+            │     │  B) PROCESAR        │  │  │
+            │     │  eventos recibidos  │  │  │
+            │     │                     │  │  │
+            │     │  ¿Nueva conexión?   │  │  │
+            │     │  └─> accept()       │  │  │
+            │     │                     │  │  │
+            │     │  ¿Datos recibidos?  │  │  │
+            │     │  └─> recv()          │  │  │
+            │     │                     │  │  │
+            │     │  ¿Desconexión?      │  │  │
+            │     │  └─> close()         │  │  │
+            │     └─────────┬────────────┘  │  │
+            │               │              │  │
+            │               └──────────────┼──┘
+            │                              │
+            └──────────────────────────────┘
+            </pre>
+        </main>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,411 @@
+/* ============================================================
+   LaserWeb - Centro de Mando de Combate Láser
+   ============================================================ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #050505;
+    --bg-panel: #0a0a0f;
+    --neon-cyan: #00f5ff;
+    --neon-magenta: #ff00aa;
+    --neon-green: #39ff14;
+    --neon-amber: #ffbf00;
+    --neon-red: #ff073a;
+    --text: #e0e0e0;
+    --text-dim: #808090;
+    --border: #1a1a2e;
+    --glow-cyan: rgba(0, 245, 255, 0.5);
+    --glow-magenta: rgba(255, 0, 170, 0.4);
+}
+
+body {
+    font-family: "Courier New", "Consolas", monospace;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+a {
+    color: var(--neon-cyan);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--neon-green);
+    text-shadow: 0 0 8px var(--glow-cyan);
+}
+
+/* ----- HUD / Panels ----- */
+.panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 12px var(--glow-cyan);
+    padding: 1.5rem;
+    margin: 1rem auto;
+    max-width: 900px;
+}
+
+.panel h2 {
+    font-size: 1rem;
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+/* ----- Logo ----- */
+.logo {
+    font-size: 2.5rem;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px var(--glow-cyan);
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.logo span {
+    color: var(--neon-magenta);
+}
+
+/* ----- Nav: bloques de energía ----- */
+.nav-hud {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.nav-hud a {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    margin: 0.4rem;
+    border: 2px solid var(--neon-cyan);
+    background: transparent;
+    color: var(--neon-cyan);
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.nav-hud a:hover {
+    background: var(--neon-cyan);
+    color: var(--bg);
+    box-shadow: 0 0 20px var(--glow-cyan);
+}
+
+/* ----- Forms ----- */
+.form-row {
+    margin-bottom: 1.2rem;
+}
+
+.form-row label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.form-row input[type="text"],
+.form-row input[type="file"],
+.form-row textarea {
+    width: 100%;
+    padding: 0.7rem;
+    background: var(--bg);
+    border: 1px solid var(--neon-cyan);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.form-row input:focus,
+.form-row textarea:focus {
+    outline: none;
+    box-shadow: 0 0 10px var(--glow-cyan);
+}
+
+/* Puerto de carga (file input) */
+.port-input {
+    border: 2px dashed var(--neon-magenta);
+    padding: 1.5rem;
+    text-align: center;
+    background: rgba(255, 0, 170, 0.05);
+}
+
+.port-input:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px var(--glow-magenta);
+}
+
+/* ----- Buttons ----- */
+.btn {
+    display: inline-block;
+    padding: 0.7rem 1.5rem;
+    border: 2px solid var(--neon-green);
+    background: transparent;
+    color: var(--neon-green);
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: var(--neon-green);
+    color: var(--bg);
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+}
+
+.btn-danger {
+    border-color: var(--neon-red);
+    color: var(--neon-red);
+}
+
+.btn-danger:hover {
+    background: var(--neon-red);
+    color: var(--bg);
+}
+
+/* Botón pequeño para volver */
+.back-row {
+    margin-bottom: 1rem;
+}
+
+.btn-back {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    font-size: 0.75rem;
+    padding: 0.4rem 1rem;
+}
+
+.btn-back:hover {
+    background: var(--neon-cyan);
+    color: var(--bg);
+    box-shadow: 0 0 12px var(--glow-cyan);
+}
+
+/* ----- Tactical Scanner table ----- */
+.scanner-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scanner-table th,
+.scanner-table td {
+    padding: 0.7rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.scanner-table th {
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+}
+
+.scanner-table tr:hover {
+    background: rgba(0, 245, 255, 0.08);
+    box-shadow: inset 0 0 20px rgba(0, 245, 255, 0.1);
+}
+
+.scanner-table .target-icon {
+    color: var(--neon-red);
+    font-size: 1.2rem;
+}
+
+/* ----- Target list (DELETE) ----- */
+.target-list {
+    list-style: none;
+}
+
+.target-list li {
+    padding: 0.6rem 1rem;
+    border-left: 3px solid var(--neon-amber);
+    margin-bottom: 0.5rem;
+    background: rgba(255, 191, 0, 0.03);
+}
+
+.target-list li:hover {
+    border-left-color: var(--neon-cyan);
+    box-shadow: 0 0 10px var(--glow-cyan);
+}
+
+.target-list a {
+    color: var(--neon-magenta);
+}
+
+.target-list a:hover {
+    color: var(--neon-red);
+}
+
+/* ----- Squad cards (about) ----- */
+.squad-grid {
+    display: block;
+}
+
+.squad-card {
+    border: 1px solid var(--neon-magenta);
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    background: rgba(255, 0, 170, 0.03);
+}
+
+.squad-card .squad-photo {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 10px var(--glow-cyan);
+    margin-bottom: 0.8rem;
+    display: block;
+}
+
+.squad-card h3 {
+    color: var(--neon-magenta);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+}
+
+.squad-card .role {
+    color: var(--neon-amber);
+    font-size: 0.85rem;
+    margin-bottom: 0.6rem;
+}
+
+.squad-card p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+/* ----- Error pages: blink alarm ----- */
+.error-hud {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.error-hud .code {
+    font-size: 4rem;
+    color: var(--neon-red);
+    letter-spacing: 0.2em;
+}
+
+.error-hud .message {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 1rem 0;
+}
+
+.error-blink {
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+}
+
+/* ----- Page layout ----- */
+.page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.page-title {
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 1.5rem;
+}
+
+/* ----- Doc pages: sections & code ----- */
+.doc-h3 {
+    font-size: 0.95rem;
+    color: var(--neon-amber);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 1.8rem 0 0.6rem;
+    border-left: 3px solid var(--neon-amber);
+    padding-left: 0.8rem;
+}
+
+.doc-p {
+    color: var(--text);
+    margin: 0.6rem 0;
+    font-size: 0.95rem;
+}
+
+.doc-p + .doc-p { margin-top: 0.4rem; }
+
+code, .code-inline {
+    background: rgba(0, 245, 255, 0.08);
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    padding: 0.15rem 0.4rem;
+    font-size: 0.88em;
+    color: var(--neon-cyan);
+}
+
+.code-block {
+    background: var(--bg);
+    border: 1px solid var(--neon-cyan);
+    padding: 1rem;
+    margin: 0.8rem 0;
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 0.82rem;
+    color: var(--neon-green);
+    overflow-x: auto;
+    box-shadow: inset 0 0 12px rgba(0, 245, 255, 0.08);
+}
+
+.flow-list {
+    list-style: none;
+    margin: 0.8rem 0;
+}
+
+.flow-list li {
+    position: relative;
+    padding-left: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+.flow-list li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--neon-cyan);
+    font-weight: bold;
+}
+
+/* ----- Doc blocks: separar secciones ----- */
+.doc-block {
+    background: rgba(0, 245, 255, 0.03);
+    border: 1px solid rgba(0, 245, 255, 0.2);
+    border-left: 3px solid var(--neon-cyan);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    border-radius: 0;
+}
+
+.doc-block:last-child {
+    margin-bottom: 0;
+}
+
+.doc-block .doc-h3 {
+    margin-top: 0;
+}

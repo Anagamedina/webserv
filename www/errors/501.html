@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb - Error 501</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+    <style>
+        /* Fallback por si el CSS externo no carga (ej. respuesta 501 en POST) */
+        body { background-color: #050505; color: #e0e0e0; font-family: "Courier New", Consolas, monospace; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .page { max-width: 900px; margin: 0 auto; padding: 1rem; width: 100%; }
+        .panel { background: #0a0a0f; border: 1px solid #00f5ff; box-shadow: 0 0 12px rgba(0,245,255,0.3); padding: 2rem; text-align: center; }
+        .code { font-size: 4rem; color: #ff073a; letter-spacing: 0.2em; animation: blink 1s ease-in-out infinite; }
+        .message { font-size: 1.2rem; margin: 1rem 0; }
+        .message p { margin: 0.5rem 0; }
+        a.btn-back { display: inline-block; margin-top: 1rem; padding: 0.4rem 1rem; border: 2px solid #00f5ff; color: #00f5ff; text-decoration: none; font-size: 0.85rem; }
+        a.btn-back:hover { background: #00f5ff; color: #050505; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="panel error-hud">
+        <div class="code">501</div>
+        <div class="message">
+            <p><strong>MÉTODO NO IMPLEMENTADO</strong></p>
+            <p>Has intentado ejecutar un protocolo que este núcleo láser aún no tiene calibrado.</p>
+            <p>Método no soportado por esta versión del sistema.</p>
+        </div>
+        <div class="back-row">
+            <a href="/" class="btn btn-back">Volver al inicio</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

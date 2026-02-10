@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>LaserWeb — Tactical Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/laserweb.css">
+    <style>
+        .scanner-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .radar-wrap {
+            display: flex;
+            justify-content: center;
+        }
+
+        .radar {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at center, rgba(0,255,0,0.25) 0, transparent 60%),
+                radial-gradient(circle at center, transparent 58%, rgba(0,255,0,0.4) 60%, transparent 62%),
+                radial-gradient(circle at center, transparent 78%, rgba(0,255,0,0.25) 80%, transparent 82%);
+            border: 2px solid #39ff14;
+            box-shadow: 0 0 25px rgba(57,255,20,0.6);
+            overflow: hidden;
+        }
+
+        .radar::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background:
+                conic-gradient(from 0deg,
+                    rgba(57,255,20,0.0) 0deg,
+                    rgba(57,255,20,0.5) 40deg,
+                    rgba(57,255,20,0.0) 80deg
+                );
+            animation: sweep 4s linear infinite;
+        }
+
+        .radar-grid-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(57,255,20,0.30);
+        }
+
+        .radar-grid-line.vert {
+            width: 1px;
+            height: 100%;
+            left: 50%;
+            top: 0;
+            background: rgba(57,255,20,0.30);
+        }
+
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .scanner-table {
+            margin-top: 0.8rem;
+        }
+
+        .status-ok {
+            color: #39ff14;
+        }
+        .status-err {
+            color: #ff073a;
+        }
+
+        .core-panel {
+            margin-top: 1.5rem;
+        }
+
+        .core-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: #ffbf00;
+            margin-bottom: 0.4rem;
+        }
+
+        .core-bar-wrap {
+            width: 100%;
+            height: 16px;
+            border: 1px solid #ffbf00;
+            box-shadow: 0 0 10px rgba(255,191,0,0.5);
+            overflow: hidden;
+            background: #050505;
+        }
+
+        .core-bar {
+            width: 72%;
+            height: 100%;
+            background: linear-gradient(90deg, #39ff14, #ffbf00, #ff073a);
+            box-shadow: 0 0 16px rgba(57,255,20,0.7);
+            position: relative;
+        }
+
+        .core-bar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 40%;
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.0),
+                rgba(255,255,255,0.35),
+                rgba(255,255,255,0.0)
+            );
+            animation: core-scan 2.5s linear infinite;
+        }
+
+        @keyframes core-scan {
+            from { left: -40%; }
+            to   { left: 100%; }
+        }
+
+        .core-value {
+            margin-top: 0.3rem;
+            font-size: 0.8rem;
+            color: #808090;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/about.html">THE SQUAD</a>
+            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/images/">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>Tactical Scanner — Radar de actividad</h2>
+            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+
+            <div class="scanner-grid">
+                <div class="radar-wrap">
+                    <div class="radar">
+                        <div class="radar-grid-line"></div>
+                        <div class="radar-grid-line vert"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.15em; color:#00f5ff;">
+                        Últimas conexiones detectadas
+                    </h3>
+                    <table class="scanner-table">
+                        <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>Método</th>
+                            <th>Estado</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>127.0.0.1</td>
+                            <td>GET /</td>
+                            <td class="status-ok">200 OK</td>
+                        </tr>
+                        <tr>
+                            <td>127.0.0.1</td>
+                            <td>POST /images/</td>
+                            <td class="status-ok">201 CREATED</td>
+                        </tr>
+                        <tr>
+                            <td>192.168.0.42</td>
+                            <td>GET /404.html</td>
+                            <td class="status-err">404 NOT FOUND</td>
+                        </tr>
+                        <tr>
+                            <td>10.0.0.5</td>
+                            <td>GET /cgi-bin/hello.py</td>
+                            <td class="status-ok">200 OK</td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="core-panel">
+                        <div class="core-label">Potencia del núcleo</div>
+                        <div class="core-bar-wrap">
+                            <div class="core-bar"></div>
+                        </div>
+                        <div class="core-value">
+                            Carga estimada: 72% — uso de recursos dentro de parámetros de combate.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="margin-top:1.4rem; font-size:0.8rem; color:#808090;">
+                Nota: En el proyecto real, esta información podría venir de logs del servidor o de un CGI
+                que lea métricas de procesos y conexiones activas.
+            </p>
+        </main>
+    </div>
+</body>
+</html>

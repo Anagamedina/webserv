@@ -1,8 +1,9 @@
 #ifndef WEBSERV_CONFIGUTILS_HPP
 #define WEBSERV_CONFIGUTILS_HPP
 
-#include "common/namespaces.hpp"
 #include <vector>
+
+#include "common/namespaces.hpp"
 
 namespace config {
 namespace utils {
@@ -13,11 +14,12 @@ std::string removeSpacesAndTabs(std::string& line);
 std::string normalizeSpaces(const std::string& line);
 bool fileExists(const std::string& path);
 
-std::vector< std::string > split(const std::string& str, char delimiter);
-std::vector< std::string > tokenize(const std::string& line);
+std::vector<std::string> split(const std::string& str, char delimiter);
+std::vector<std::string> tokenize(const std::string& line);
 std::string removeSemicolon(const std::string& str);
 int stringToInt(const std::string& str);
-void exportContentToLogFile(const std::string& fileContent, const std::string& pathToExport);
+void exportContentToLogFile(const std::string& fileContent,
+                            const std::string& pathToExport);
 bool isValidPath(const std::string& path);
 long parseSize(const std::string& str);
 
@@ -30,8 +32,8 @@ bool isValidHttpMethod(const std::string& method);
 std::string checkRootPath(const std::string& path);
 void ensureUploadStorePath(const std::string& path);
 
-} // namespace utils
+}  // namespace utils
 
-} // namespace config
+}  // namespace config
 
-#endif // WEBSERV_CONFIGUTILS_HPP
+#endif  // WEBSERV_CONFIGUTILS_HPP
