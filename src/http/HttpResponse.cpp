@@ -3,20 +3,6 @@
 
 #include <sstream>
 
-// Asegura que no haya CR/LF en la salida; Chrome y otros son estrictos (RFC 7230).
-static std::string sanitizeForHeader(const std::string& s) {
-    std::string out;
-    out.reserve(s.size());
-    for (std::string::size_type i = 0; i < s.size(); ++i) {
-        char c = s[i];
-        if (c == '\r' || c == '\n')
-            out += ' ';
-        else
-            out += c;
-    }
-    return out;
-}
-
 static std::string reasonPhraseForStatus(int code) {
     switch (code) {
     case HTTP_STATUS_OK:
@@ -112,17 +98,16 @@ bool HttpResponse::hasHeader(const std::string& key) const {
     return it != _headers.end();
 }
 
-// SERIALIZE — CRLF estricto (\r\n) en cada línea para protocol compliance (Chrome estricto).
+// SERIALIZE
 std::vector< char > HttpResponse::serialize() const {
     std::stringstream buffer;
 
-    std::string reason = sanitizeForHeader(_reasonPhrase);
-    buffer << versionToString(_version) << " " << _status << " " << reason << "\r\n";
+    buffer << versionToString(_version) << " " << _status << " " << _reasonPhrase << "\r\n";
 
     for (HeaderMap::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
         if (http_header_utils::toLowerCopy(it->first) == "content-length")
             continue;
-        buffer << sanitizeForHeader(it->first) << ": " << sanitizeForHeader(it->second) << "\r\n";
+        buffer << it->first << ": " << it->second << "\r\n";
     }
 
     buffer << "Content-Length: " << _body.size() << "\r\n";
