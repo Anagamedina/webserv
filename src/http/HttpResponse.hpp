@@ -10,9 +10,11 @@
 // Códigos de estado mínimos para empezar.
 enum HttpStatusCode {
     HTTP_STATUS_OK = 200,
+    HTTP_STATUS_CREATED = 201,
     HTTP_STATUS_BAD_REQUEST = 400,
     HTTP_STATUS_NOT_FOUND = 404,
     HTTP_STATUS_METHOD_NOT_ALLOWED = 405,
+    HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE = 413,
     HTTP_STATUS_INTERNAL_SERVER_ERROR = 500
 };
 
@@ -53,6 +55,8 @@ class HttpResponse {
     // HELPERS
     // segun la extension del archivo
     void setContentType(const std::string& filename);
+    // comprobar si ya existe un header (se usa para no sobreescribir Content-Type)
+    bool hasHeader(const std::string& key) const;
 };
 
 #endif // HTTP_RESPONSE_HPP

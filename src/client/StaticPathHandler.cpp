@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
+#include <ctime>
 
 static bool readFileToBody(const std::string& path, std::vector< char >& out) {
 
@@ -109,8 +110,9 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
             break;
         }
     }
-//revisar de hacer un doble check en el mapa de cgi de daru 
+// 
     if (foundIndex) {
+        // Double check: si el index es CGI segun config, no servir como estatico.
         if (isCgiRequestByConfig(location, indexPath)) {
             std::string redirectPath = request.getPath();
             if (redirectPath.empty())
@@ -128,6 +130,9 @@ static bool handleDirectory(const HttpRequest& request, const ServerConfig* serv
             buildErrorResponse(response, request, 403, false, server);
             return true;
         }
+        // El index es un archivo estatico normal: fijamos el Content-Type
+        // usando la extension real del fichero (index.html, index.css, ...).
+        response.setContentType(indexPath);
         return false;
     }
 
@@ -162,13 +167,68 @@ static bool handleRegularFile(const HttpRequest& request, const ServerConfig* se
         buildErrorResponse(response, request, 403, false, server);
         return true;
     }
-
+    // Archivo estatico leido correctamente: asignamos Content-Type segun su extension.
+    response.setContentType(path);
     return false;
+}
+
+static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
+                         const LocationConfig* location, const std::string& path,
+                         std::vector< char >& body, HttpResponse& response) {
+    (void)body;
+    std::string uploadStore = location->getUploadStore();
+    if (uploadStore.empty()) {
+        buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
+        return true;
+    }
+
+    // Intentamos usar el ultimo segmento de la ruta como nombre de archivo.
+    // Ej: POST /uploads/mi_foto.png -> filename = "mi_foto.png"
+    std::string filename;
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash != std::string::npos && lastSlash < path.length() - 1) {
+        filename = path.substr(lastSlash + 1);
+    } else {
+        // Si no viene nombre en la URL, generamos uno simple con timestamp.
+        std::ostringstream oss;
+        oss << "uploaded_file_" << std::time(NULL);
+        filename = oss.str();
+    }
+
+    if (!uploadStore.empty() && uploadStore[uploadStore.length() - 1] != '/') {
+        uploadStore += "/";
+    }
+
+    std::string fullPath = uploadStore + filename;
+
+    std::ofstream outFile(fullPath.c_str(), std::ios::out | std::ios::binary);
+    if (!outFile.is_open()) {
+        buildErrorResponse(response, request, HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);
+        return true;
+    }
+
+    const std::vector< char >& reqBody = request.getBody();
+    if (!reqBody.empty()) {
+        outFile.write(&reqBody[0], reqBody.size());
+    }
+    outFile.close();
+
+    response.setStatusCode(HTTP_STATUS_CREATED);
+    // Podemos opcionalmente devolver un pequeño mensaje en el body:
+    // body = toBody("File uploaded\n");
+    return true;
 }
 
 bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
                       const LocationConfig* location, const std::string& path,
                       std::vector< char >& body, HttpResponse& response) {
+    // Si es un POST y la location tiene configurado un upload_store, manejamos
+    // la subida de archivo en lugar de servir un recurso estatico normal.
+    if (request.getMethod() == HTTP_METHOD_POST && location &&
+        !location->getUploadStore().empty()) {
+        return handleUpload(request, server, location, path, body, response);
+    }
+
     bool isDir = false;
     bool isReg = false;
     if (!getPathInfo(path, isDir, isReg)) {

@@ -44,11 +44,18 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
     const ServerConfig* server = selectServerByPort(_listenPort, _configs);
     if (server == 0)
         return false;
+
     const LocationConfig* location = matchLocation(*server, request.getPath());
     if (location == 0)
         return false;
 
+    if (server && request.getBody().size() > server->getMaxBodySize()) {
+        buildErrorResponse(_response, request, HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE, true, server);
+        return true;
+    }
+
     std::string scriptPath = resolvePath(*server, location, request.getPath());
+
     if (!isCgiRequest(scriptPath) && !isCgiRequestByConfig(location, scriptPath))
         return false;
 
@@ -57,6 +64,7 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
         std::string ext = getFileExtension(scriptPath);
         interpreterPath = location->getCgiPath(ext);
     }
+
     CgiExecutor exec;
     _cgiProcess = exec.executeAsync(request, scriptPath, interpreterPath);
     if (_cgiProcess == 0) {
@@ -66,6 +74,7 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
 
     _serverManager->registerCgiPipe(_cgiProcess->getPipeOut(), EPOLLIN | EPOLLRDHUP, this);
     _serverManager->registerCgiPipe(_cgiProcess->getPipeIn(), EPOLLOUT | EPOLLRDHUP, this);
+
     _state = STATE_READING_BODY;
     return true;
 }

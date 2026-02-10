@@ -18,6 +18,10 @@ void fillBaseResponse(HttpResponse& response, const HttpRequest& request, int st
         response.setHeader("Connection", "close");
     else
         response.setHeader("Connection", "keep-alive");
-    response.setContentType(request.getPath());
+    // Si el caller ya ha fijado un Content-Type concreto (por ejemplo,
+    // StaticPathHandler usando la extension real del fichero o un CGI
+    // que ha enviado sus propios headers), no lo sobreescribimos.
+    if (!response.hasHeader("content-type"))
+        response.setContentType(request.getPath());
     response.setBody(body);
 }

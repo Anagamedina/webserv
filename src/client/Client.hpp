@@ -74,6 +74,7 @@ class Client {
     int getFd() const;
     ClientState getState() const;
     bool needsWrite() const;
+    // bool hasPendingData() const; // helper: true si hay data pendiente en cola o buffer
     time_t getLastActivity() const;
 
     // Manejo de eventos

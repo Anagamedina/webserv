@@ -7,12 +7,16 @@ static std::string reasonPhraseForStatus(int code) {
     switch (code) {
     case HTTP_STATUS_OK:
         return "OK";
+    case HTTP_STATUS_CREATED:
+        return "Created";
     case HTTP_STATUS_BAD_REQUEST:
         return "Bad Request";
     case HTTP_STATUS_NOT_FOUND:
         return "Not Found";
     case HTTP_STATUS_METHOD_NOT_ALLOWED:
         return "Method Not Allowed";
+    case HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE:
+        return "Request Entity Too Large";
     case HTTP_STATUS_INTERNAL_SERVER_ERROR:
         return "Internal Server Error";
     default:
@@ -87,6 +91,11 @@ void HttpResponse::setBody(const std::vector< char >& body) {
 
 void HttpResponse::setBody(const std::string& body) {
     _body.assign(body.begin(), body.end());
+}
+
+bool HttpResponse::hasHeader(const std::string& key) const {
+    HeaderMap::const_iterator it = _headers.find(http_header_utils::toLowerCopy(key));
+    return it != _headers.end();
 }
 
 // SERIALIZE

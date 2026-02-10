@@ -21,13 +21,6 @@ Client::Client(int fd, const std::vector< ServerConfig >* configs, int listenPor
 }
 
 Client::~Client() {
-    /*
-    if (_cgiProcess)
-    {
-        delete _cgiProcess;
-        _cgiProcess = 0;
-    }
-  */
 }
 
 int Client::getFd() const {
@@ -42,22 +35,33 @@ bool Client::needsWrite() const {
     return !_outBuffer.empty();
 }
 
+// bool Client::hasPendingData() const {
+//     // Helper para saber si el cliente tiene algo pendiente por enviar:
+//     // se usa para decidir si mantener EPOLLOUT activo en el loop.
+//     return !_outBuffer.empty() || !_responseQueue.empty();
+// }
+
 time_t Client::getLastActivity() const {
     return _lastActivity;
 }
 
-// MOTOR DE ENTRADA
-// ESTE METODO SE LLAMARA CUANDO EPOLL NOS AVISE CUANDO HAY EPOLLIN
+// ============================
+// LECTURA DESDE EL SOCKET (EPOLLIN)
+// ============================
+// - Lee bytes crudos con recv().
+// - Actualiza _lastActivity.
+// - Alimenta el HttpParser.
+// - Cuando hay una HttpRequest COMPLETA, llama a handleCompleteRequest().
 
 void Client::handleRead() {
     char buffer[4096]; // buffer temporal
     ssize_t bytesRead = 0;
 
-    // 1) Recibir datos crudos
-    // 2)actualizar tiempo para evitar timeout
-    // 3) anadir al buffer de procesamiento
-    // 4) invocar al parser (la logia que ya esta hecha)
-    // 5)verificar si el parser termino
+    // Pasos:
+    // 1) Recibir datos crudos.
+    // 2) Actualizar tiempo para evitar timeout.
+    // 3) Pasar los datos al parser HTTP.
+    // 4) Ver si el parser ha completado una o mas requests.
     bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
     if (bytesRead > 0) {
         _lastActivity = std::time(0);
@@ -87,9 +91,13 @@ void Client::handleRead() {
     }
 }
 
-// MOTOR DE SALIDA
-// ES EL PUNTO CRITICO DE LOS SERVIDORES NO BLOQUEANTES
-// SEND() NO VA ENVAIR Todo EL VECTOR DE UNA VEZ
+// ============================
+// ESCRITURA AL SOCKET (EPOLLOUT)
+// ============================
+// - Intenta enviar parte de _outBuffer con send().
+// - Borra del buffer lo que se haya enviado.
+// - Si termina y hay mas respuestas en cola, las saca una a una.
+// - Si no hay nada mas y no hay que cerrar, vuelve a STATE_IDLE.
 
 void Client::handleWrite() {
     if (_outBuffer.empty())
@@ -104,9 +112,10 @@ void Client::handleWrite() {
         return;
     }
 
-    // 1)Intentar enviar lo que queda en el buffer
-    // 2)hemos terminado de enviar todo?
-    // 2.1)respuesta completa? cerrar conexion o keep alive
+    // 1) Intentar enviar lo que queda en el buffer.
+    // 2) Si hemos terminado de enviar:
+    //    - Cerrar la conexion si _closeAfterWrite es true.
+    //    - O sacar la siguiente respuesta de la cola si existe.
 
     if (_outBuffer.empty()) {
         if (_closeAfterWrite) {
@@ -128,35 +137,16 @@ void Client::handleWrite() {
 }
 
 void Client::buildResponse() {
-    // depende del status que tengas respondemos una cosa u otra...
-    // serializar a raw bytes para el envio
+    // Construye la respuesta logica (HttpResponse) a partir de la HttpRequest.
+    // Despues, handleCompleteRequest() se encarga de serializarla y encolarla.
     const HttpRequest& request = _parser.getRequest();
-    // TODO (CGI flujo):
-    // 1) RequestProcessor decide si es CGI o estatico.
-    // 2) Si es CGI, el Client debe crear el proceso CGI (CgiExecutor)
-    //    y registrar el pipe de salida en epoll via ServerManager.
-    // 3) ServerManager recibe eventos del pipe y llama de vuelta al Client
-    //    para leer la salida CGI y construir HttpResponse.
-    //
-    // Ejemplo:
-    // if (requestIsCgi(request)) {
-    //     CgiExecutor exec;
-    //     CgiProcess* proc = exec.executeAsync(request, scriptPath, interpreterPath);
-    //     if (proc) {
-    //         serverManager->registerCgiPipe(proc->getPipeOut(), EPOLLIN, this);
-    //         // Guardar proc en el Client para leer salida luego
-    //         // this->_cgiProcess = proc;
-    //     } else {
-    //         buildErrorResponse(_response, request, 500, true, /*server*/0);
-    //     }
-    //     return;
-    // }
-    // else {
-    //     _processor.process(request, _configs, _listenPort,
-    //                        _parser.getState() == ERROR, _response);
-    // }
+    // Primero intentamos el flujo CGI. Si startCgiIfNeeded() devuelve true,
+    // significa que ya se ha iniciado un CGI (o se ha respondido con error CGI)
+    // y la respuesta final se enviara mas tarde via ClientCgi.cpp.
     if (startCgiIfNeeded(request))
         return;
+    // Si no es CGI, delegamos en RequestProcessor para servir contenido estatico
+    // o errores HTTP clasicos.
     _processor.process(request, _configs, _listenPort, _parser.getState() == ERROR, _response);
 }
 
@@ -165,13 +155,10 @@ bool Client::handleCompleteRequest() {
     bool shouldClose = (_parser.getState() == ERROR) || request.shouldCloseConnection();
     buildResponse();
     if (_cgiProcess) {
-        // Esperando respuesta CGI; la respuesta se enviara cuando termine.
-        // Ejemplo (comentado):
-        // if (_cgiProcess->isHeadersComplete()) {
-        //     // Ya tenemos headers+body del CGI en buffers internos.
-        //     finalizeCgiResponse();
-        //     _cgiProcess = 0;
-        // }
+        // Hemos arrancado un CGI: la respuesta HttpResponse se construira
+        // cuando termine el CGI (ver finalizeCgiResponse en ClientCgi.cpp).
+        // Devolvemos true para indicar al bucle que, por ahora, no debe
+        // seguir procesando mas datos de este cliente.
         return true;
     }
     std::vector< char > serialized = _response.serialize();
