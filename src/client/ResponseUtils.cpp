@@ -10,6 +10,14 @@ std::vector<char> toBody(const std::string& text) {
   return std::vector<char>(text.begin(), text.end());
 }
 
+// Devuelve el mensaje de error según el código HTTP (para errores de parseo)
+std::string getErrorDescription(int statusCode) {
+  if (statusCode == HTTP_STATUS_FORBIDDEN) return "Forbidden\n";
+  if (statusCode == HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE)
+    return "Request Entity Too Large\n";
+  return "Bad Request\n";  // Por defecto para 400 u otros errores de parseo
+}
+
 void fillBaseResponse(HttpResponse& response, const HttpRequest& request, int statusCode,
                       bool shouldClose, const std::vector< char >& body) {
     response.setStatusCode(statusCode);

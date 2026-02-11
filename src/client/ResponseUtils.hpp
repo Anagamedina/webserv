@@ -9,6 +9,8 @@
 
 std::vector<char> toBody(const std::string& text);
 
+std::string getErrorDescription(int statusCode);
+
 void fillBaseResponse(HttpResponse& response, const HttpRequest& request,
                       int statusCode, bool shouldClose,
                       const std::vector<char>& body);

@@ -73,6 +73,8 @@ class HttpRequest {
   void clear();
   // shouldCloseConnection
   bool shouldCloseConnection() const;
+  // Expect: 100-continue (cliente espera confirmación antes de enviar body grande)
+  bool hasExpect100Continue() const;
 };
 
 #endif  // HTTP_REQUEST_HPP

@@ -15,7 +15,7 @@ class RequestProcessor {
  public:
   void process(const HttpRequest& request,
                const std::vector<ServerConfig>* configs, int listenPort,
-               bool parseError, HttpResponse& response);
+               int parseErrorCode, HttpResponse& response);
 
  private:
 };

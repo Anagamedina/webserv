@@ -51,6 +51,7 @@ class Client {
   ServerManager* _serverManager;
   CgiProcess* _cgiProcess;
   bool _closeAfterWrite;
+  bool _sent100Continue;  // Para Expect: 100-continue (respuesta intermedia)
   struct PendingResponse {
     std::string data;
     bool closeAfter;
@@ -61,6 +62,7 @@ class Client {
   // Invocado cuando el parser marca una HttpRequest como completa.
   bool handleCompleteRequest();
   void enqueueResponse(const std::vector<char>& data, bool closeAfter);
+  void handleExpect100();
   bool startCgiIfNeeded(const HttpRequest& request);
   void finalizeCgiResponse();
 

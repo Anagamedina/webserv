@@ -85,6 +85,9 @@ void HttpParser::parseHeaders() {
       return;  // No hay línea completa, esperamos al siguiente epoll()
     // Caso 1: Línea vacía -> Fin de headers
     if (line.empty() && !validateHeaders()) {
+      _errorStatusCode = (_maxBodySize > 0 && _contentLength > _maxBodySize)
+                             ? 413
+                             : 400;
       _state = ERROR;
       return;
     }
@@ -100,6 +103,7 @@ void HttpParser::parseHeaders() {
 
     // Caso 2: Línea con datos -> Procesar
     if (!processHeaderLine(line)) {
+      _errorStatusCode = 400;
       _state = ERROR;
       return;
     }
