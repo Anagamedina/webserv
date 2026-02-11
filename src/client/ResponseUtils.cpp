@@ -1,4 +1,5 @@
 #include "ResponseUtils.hpp"
+#include "SessionUtils.hpp"
 
 static std::string versionToString(HttpVersion version) {
     if (version == HTTP_VERSION_1_0)
@@ -24,4 +25,6 @@ void fillBaseResponse(HttpResponse& response, const HttpRequest& request, int st
     if (!response.hasHeader("content-type"))
         response.setContentType(request.getPath());
     response.setBody(body);
+
+    addSessionCookieIfNeeded(response, request, statusCode);
 }
