@@ -142,10 +142,16 @@ void HttpResponse::setContentType(const std::string& filename) {
     contentType = "image/jpeg";
   else if (ext == "gif")
     contentType = "image/gif";
+  else if (ext == "ico")
+    contentType = "image/x-icon";
   else if (ext == "svg")
     contentType = "image/svg+xml";
   else if (ext == "txt")
     contentType = "text/plain";
+  else if (ext == "json")
+    contentType = "application/json";
+  else if (ext == "pdf")
+    contentType = "application/pdf";
 
   setHeader("Content-Type", contentType);
 }

@@ -60,7 +60,7 @@ def test_cookie_session():
         session_id = None
         data1_str = data1.decode(errors='ignore')
         if "Set-Cookie" in data1_str:
-            start = data1_str.find("session_id=")
+            start = data1_str.find("id=")
             if start != -1:
                 end = data1_str.find(";", start)
                 if end == -1: end = data1_str.find("\r\n", start)

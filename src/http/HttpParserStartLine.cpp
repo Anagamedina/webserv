@@ -65,24 +65,73 @@ bool HttpParser::splitStartLine(const std::string& line, std::string& method,
 }
 
 /**
- * Analiza la URI y la divide en path y query.
- * @param uri: La URI a analizar.
- * ejemplo: uri: "/index.html?query=value"
- * qpos: 14
- * path: "/index.html" qpos: 14
- * query: "query=value"
+ * Comprueba si el path tiene ".." como segmento (directorio padre).
+ * Esto es peligroso: alguien podría pedir /../../etc/passwd para salirse del root.
+ *
+ * Solo rechazamos cuando ".." va entre barras (o al inicio/final).
+ * Ejemplos que SÍ rechazamos: /../, /foo/../bar, ../x
+ * Ejemplos que NO rechazamos: file..txt, /foto..jpg (son nombres de archivo normales)
+ */
+static bool containsParentPathSegment(const std::string& path) {
+  std::string::size_type search_pos = 0;
+
+  while (search_pos < path.length()) {
+    // Buscar la siguiente aparición de ".."
+    std::string::size_type found_at = path.find("..", search_pos);
+
+    if (found_at == std::string::npos) {
+      // No hay más "..", el path está bien
+      return false;
+    }
+
+    // ¿Está el ".." justo al inicio del path o después de una barra?
+    bool is_valid_start = (found_at == 0) || (path[found_at - 1] == '/');
+
+    // ¿Termina el ".." al final del path o va seguido de una barra?
+    bool is_valid_end = (found_at + 2 >= path.length()) ||
+                        (path[found_at + 2] == '/');
+
+    if (is_valid_start && is_valid_end) {
+      // Encontramos ".." como segmento de path -> intento de directory traversal
+      return true;
+    }
+
+    // Seguir buscando por si hay otro ".." más adelante
+    search_pos = found_at + 1;
+  }
+
+  return false;
+}
+
+/**
+ * Extrae el path y el query string de la URI.
+ * Ejemplo: "/index.html?nombre=ana" -> path="/index.html", query="nombre=ana"
  */
 void HttpParser::parseUri(const std::string& uri) {
-  std::string::size_type qpos;
+  std::string path;
+  std::string query;
 
-  qpos = uri.find('?');
-  if (qpos != std::string::npos) {
-    _request.setPath(uri.substr(0, qpos));
-    _request.setQuery(uri.substr(qpos + 1));
+  // Separar path y query por el ?
+  // Ejemplo: /index.html?nombre=ana -> path="/index.html", query="nombre=ana"
+  std::string::size_type question_mark_pos = uri.find('?');
+
+  if (question_mark_pos != std::string::npos) {
+    path = uri.substr(0, question_mark_pos);
+    query = uri.substr(question_mark_pos + 1);
   } else {
-    _request.setPath(uri);
-    _request.setQuery("");
+    path = uri;
+    query = "";
   }
+
+  // Seguridad: bloquear intentos de salir del directorio (directory traversal)
+  if (containsParentPathSegment(path)) {
+    _errorStatusCode = 403;
+    _state = ERROR;
+    return;
+  }
+
+  _request.setPath(path);
+  _request.setQuery(query);
 }
 
 // PARSE START LINE ----------------------------------------------------------
@@ -99,15 +148,13 @@ void HttpParser::parseStartLine() {
 
   if (!extractLine(line)) return;
 
-  // DEBUG:
-  // std::cout << "[parseStartLine] line=" << line << std::endl;
-
-  if (line.empty()) {
-    _state = ERROR;
-    return;
+  // Ignorar líneas vacías (ej: \r\n al inicio) y esperar la start line real
+  while (line.empty()) {
+    if (!extractLine(line)) return;
   }
 
   if (!splitStartLine(line, method, uri, version)) {
+    _errorStatusCode = 400;
     _state = ERROR;
     return;
   }

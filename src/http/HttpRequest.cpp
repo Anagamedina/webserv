@@ -225,3 +225,11 @@ bool HttpRequest::shouldCloseConnection() const {
     return true;
   }
 }
+
+// Comprueba si el cliente envió Expect: 100-continue (espera confirmación
+// antes de mandar un body grande)
+bool HttpRequest::hasExpect100Continue() const {
+  std::string expect = getHeader("expect");
+  std::transform(expect.begin(), expect.end(), expect.begin(), ::tolower);
+  return expect.find("100-continue") != std::string::npos;
+}

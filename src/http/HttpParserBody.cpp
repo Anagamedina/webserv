@@ -13,9 +13,17 @@ void HttpParser::parseBody() {
 }
 
 /*
- * Maneja el caso donde concemos el tamano exacto (content-length) del body.
+ * Maneja el caso donde conocemos el tamano exacto (content-length) del body.
+ * Capa estática: comprobamos ANTES de leer si el total esperado supera el límite.
  */
 void HttpParser::parseBodyFixedLength() {
+  // Check si el tamano total esperado supera el límite.
+  if (_maxBodySize > 0 && _contentLength > _maxBodySize) {
+    _errorStatusCode = 413;
+    _state = ERROR;
+    return;
+  }
+
   std::size_t remaining = 0;
   if (_contentLength > _bytesRead) remaining = _contentLength - _bytesRead;
 
@@ -42,6 +50,7 @@ bool HttpParser::parseChunkSizeLine(std::size_t& size) {
   if (!extractLine(line)) return false;  // falta data
   // OJO! Según el protocolo, aquí debe haber un número. Si no hay, es un error.
   if (line.empty()) {
+    _errorStatusCode = 400;
     _state = ERROR;
     return false;
   }
@@ -56,6 +65,7 @@ bool HttpParser::parseChunkSizeLine(std::size_t& size) {
   // pudo leer ni un solo número válido.
   value = std::strtoul(line.c_str(), &endPtr, 16);
   if (endPtr == line.c_str()) {
+    _errorStatusCode = 400;
     _state = ERROR;
     return false;
   }
@@ -89,6 +99,7 @@ bool HttpParser::handleChunkDataState() {
   if (_buffer.size() < needed) return false;  // falta data
 
   if (_buffer[_chunkSize] != '\r' || _buffer[_chunkSize + 1] != '\n') {
+    _errorStatusCode = 400;
     _state = ERROR;
     return false;
   }
@@ -96,6 +107,14 @@ bool HttpParser::handleChunkDataState() {
   if (_chunkSize > 0)
     _request.addBody(_buffer.begin(), _buffer.begin() + _chunkSize);
   _buffer.erase(0, needed);  // datos + CRLF
+
+  // Límite de body desde config: rechazar si chunked body supera max_body_size
+  if (_maxBodySize > 0 &&
+      _request.getBody().size() > _maxBodySize) {
+    _errorStatusCode = 413;
+    _state = ERROR;
+    return false;
+  }
 
   _stateChunk = CHUNK_SIZE;
   return true;

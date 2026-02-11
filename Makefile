@@ -40,6 +40,7 @@ SRC_FILES = $(SRC_DIR)/main.cpp \
 			$(SRC_DIR)/client/ClientCgi.cpp \
 			$(SRC_DIR)/client/ErrorUtils.cpp \
 			$(SRC_DIR)/client/ResponseUtils.cpp \
+			$(SRC_DIR)/client/SessionUtils.cpp \
 			$(SRC_DIR)/client/AutoindexRenderer.cpp \
 			$(SRC_DIR)/client/StaticPathHandler.cpp \
 			$(SRC_DIR)/client/RequestProcessorUtils.cpp \
@@ -130,6 +131,7 @@ TEST_REQUEST_PROCESSOR_BIN = tests/manual_request_processor
 TEST_REQUEST_PROCESSOR_SRC = tests/manual_processor/manual_request_processor.cpp \
 				  $(SRC_DIR)/client/ErrorUtils.cpp \
 				  $(SRC_DIR)/client/ResponseUtils.cpp \
+				  $(SRC_DIR)/client/SessionUtils.cpp \
 				  $(SRC_DIR)/client/StaticPathHandler.cpp \
 				  $(SRC_DIR)/client/RequestProcessor.cpp \
 				  $(SRC_DIR)/http/HttpRequest.cpp \
@@ -140,6 +142,7 @@ TEST_CLIENT_SRC = tests/manual_client/manual_client.cpp \
 				  $(SRC_DIR)/client/Client.cpp \
 				  $(SRC_DIR)/client/ErrorUtils.cpp \
 				  $(SRC_DIR)/client/ResponseUtils.cpp \
+				  $(SRC_DIR)/client/SessionUtils.cpp \
 				  $(SRC_DIR)/client/StaticPathHandler.cpp \
 				  $(SRC_DIR)/client/RequestProcessor.cpp \
 				  $(SRC_DIR)/http/HttpParser.cpp \

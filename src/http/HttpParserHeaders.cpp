@@ -54,11 +54,6 @@ void HttpParser::handleHeader(const std::string& key,
  */
 bool HttpParser::validateHeaders() const {
   // Host es obligatorio en HTTP/1.1
-  // if (_request.getVersion() == HTTP_VERSION_1_1)
-  // {
-  //     if (_request.getHeader("host").empty())
-  //         return false;
-  // }
   if (_request.getVersion() == HTTP_VERSION_1_1 &&
       _request.getHeader("host").empty())
     return false;
@@ -66,9 +61,8 @@ bool HttpParser::validateHeaders() const {
   // Si llegan ambos headers (Transfer-Encoding y Content-Length),
   // se ignora Content-Length y se usa chunked (comportamiento actual).
 
-  // Límite de body (si se configuró)
-  // if (_maxBodySize > 0 && _contentLength > _maxBodySize)
-  //     return false;
+  // Límite de body: lo setea el Client con setMaxBodySize() antes de consume().
+  if (_maxBodySize > 0 && _contentLength > _maxBodySize) return false;
 
   return true;
 }
@@ -91,6 +85,9 @@ void HttpParser::parseHeaders() {
       return;  // No hay línea completa, esperamos al siguiente epoll()
     // Caso 1: Línea vacía -> Fin de headers
     if (line.empty() && !validateHeaders()) {
+      _errorStatusCode = (_maxBodySize > 0 && _contentLength > _maxBodySize)
+                             ? 413
+                             : 400;
       _state = ERROR;
       return;
     }
@@ -106,6 +103,7 @@ void HttpParser::parseHeaders() {
 
     // Caso 2: Línea con datos -> Procesar
     if (!processHeaderLine(line)) {
+      _errorStatusCode = 400;
       _state = ERROR;
       return;
     }

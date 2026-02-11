@@ -1,7 +1,57 @@
 #include "Client.hpp"
+#include "RequestProcessorUtils.hpp"
 
 #include <sys/socket.h>
 #include <unistd.h>
+
+// ============================
+// FUNCIONES AUXILIARES
+// ============================
+
+void Client::handleExpect100() {
+  if (_parser.getState() == PARSING_BODY &&
+      _parser.getRequest().hasExpect100Continue() && !_sent100Continue) {
+    std::string continueMsg("HTTP/1.1 100 Continue\r\n\r\n");
+    enqueueResponse(
+        std::vector<char>(continueMsg.begin(), continueMsg.end()), false);
+    _sent100Continue = true;
+  }
+}
+
+void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
+  std::string payload(data.begin(), data.end());
+  if (_outBuffer.empty()) {
+    _outBuffer = payload;
+    _closeAfterWrite = closeAfter;
+    _state = STATE_WRITING_RESPONSE;
+    return;
+  }
+  _responseQueue.push(PendingResponse(payload, closeAfter));
+}
+
+void Client::buildResponse() {
+  const HttpRequest& request = _parser.getRequest();
+  if (startCgiIfNeeded(request)) return;
+  _processor.process(request, _configs, _listenPort,
+                     _parser.getErrorStatusCode(), _response);
+}
+
+bool Client::handleCompleteRequest() {
+  const HttpRequest& request = _parser.getRequest();
+  bool shouldClose =
+      (_parser.getState() == ERROR) || request.shouldCloseConnection();
+  buildResponse();
+  if (_cgiProcess) {
+    return true;
+  }
+  std::vector<char> serialized = _response.serialize();
+  enqueueResponse(serialized, shouldClose);
+  return shouldClose;
+}
+
+// ============================
+// CONSTRUCTOR, DESTRUCTOR, GETTERS
+// ============================
 
 Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
     : _fd(fd),
@@ -17,7 +67,11 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _serverManager(0),
       _cgiProcess(0),
       _closeAfterWrite(false),
-      _responseQueue() {}
+      _sent100Continue(false),
+      _responseQueue() {
+  const ServerConfig* server = selectServerByPort(listenPort, configs);
+  if (server) _parser.setMaxBodySize(server->getMaxBodySize());
+}
 
 Client::~Client() {}
 
@@ -34,12 +88,8 @@ bool Client::hasPendingData() const {
 time_t Client::getLastActivity() const { return _lastActivity; }
 
 // ============================
-// LECTURA DESDE EL SOCKET (EPOLLIN)
+// MANEJO DE EVENTOS (EPOLL)
 // ============================
-// - Lee bytes crudos con recv().
-// - Actualiza _lastActivity.
-// - Alimenta el HttpParser.
-// - Cuando hay una HttpRequest COMPLETA, llama a handleCompleteRequest().
 
 void Client::handleRead() {
   char buffer[4096];  // buffer temporal
@@ -56,12 +106,14 @@ void Client::handleRead() {
     if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
 
     _parser.consume(std::string(buffer, bytesRead));
+    handleExpect100();
 
     while (_parser.getState() == COMPLETE) {
       bool shouldClose = handleCompleteRequest();
       if (_cgiProcess) return;
       if (shouldClose) return;
       _parser.reset();
+      _sent100Continue = false;
       _parser.consume("");
     }
 
@@ -118,46 +170,4 @@ void Client::handleWrite() {
 
     _state = STATE_IDLE;
   }
-}
-
-void Client::buildResponse() {
-  // Construye la respuesta logica (HttpResponse) a partir de la HttpRequest.
-  // Despues, handleCompleteRequest() se encarga de serializarla y encolarla.
-  const HttpRequest& request = _parser.getRequest();
-  // Primero intentamos el flujo CGI. Si startCgiIfNeeded() devuelve true,
-  // significa que ya se ha iniciado un CGI (o se ha respondido con error CGI)
-  // y la respuesta final se enviara mas tarde via ClientCgi.cpp.
-  if (startCgiIfNeeded(request)) return;
-  // Si no es CGI, delegamos en RequestProcessor para servir contenido estatico
-  // o errores HTTP clasicos.
-  _processor.process(request, _configs, _listenPort,
-                     _parser.getState() == ERROR, _response);
-}
-
-bool Client::handleCompleteRequest() {
-  const HttpRequest& request = _parser.getRequest();
-  bool shouldClose =
-      (_parser.getState() == ERROR) || request.shouldCloseConnection();
-  buildResponse();
-  if (_cgiProcess) {
-    // Hemos arrancado un CGI: la respuesta HttpResponse se construira
-    // cuando termine el CGI (ver finalizeCgiResponse en ClientCgi.cpp).
-    // Devolvemos true para indicar al bucle que, por ahora, no debe
-    // seguir procesando mas datos de este cliente.
-    return true;
-  }
-  std::vector<char> serialized = _response.serialize();
-  enqueueResponse(serialized, shouldClose);
-  return shouldClose;
-}
-
-void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
-  std::string payload(data.begin(), data.end());
-  if (_outBuffer.empty()) {
-    _outBuffer = payload;
-    _closeAfterWrite = closeAfter;
-    _state = STATE_WRITING_RESPONSE;
-    return;
-  }
-  _responseQueue.push(PendingResponse(payload, closeAfter));
 }

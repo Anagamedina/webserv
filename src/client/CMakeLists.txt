@@ -6,6 +6,7 @@ add_library(client STATIC
         RequestProcessor.cpp
         RequestProcessorUtils.cpp
         ResponseUtils.cpp
+        SessionUtils.cpp
         StaticPathHandler.cpp
         AutoindexRenderer.hpp
         Client.hpp
