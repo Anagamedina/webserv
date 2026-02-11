@@ -40,9 +40,9 @@ class ServerManager {
   EpollWrapper epoll_;
 
   std::map<int, TcpListener*> listeners_;
-  // Map listener FD to port, or directly to configs?
-  // Config list provided by ConfigParser
+
   const std::vector<ServerConfig>* configs_;
+
   // Map Listener FD -> Port
   std::map<int, int> listener_ports_;
 
@@ -50,6 +50,6 @@ class ServerManager {
   std::map<int, Client*> clients_;
 
   // Map CGI pipe FD -> Client (for CGI output handling)
-  std::map<int, Client*> cgi_pipes_;  // NEW
-                                      //
+  std::map<int, Client*> cgi_pipes_;
+  void reapChildren();
 };
