@@ -98,3 +98,5 @@ tests/manual_http_request
 
 /config/logs/
 .cache/
+compile_commands.json
+valgrind.log

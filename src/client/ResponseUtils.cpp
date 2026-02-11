@@ -2,13 +2,12 @@
 #include "SessionUtils.hpp"
 
 static std::string versionToString(HttpVersion version) {
-    if (version == HTTP_VERSION_1_0)
-        return "HTTP/1.0";
-    return "HTTP/1.1";
+  if (version == HTTP_VERSION_1_0) return "HTTP/1.0";
+  return "HTTP/1.1";
 }
 
-std::vector< char > toBody(const std::string& text) {
-    return std::vector< char >(text.begin(), text.end());
+std::vector<char> toBody(const std::string& text) {
+  return std::vector<char>(text.begin(), text.end());
 }
 
 void fillBaseResponse(HttpResponse& response, const HttpRequest& request, int statusCode,

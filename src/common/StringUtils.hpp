@@ -5,12 +5,12 @@
 namespace string_utils {
 
 // Generic template for converting to string
-template < typename T >
+template <typename T>
 static std::string toString(const T& value);
 
 int stringToInt(const std::string& str, int defaultValue = 0);
 long stringToLong(const std::string& str, long defaultValue = 0);
 
-}
+}  // namespace string_utils
 
 #include "StringUtils.tpp"
