@@ -4,8 +4,7 @@
 #include "LocationConfig.hpp"
 
 ServerConfig::ServerConfig()
-    : listen_port_(config::section::default_port),
-      host_address_(config::section::default_host_name),
+	: listen_port_(config::section::default_port),
       max_body_size_(config::section::max_body_size),
       autoindex_(false),
       redirect_code_(-1) {}

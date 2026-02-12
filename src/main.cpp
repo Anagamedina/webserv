@@ -46,16 +46,10 @@ int main(int argc, char* argv[]) {
    */
   signal(SIGPIPE, SIG_IGN);
 
-  std::cout << "Esto se pone interesante" << std::endl;
-
   try {
     ConfigParser parser(configPath);
-    std::cout << "Config file path: [" << parser.getConfigFilePath() << "]\n";
+    std::cout << "Config file path: [" << config::colors::blue << parser.getConfigFilePath() << "]\n" << config::colors::reset;
     parser.parse();
-    // - ConfigParser parser("config/default.conf");
-    // - parser.parse();
-    // - std::vector<ServerConfig> servers = parser.getServers();
-    // - ServerManager server(&servers);
 
     // Crear el gestor del servidor con la lista de servers
     ServerManager server(&parser.getServers());

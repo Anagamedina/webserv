@@ -84,7 +84,9 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
   std::istringstream tokenStream(str);
 
   if (delimiter == ' ') {
-    while (tokenStream >> token) tokens.push_back(token);
+    while (tokenStream >> token) {
+    	tokens.push_back(token);
+    }
   } else {
     while (std::getline(tokenStream, token, delimiter)) {
       tokens.push_back(token);
@@ -97,7 +99,6 @@ std::vector<std::string> tokenize(const std::string& line) {
   std::vector<std::string> tokens;
   std::string currentToken;
   bool inQuotes = false;
-  // char quoteChar = 0; // ' or "
 
   for (size_t i = 0; i < line.size(); ++i) {
     char c = line[i];
@@ -105,11 +106,6 @@ std::vector<std::string> tokenize(const std::string& line) {
     if (inQuotes) {
       if (c == '"') {
         inQuotes = false;
-        // quoteChar = 0;
-        // Don't add quote to token?
-        // Nginx usually strips quotes.
-        // tokens.push_back(currentToken);
-        // currentToken.clear();
       } else {
         currentToken += c;
       }
@@ -123,21 +119,6 @@ std::vector<std::string> tokenize(const std::string& line) {
         inQuotes = true;
         // quoteChar = c;
       } else if (c == ';') {
-        /*
-        if (!currentToken.empty()) {
-          tokens.push_back(currentToken);
-          currentToken.clear();
-        }*/
-        // tokens.push_back(";"); // Keep semicolon as separate token?
-        // ConfigParser expects tokens with semicolons attached usually or
-        // stripped manually. Current split behavior: "listen 80;" -> "listen",
-        // "80;" So we should attach semicolon if it's part of the word, or...
-        // Wait, split(' ') keeps "80;" as "80;".
-        // But here we are iterating chars.
-        // If we hit ';', we end the token.
-        // We can append ';' to currentToken before clearing?
-        // Or just treat it as a char unless we want to be smart.
-        // Let's just treat it as normal char if not space.
         currentToken += c;
       } else if (c == '#') {
         // Comment detected, stop parsing line

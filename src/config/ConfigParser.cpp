@@ -1,5 +1,6 @@
 #include "ConfigParser.hpp"
 
+#include <fstream>
 #include <sstream>
 
 #include "../common/namespaces.hpp"
@@ -240,17 +241,11 @@ void ConfigParser::parseAllServerBlocks() {
 void ConfigParser::parseListen(ServerConfig& server,
                                const std::vector<std::string>& tokens) {
   if (tokens.size() < 2) {
-    throw ConfigException("Missing argument for listen");
+    throw ConfigException(config::errors::missing_args_in_listen);
   }
   std::string value = config::utils::removeSemicolon(tokens[1]);
   size_t pos = value.find(':');
 
-  /*
-  std::cout << "current directive: [" << directive << "]" << std::endl;
-  std::cout << "value [" << value << "]" << std::endl;
-      function to check if pattern is correct respect to PORT:IP
-  8080:192.178.1.1
-  */
   if (pos != std::string::npos) {
     // Case: IP:PORT (127.0.0.1:8080)
     std::string first = value.substr(0, pos);
@@ -287,8 +282,28 @@ void ConfigParser::parseListen(ServerConfig& server,
   }
 }
 
+void ConfigParser::parseHost(ServerConfig& server,
+                             const std::vector<std::string>& tokens) {
+  if (tokens.size() < 2) {
+    throw ConfigException(config::errors::missing_args_in_host);
+  }
+  
+  std::string hostValue = config::utils::removeSemicolon(tokens[1]);
+  
+  // if (hostValue.empty()) {
+  //   throw ConfigException("Host value cannot be empty");
+  // }
+  
+  // Validate host format (IP address or hostname)
+  if (!config::utils::isValidHost(hostValue)) {
+    throw ConfigException(config::errors::invalid_ip_format + ": " + hostValue);
+  }
+  
+  server.setHost(hostValue);
+}
+
 void ConfigParser::parseMaxSizeBody(ServerConfig& server,
-                                    const std::vector<std::string>& tokens) {
+									const std::vector<std::string>& tokens) {
   const std::string& maxSizeStr = config::utils::removeSemicolon(tokens[1]);
   if (!maxSizeStr.empty()) {
     config::utils::removeSemicolon(maxSizeStr);
@@ -513,6 +528,8 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     // std::cout << "current directive: [" << directive << "]" << std::endl;
     if (directive == config::section::listen) {
       parseListen(server, tokens);
+    } else if (directive == config::section::host) {
+		parseHost(server, tokens);
     } else if (directive == config::section::server_name) {
       parseServerName(server, tokens);
     } else if (directive == config::section::root) {
