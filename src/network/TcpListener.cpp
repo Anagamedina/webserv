@@ -16,8 +16,10 @@
 
 #include "common/StringUtils.hpp"
 #include <sstream>
+#include <netdb.h> 
 
-TcpListener::TcpListener(int port) : socket_fd_(-1), port_(port) {
+TcpListener::TcpListener(const std::string& host, int port)
+    : socket_fd_(-1), port_(port), host_(host) {
   createSocket();
   setSocketOptions();
   bindSocket();
@@ -175,23 +177,46 @@ void TcpListener::setSocketOptions() {
 ///
 /// @throws std::runtime_error if bind() fails
 void TcpListener::bindSocket() {
-  struct sockaddr_in address;
-  std::memset(&address, 0, sizeof(address));
+  struct addrinfo hints;
+  struct addrinfo* result; // will point to a linked list of addrinfo structures
+  struct addrinfo* rp;
+  int s;
 
-  address.sin_family = AF_INET;
-  address.sin_addr.s_addr = INADDR_ANY;
+  std::memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_INET;       // Allow IPv4 only (compatible with socket())
+  hints.ai_socktype = SOCK_STREAM; // TCP socket
+  hints.ai_flags = AI_PASSIVE;     // For wildcard IP address if host is null/empty
 
-  // Convierte un entero de 16 bits del orden de bytes del host (tu CPU) al
-  // orden de bytes de red (estándar TCP/IP).
-  address.sin_port = htons(port_);
+  const char* host_ptr = host_.empty() ? NULL : host_.c_str();
+  std::string port_str = string_utils::toString(port_);
 
-  if (bind(socket_fd_, (struct sockaddr*)&address, sizeof(address)) < 0) {
+  s = getaddrinfo(host_ptr, port_str.c_str(), &hints, &result);
+  if (s != 0) {
     close(socket_fd_);
-    throw std::runtime_error("Failed to bind socket to port " +
-                             string_utils::toString(port_));
+    throw std::runtime_error("getaddrinfo failed: " + std::string(gai_strerror(s)));
   }
 
-  std::cout << "Socket bound to port " << port_ << std::endl;
+  // getaddrinfo() returns a list of address structures.
+  // Try each address until we successfully bind.
+  // Since we forced AF_INET, we typically get one IPv4 result.
+
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    if (bind(socket_fd_, rp->ai_addr, rp->ai_addrlen) == 0) {
+       break; // Success :)
+    }
+  }
+
+  if (rp == NULL) { // No address succeeded
+    freeaddrinfo(result);
+    close(socket_fd_);
+    throw std::runtime_error("Failed to bind socket to " +
+                             (host_.empty() ? "*" : host_) + ":" + port_str);
+  }
+
+  freeaddrinfo(result);
+
+  std::cout << "Socket bound to " << (host_.empty() ? "0.0.0.0" : host_) 
+            << ":" << port_ << std::endl;
 }
 
 /// Activates listening mode on the socket, enabling it to accept connections.

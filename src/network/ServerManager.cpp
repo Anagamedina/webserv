@@ -32,7 +32,7 @@ ServerManager::ServerManager(const std::vector<ServerConfig>* configs)
     }
     bound_ports.insert(port);
 
-    TcpListener* listener = new TcpListener(port);
+    TcpListener* listener = new TcpListener(server.getHost(), port);
     try {
       listener->listen();
       int fd = listener->getFd();
