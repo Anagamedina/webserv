@@ -150,7 +150,7 @@ static bool handleRegularFile(const HttpRequest& request,
     return true;
   }
   if (request.getMethod() == HTTP_METHOD_DELETE) {
-    if (unlink(path.c_str()) == 0) {
+    if (std::remove(path.c_str()) == 0) {
       body.clear();
       return false;
     }

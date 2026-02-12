@@ -15,6 +15,7 @@
 #include <stdexcept>
 
 #include "common/StringUtils.hpp"
+#include <sstream>
 
 TcpListener::TcpListener(int port) : socket_fd_(-1), port_(port) {
   createSocket();
@@ -383,7 +384,7 @@ int TcpListener::acceptConnection() {
   struct sockaddr_in client_addr;
   socklen_t addr_len = sizeof(client_addr);
 
-  bzero(&client_addr, size_t(addr_len));
+  std::memset(&client_addr, 0, size_t(addr_len));
   int client_fd = accept(socket_fd_, (struct sockaddr*)&client_addr, &addr_len);
 
   if (client_fd < 0) return -1;
@@ -393,8 +394,12 @@ int TcpListener::acceptConnection() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
   }
 
-  char client_ip[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+  // Manual IP formatting to replace inet_ntop (forbidden)
+  unsigned char* ip_bytes = (unsigned char*)&client_addr.sin_addr;
+  std::ostringstream oss;
+  oss << (int)ip_bytes[0] << "." << (int)ip_bytes[1] << "." 
+      << (int)ip_bytes[2] << "." << (int)ip_bytes[3];
+  std::string client_ip = oss.str();
   std::cout << "New connection from " << client_ip << ":"
             << ntohs(client_addr.sin_port) << " (fd: " << client_fd << ")"
             << std::endl;
