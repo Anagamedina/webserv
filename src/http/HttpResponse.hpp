@@ -59,6 +59,8 @@ class HttpResponse {
   // comprobar si ya existe un header (se usa para no sobreescribir
   // Content-Type)
   bool hasHeader(const std::string& key) const;
+
+  void clear();
 };
 
 #endif  // HTTP_RESPONSE_HPP

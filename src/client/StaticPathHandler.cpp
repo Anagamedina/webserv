@@ -150,6 +150,8 @@ static bool handleRegularFile(const HttpRequest& request,
     return true;
   }
   if (request.getMethod() == HTTP_METHOD_DELETE) {
+    // in case unlink is not allowed use std::remove
+    // if (std::remove(path.c_str()) == 0) {
     if (unlink(path.c_str()) == 0) {
       body.clear();
       return false;

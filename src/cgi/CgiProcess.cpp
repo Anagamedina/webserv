@@ -6,6 +6,7 @@
 
 #include "CgiProcess.hpp"
 
+#include <sys/signal.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -31,7 +32,9 @@ CgiProcess::CgiProcess(const std::string& script_path,
       timeout_secs_(timeout_secs) {}
 
 CgiProcess::~CgiProcess() {
-  // Pipes will be closed by the caller (Client/ServerManager)
+  if (pid_ > 0) {
+      kill(pid_, SIGKILL);
+  }
 }
 
 bool CgiProcess::appendResponseData(const char* data, size_t len) {

@@ -66,9 +66,12 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _lastActivity(std::time(0)),
       _serverManager(0),
       _cgiProcess(0),
+
       _closeAfterWrite(false),
       _sent100Continue(false),
-      _responseQueue() {
+      _responseQueue(),
+      _savedShouldClose(false),
+      _savedVersion(HTTP_VERSION_1_1) {
   const ServerConfig* server = selectServerByPort(listenPort, configs);
   if (server) _parser.setMaxBodySize(server->getMaxBodySize());
 }
@@ -108,14 +111,7 @@ void Client::handleRead() {
     _parser.consume(std::string(buffer, bytesRead));
     handleExpect100();
 
-    while (_parser.getState() == COMPLETE) {
-      bool shouldClose = handleCompleteRequest();
-      if (_cgiProcess) return;
-      if (shouldClose) return;
-      _parser.reset();
-      _sent100Continue = false;
-      _parser.consume("");
-    }
+    processRequests();
 
     if (_parser.getState() == ERROR) {
       handleCompleteRequest();
@@ -127,6 +123,35 @@ void Client::handleRead() {
     _state = STATE_CLOSED;
   }
 }
+
+void Client::processRequests() {
+  while (_parser.getState() == COMPLETE) {
+    // If a CGI process is running, we cannot start another one or process
+    // responses yet. We just wait (parser buffer holds next request).
+    if (_cgiProcess) return;
+
+    bool shouldClose = handleCompleteRequest();
+
+    // If CGI started, handleCompleteRequest returned true (and set _cgiProcess).
+    // The parser holds the request that started the CGI. We must reset it
+    // so we can parse the *next* request (if any) later.
+    // BUT we must have saved the necessary info from the request first
+    // (done in startCgiIfNeeded).
+    if (_cgiProcess) {
+       _response.clear();
+       _parser.reset();
+       return;
+    }
+
+    if (shouldClose) return;
+    _response.clear();
+    _parser.reset();
+    _sent100Continue = false;
+    _parser.consume("");
+  }
+}
+
+
 
 // ============================
 // ESCRITURA AL SOCKET (EPOLLOUT)

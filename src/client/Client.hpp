@@ -64,8 +64,13 @@ class Client {
   void enqueueResponse(const std::vector<char>& data, bool closeAfter);
   void handleExpect100();
   bool startCgiIfNeeded(const HttpRequest& request);
-  void finalizeCgiResponse();
 
+  void finalizeCgiResponse();
+  void processRequests();
+
+  // Saved request state for CGI
+  bool _savedShouldClose;
+  HttpVersion _savedVersion;
  public:
   Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
   ~Client();

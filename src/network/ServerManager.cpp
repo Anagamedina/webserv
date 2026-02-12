@@ -32,7 +32,7 @@ ServerManager::ServerManager(const std::vector<ServerConfig>* configs)
     }
     bound_ports.insert(port);
 
-    TcpListener* listener = new TcpListener(port);
+    TcpListener* listener = new TcpListener(server.getHost(), port);
     try {
       listener->listen();
       int fd = listener->getFd();
@@ -105,14 +105,29 @@ void ServerManager::run() {
 
       // Reap any terminated child CGI processes to prevent zombies
       // Non-blocking call - returns immediately if no children have exited
-      while (waitpid(-1, NULL, WNOHANG) > 0) {
-        // TODO: remove log
-        std::cout << "=> child process reaped :)" << std::endl;
-      }
 
+      reapChildren();
       checkTimeouts();
     } catch (const std::exception& e) {
       std::cerr << "Error in event loop: " << e.what() << std::endl;
+    }
+  }
+}
+
+void ServerManager::reapChildren() {
+  while (true) {
+    pid_t pid = waitpid(-1, NULL, WNOHANG);
+
+    if (pid > 0) {
+#ifdef DEBUG
+      std::cout << "[CDI] Reaped child PID: " << pid << std::endl;
+#endif  // DEBUG
+    } else if (pid == 0) {
+      break;
+    } else {  // pid == -1
+      if (errno == ECHILD) break;
+      // Real error here
+      std::cerr << "waitpid failed: " << std::strerror(errno) << std::endl;
     }
   }
 }

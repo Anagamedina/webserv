@@ -155,3 +155,11 @@ void HttpResponse::setContentType(const std::string& filename) {
 
   setHeader("Content-Type", contentType);
 }
+
+void HttpResponse::clear() {
+  _status = HTTP_STATUS_OK;
+  _version = HTTP_VERSION_1_1;
+  _headers.clear();
+  _reasonPhrase = reasonPhraseForStatus(HTTP_STATUS_OK);
+  _body.clear();
+}

@@ -22,9 +22,11 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 static std::string methodToString(HttpMethod method) {
   if (method == HTTP_METHOD_GET) return "GET";
@@ -97,9 +99,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     close(pipe_out[0]);
     close(pipe_out[1]);
 
-    // Set alarm for timeout (5 seconds)
-    alarm(5);
-
     // Extract script directory and filename
     std::string script_dir = ".";
     std::string script_name = script_path;
@@ -111,8 +110,8 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // Change to script directory
     if (chdir(script_dir.c_str()) == -1) {
-      perror("chdir failed");
-      exit(1);
+      std::cerr << "chdir failed: " << std::strerror(errno) << std::endl;
+      kill(getpid(), SIGKILL);
     }
 
     // Prepare environment variables
@@ -125,23 +124,33 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // Prefix with ./ for relative paths to work with /usr/bin/env and direct
     // execution
     std::string relative_script = "./" + script_name;
+    // Manual copy of arguments to avoid strdup (forbidden)
+    // We use a vector to hold the allocated pointers so we can track them if needed,
+    // though in a successful execve they are replaced, and on failure we kill the process.
+    // But strictly speaking, we just need to allocate writable memory.
+    
     char* args[3];
+    args[0] = NULL;
+    args[1] = NULL;
+    args[2] = NULL;
+
     if (!interpreter_path.empty()) {
-      args[0] = strdup(interpreter_path.c_str());
-      args[1] = strdup(relative_script.c_str());
-      args[2] = NULL;
+        args[0] = new char[interpreter_path.size() + 1];
+        std::strcpy(args[0], interpreter_path.c_str());
+        
+        args[1] = new char[relative_script.size() + 1];
+        std::strcpy(args[1], relative_script.c_str());
     } else {
-      args[0] = strdup(relative_script.c_str());
-      args[1] = NULL;
-      args[2] = NULL;
+        args[0] = new char[relative_script.size() + 1];
+        std::strcpy(args[0], relative_script.c_str());
     }
 
     const char* exec_path = args[0];
     execve(exec_path, args, envp);
 
     // If execve fails
-    perror("execve failed");
-    exit(1);
+    std::cerr << "execve failed: " << std::strerror(errno) << std::endl;
+    kill(getpid(), SIGKILL);
 
   } else {
     // PARENT PROCESS
@@ -248,7 +257,9 @@ char** CgiExecutor::createEnvArray(
   for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
        it != env_map.end(); ++it) {
     std::string s = it->first + "=" + it->second;
-    envp[i++] = strdup(s.c_str());
+    envp[i] = new char[s.size() + 1];
+    std::strcpy(envp[i], s.c_str());
+    i++;
   }
   envp[i] = NULL;
   return envp;

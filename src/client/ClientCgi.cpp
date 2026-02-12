@@ -76,26 +76,32 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
   _serverManager->registerCgiPipe(_cgiProcess->getPipeIn(),
                                   EPOLLOUT | EPOLLRDHUP, this);
 
+
   _state = STATE_READING_BODY;
+  
+  // Save request state needed for finalization
+  _savedShouldClose = request.shouldCloseConnection();
+  _savedVersion = request.getVersion();
+  
   return true;
 }
 
 void Client::finalizeCgiResponse() {
-  const HttpRequest& request = _parser.getRequest();
-  bool shouldClose = request.shouldCloseConnection();
-
   _response.setStatusCode(_cgiProcess->getStatusCode());
-  if (request.getVersion() == HTTP_VERSION_1_0)
+  if (_savedVersion == HTTP_VERSION_1_0)
     _response.setVersion("HTTP/1.0");
   else
     _response.setVersion("HTTP/1.1");
-  _response.setHeader("Connection", shouldClose ? "close" : "keep-alive");
+  _response.setHeader("Connection", _savedShouldClose ? "close" : "keep-alive");
 
   parseCgiHeaders(_cgiProcess->getResponseHeaders(), _response);
   _response.setBody(_cgiProcess->getResponseBody());
 
   std::vector<char> serialized = _response.serialize();
-  enqueueResponse(serialized, shouldClose);
+  enqueueResponse(serialized, _savedShouldClose);
+  
+  // Resume processing requests (in case pipelined data is waiting)
+  processRequests();
 }
 
 void Client::handleCgiPipe(int pipe_fd, size_t events) {
