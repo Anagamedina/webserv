@@ -5,8 +5,6 @@ add_library(common STATIC
     StringUtils.cpp
     StringUtils.hpp
     StringUtils.tpp
-    Types.hpp
-    Utils.hpp
     namespaces.hpp
 )
 
