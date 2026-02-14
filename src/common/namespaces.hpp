@@ -122,7 +122,7 @@ namespace config
 		static const std::string preferential_prefix_modifier = "^~";
 
 		static const int default_return_code = 302;
-		static const int default_port = 80;
+		static const int default_port = 8080;
 		static const std::string default_host_name = "127.0.0.1";
 		static const size_t max_body_size = 1048576;
 		static const int max_port = 65535;
