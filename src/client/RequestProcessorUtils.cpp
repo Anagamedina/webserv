@@ -87,6 +87,7 @@ std::string methodToString(HttpMethod method) {
   if (method == HTTP_METHOD_GET) return "GET";
   if (method == HTTP_METHOD_POST) return "POST";
   if (method == HTTP_METHOD_DELETE) return "DELETE";
+  if (method == HTTP_METHOD_HEAD) return "HEAD";
   return "";
 }
 

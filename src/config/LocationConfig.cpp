@@ -121,18 +121,23 @@ const std::map<std::string, std::string>& LocationConfig::getCgiHandlers()
  * @return true or false
  */
 bool LocationConfig::isMethodAllowed(const std::string& method) const {
-  //	TODO: what happen if method parameter is "" empty?
-  //	we need to introudce default case that is: GET
-  //	and this get insert in vector.
   if (method.empty()) {
     return false;
   }
+  // Per HTTP spec (RFC 2616 §5.1.1 / RFC 9110 §9.3.2):
+  // HEAD is identical to GET except the server MUST NOT return a body.
+  // A server that supports GET MUST also support HEAD.
+  // So we treat HEAD as GET for method-validation purposes.
+  std::string effectiveMethod = method;
+  if (effectiveMethod == config::section::method_head) {
+    effectiveMethod = config::section::method_get;
+  }
   if (allowed_methods_.empty()) {
-    return (method == config::section::method_get);
+    return (effectiveMethod == config::section::method_get);
   }
 
   for (size_t i = 0; i < allowed_methods_.size(); ++i) {
-    if (allowed_methods_[i] == method) return true;
+    if (allowed_methods_[i] == effectiveMethod) return true;
   }
   return false;
 }
