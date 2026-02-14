@@ -20,9 +20,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
-#include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -119,16 +119,24 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // INFO: Use full path for SCRIPT_FILENAME env var
     std::map<std::string, std::string> env_map =
         prepareEnvironment(request, script_path, serverConfig);
+#ifdef DEBUG
+    std::cout << "[CGI ENV] script=" << script_path << std::endl;
+    for (std::map<std::string, std::string>::const_iterator it =
+             env_map.begin();
+         it != env_map.end(); ++it) {
+      std::cerr << "[CGI ENV] " << it->first << "=" << it->second << std::endl;
+    }
+#endif
     char** envp = createEnvArray(env_map);
 
     // Prepare arguments - use just the script filename after chdir
     // Prefix with ./ for relative paths to work with /usr/bin/env and direct
     // execution
     std::string relative_script = "./" + script_name;
-    // We use a vector to hold the allocated pointers so we can track them if needed,
-    // though in a successful execve they are replaced, and on failure we kill the process.
-    // so we do not need to delete them manually since the process will wipe
-    // memory it self
+    // We use a vector to hold the allocated pointers so we can track them if
+    // needed, though in a successful execve they are replaced, and on failure
+    // we kill the process. so we do not need to delete them manually since the
+    // process will wipe memory it self
 
     char* args[3];
     args[0] = NULL;
@@ -136,14 +144,14 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     args[2] = NULL;
 
     if (!interpreter_path.empty()) {
-        args[0] = new char[interpreter_path.size() + 1];
-        std::strcpy(args[0], interpreter_path.c_str());
+      args[0] = new char[interpreter_path.size() + 1];
+      std::strcpy(args[0], interpreter_path.c_str());
 
-        args[1] = new char[relative_script.size() + 1];
-        std::strcpy(args[1], relative_script.c_str());
+      args[1] = new char[relative_script.size() + 1];
+      std::strcpy(args[1], relative_script.c_str());
     } else {
-        args[0] = new char[relative_script.size() + 1];
-        std::strcpy(args[0], relative_script.c_str());
+      args[0] = new char[relative_script.size() + 1];
+      std::strcpy(args[0], relative_script.c_str());
     }
 
     const char* exec_path = args[0];
@@ -232,7 +240,8 @@ std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
   std::ostringstream port_ss;
   port_ss << serverConfig.getPort();
   env["SERVER_PORT"] = port_ss.str();
-  env["PATH_INFO"] = request.getPath();           // We only support direct script execution for now
+  env["PATH_INFO"] =
+      request.getPath();  // We only support direct script execution for now
   env["PATH_TRANSLATED"] = "";     // Corresponding physical path
   env["REDIRECT_STATUS"] = "200";  // Required by php-cgi in some setups
 
