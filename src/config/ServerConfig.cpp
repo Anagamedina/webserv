@@ -1,5 +1,4 @@
 #include "ServerConfig.hpp"
-
 #include "ConfigException.hpp"
 #include "LocationConfig.hpp"
 
@@ -41,7 +40,7 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other) {
 
 ServerConfig::~ServerConfig() {}
 
-//	GETTERS AND SETTERS
+//	SETTERS
 void ServerConfig::setPort(int port) {
   if (port < 1 || port > config::section::max_port) {
     throw ConfigException(config::errors::invalid_port_range);

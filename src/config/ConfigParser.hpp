@@ -1,6 +1,8 @@
 #ifndef WEBSERV_CONFIGPARSER_HPP
 #define WEBSERV_CONFIGPARSER_HPP
 
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -26,7 +28,7 @@ class ConfigParser {
   std::vector<std::string> raw_server_blocks_;
   std::vector<ServerConfig> servers_;
 
-  //	constructors of copy and operator
+  // constructors of copy and operator
   ConfigParser(const ConfigParser& other);
   ConfigParser& operator=(const ConfigParser& other);
 

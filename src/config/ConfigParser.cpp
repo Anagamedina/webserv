@@ -30,14 +30,7 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
- * manage if config_file_path_:
- * has valid size of length
- * has extension '.conf'
- * @return true or false
- */
-/**
  * main function of parsing
- *
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
