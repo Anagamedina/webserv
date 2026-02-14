@@ -100,3 +100,4 @@ tests/manual_http_request
 .cache/
 compile_commands.json
 valgrind.log
+nginx/

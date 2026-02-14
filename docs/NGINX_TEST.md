@@ -13,13 +13,20 @@ cd nginx-1.29.5
 ```
 
 ### Configure
-configuramos donde queremos instalarlo, en nuestro caso nos va bien en nuestro home,
-en la carpeta nginx
+Configuramos donde queremos instalarlo, en nuestro caso nos va bien en nuestro home,  
+en la carpeta nginx, por ejemplo aqui lo instalamos en $HOME/nginx.  
+Para instalarlo dentro de nuestro webserver, usar $(pwd)/../nginx.
 ```bash
 ./configure --prefix=$HOME/nginx \
     --sbin-path=$HOME/nginx/nginx \
     --conf-path=$HOME/nginx/conf/nginx.conf \
     --pid-path=$HOME/nginx/nginx.pid
+
+# --- para instalarlo dentro del repo webserver:
+export WSERV_PATH=$HOME/Documents/42bcn/webserv && ./configure --prefix=$WSERV_PATH/nginx \
+    --sbin-path=$WSERV_PATH/nginx \
+    --conf-path=$WSERV_PATH/nginx/conf/nginx.conf \
+    --pid-path=$WSERV_PATH/nginx/nginx.pid
 ```
 
 finalmente podemos ejecutar
