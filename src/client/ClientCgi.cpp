@@ -48,12 +48,12 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
   if (location == 0) return false;
 
   // Validate that the method is allowed for this location
+  // I belive this is already done earlier
   std::string methodStr;
   if (request.getMethod() == HTTP_METHOD_GET) methodStr = "GET";
   else if (request.getMethod() == HTTP_METHOD_POST) methodStr = "POST";
   else if (request.getMethod() == HTTP_METHOD_DELETE) methodStr = "DELETE";
-  else if (request.getMethod() == HTTP_METHOD_HEAD) methodStr = "HEAD";
-  
+
   if (!location->isMethodAllowed(methodStr)) {
     buildErrorResponse(_response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
     return true;
@@ -90,11 +90,11 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
 
 
   _state = STATE_READING_BODY;
-  
+
   // Save request state needed for finalization
   _savedShouldClose = request.shouldCloseConnection();
   _savedVersion = request.getVersion();
-  
+
   return true;
 }
 
@@ -111,7 +111,7 @@ void Client::finalizeCgiResponse() {
 
   std::vector<char> serialized = _response.serialize();
   enqueueResponse(serialized, _savedShouldClose);
-  
+
   // Resume processing requests (in case pipelined data is waiting)
   processRequests();
 }

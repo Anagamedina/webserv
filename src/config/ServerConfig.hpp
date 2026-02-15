@@ -57,6 +57,7 @@ class ServerConfig {
   bool getAutoindex() const;
   int getRedirectCode() const;
   const std::string& getRedirectUrl() const;
+  size_t getGlobalMaxBodySize() const;
 
   // Debug
   void print() const;

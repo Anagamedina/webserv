@@ -25,6 +25,7 @@ class LocationConfig {
   void setRedirectCode(int integerCode);
   void setRedirectUrl(const std::string& redirectUrl);
   void setRedirectParamCount(int count);
+  void setMaxBodySize(size_t size);
   void addCgiHandler(const std::string& extension,
                      const std::string& binaryPath);
 
@@ -38,6 +39,7 @@ class LocationConfig {
   int getRedirectCode() const;
   const std::string& getRedirectUrl() const;
   int getRedirectParamCount() const;
+  size_t getMaxBodySize() const;
   std::string getCgiPath(const std::string& extension) const;
   const std::map<std::string, std::string>& getCgiHandlers() const;
 
@@ -57,6 +59,7 @@ class LocationConfig {
   int redirect_code_;                         // return 301 /new-path (optional)
   std::string redirect_url_;                  // return /new-path (optional)
   int redirect_param_count_;  // Number of params in return directive
+  size_t max_body_size_;      // client_max_body_size
   std::map<std::string, std::string> cgi_handlers_;
 };
 
@@ -84,9 +87,12 @@ inline std::ostream& operator<<(std::ostream& os,
        << location.getUploadStore() << config::colors::reset << "\n";
   } else {
     os << "\t" << config::colors::yellow
-       << "Upload Store: " << config::colors::reset << config::colors::red
        << "empty" << config::colors::reset << "\n";
   }
+
+  os << "\t" << config::colors::yellow
+     << "Max Body Size: " << config::colors::reset << config::colors::green
+     << location.getMaxBodySize() << config::colors::reset << "\n";
 
   if (location.getRedirectCode() != -1) {
     os << "\t" << config::colors::yellow << "Return ("

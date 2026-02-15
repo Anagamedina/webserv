@@ -118,4 +118,18 @@ const std::string& ServerConfig::getRedirectUrl() const {
   return redirect_url_;
 }
 
+size_t ServerConfig::getGlobalMaxBodySize() const {
+  size_t max = max_body_size_;
+  if (max == 0) return 0;  // Unlimited
+
+  for (size_t i = 0; i < locations_.size(); ++i) {
+    size_t locMax = locations_[i].getMaxBodySize();
+    if (locMax == 0) return 0;  // Unlimited in a location -> Global unlimited
+    if (locMax > max) {
+      max = locMax;
+    }
+  }
+  return max;
+}
+
 void ServerConfig::print() const { std::cout << *this; }
