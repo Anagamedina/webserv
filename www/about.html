@@ -17,7 +17,7 @@
             <a href="/upload.html">LOAD LASER</a>
             <a href="/about.html">THE SQUAD</a>
             <a href="/target-list.html">TARGET LIST</a>
-            <a href="/images/">TACTICAL SCANNER</a>
+            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
 
         <main class="panel">
@@ -54,7 +54,7 @@
                     Introduce el nombre de tu grupo de láser para jugar. Así el sistema identifica tu escuadrón en las partidas.
                     Opcionalmente añade los callsigns o roles de los miembros.
                 </p>
-                <form action="/post_body" method="POST">
+                <form action="/cgi-bin/register_squad.py" method="POST">
                     <div class="form-row">
                         <label for="team-name">Nombre de tu grupo / escuadrón láser</label>
                         <input type="text" id="team-name" name="team_name" placeholder="ej: SQUAD NOVA, PHANTOM LASERS, STRIKE ONE" required>

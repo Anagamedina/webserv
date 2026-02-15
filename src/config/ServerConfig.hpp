@@ -11,13 +11,12 @@
 
 /**
  * ServerConfig stores configuration for one server { } block
- *
  * Corresponds to nginx-like config:
  * server {
  *     listen 8080;
  *     host 127.0.0.1;
  *     server_name example.com;
- *     max_body_size 1048576;
+ *     max_body_size 1048576 (bytes);
  *     error_page 404 /404.html;
  *     location / { ... }
  * }
@@ -68,7 +67,7 @@ class ServerConfig {
   std::string server_name_;
   std::string root_;
   std::vector<std::string> indexes_;
-  size_t max_body_size_;  // max is 1048576 (bytes)
+  size_t max_body_size_;
   std::map<int, std::string> error_pages_;
   std::vector<LocationConfig> locations_;
   bool autoindex_;
@@ -86,7 +85,9 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
      << "\n"
      << "\t" << config::colors::yellow
      << "Server name: " << config::colors::reset << config::colors::green
-     << config.getServerName() << config::colors::reset << "\n";
+     << config.getServerName() << config::colors::reset << "\n"<< config::colors::yellow
+	 << "\tMax body size: " << config::colors::reset << config::colors::green
+	 << config.getMaxBodySize() << config::colors::reset << "\n";
 
   const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
   os << "\t" << config::colors::yellow << "Error pages:\n"
@@ -105,13 +106,13 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
       for (std::vector<int>::const_iterator codeIt = codes.begin();
            codeIt != codes.end(); ++codeIt) {
         os << config::colors::magenta << " " << *codeIt
-           << config::colors::reset;  // Rojo para códigos de error
+           << config::colors::reset;
       }
       os << config::colors::green << " " << groupIt->first
          << config::colors::reset << "\n";
     }
   } else {
-    os << "\t" << config::colors::red << "Not configured"
+    os << config::colors::red << "\t\tNot configured"
        << config::colors::reset << "\n";
   }
 
@@ -121,42 +122,5 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
   }
   return os;
 }
-/*
-inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
-    os << config::colors::blue << "Server Config:\n"
-       << config::colors::reset << "\tPort: " << config.getPort()
-       << "\n\tHost: " << config.getHost() << "\n\tServer name: " <<
-config.getServerName() << "\n";
-
-    const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
-    os << "\tError pages:\n";
-
-    if (!errorPages.empty()) {
-        std::map< std::string, std::vector< int > > groupedErrors;
-
-        for (ServerConfig::ErrorIterator it = errorPages.begin(); it !=
-errorPages.end(); ++it) { groupedErrors[it->second].push_back(it->first);
-        }
-
-        for (std::map< std::string, std::vector< int > >::const_iterator groupIt
-= groupedErrors.begin(); groupIt != groupedErrors.end(); ++groupIt) { os <<
-"\t"; const std::vector< int >& codes = groupIt->second; for (std::vector< int
->::const_iterator codeIt = codes.begin(); codeIt != codes.end();
-                 ++codeIt) {
-                os << " " << *codeIt;
-            }
-            os << " " << groupIt->first << "\n";
-        }
-    } else {
-        os << "\tNot configured\n";
-    }
-
-    const std::vector< LocationConfig >& locations = config.getLocations();
-    for (size_t i = 0; i < locations.size(); ++i) {
-        os << locations[i];
-    }
-    return os;
-}
-*/
 
 #endif  // WEBSERV_SERVERCONFIG_HPP

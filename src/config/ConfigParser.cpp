@@ -30,14 +30,7 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
- * manage if config_file_path_:
- * has valid size of length
- * has extension '.conf'
- * @return true or false
- */
-/**
  * main function of parsing
- *
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
@@ -57,16 +50,17 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
-  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
-    throw ConfigException("Invalid number of curly brackets " +
-                          config_file_path_);
+    throw ConfigException(
+        config::errors::invalid_brackets_length_or_invalid_start_end +
+        config_file_path_);
   } else {
     std::cout << "VALID CURLY BRACKETS PAIRS: ✅\n";
   }
 
   loadServerBlocks();
   parseAllServerBlocks();
+  checkDuplicateServerConfig();
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other)
@@ -123,15 +117,28 @@ de valores)
  */
 bool ConfigParser::validateBalancedBrackets() const {
   int countBrackets = 0;
+  bool hasContentBeforeBrace = false;
 
   for (size_t Index = 0; Index < clean_file_str_.size(); ++Index) {
-    if (clean_file_str_.at(Index) == '{') {
+    char c = clean_file_str_.at(Index);
+
+    if (c == config::section::open_bracket) {
+      if (!hasContentBeforeBrace) {
+        return false;
+        // Error: Block without directive name (anonymous block)
+      }
       ++countBrackets;
-    } else if (clean_file_str_.at(Index) == '}') {
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::close_bracket) {
       --countBrackets;
       if (countBrackets < 0) {
         return false;
       }
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::semicolon) {
+      hasContentBeforeBrace = false;
+    } else if (!isspace(c)) {
+      hasContentBeforeBrace = true;
     }
   }
   return countBrackets == 0;
@@ -268,7 +275,7 @@ void ConfigParser::parseListen(ServerConfig& server,
       server.setPort(config::utils::stringToInt(second));
     }
   } else {
-    // Case: PORT (8080) or only HOST (localhost)
+    // TODO: Case: PORT (8080) or only HOST (localhost)
     // Simple heurística: Si tiene digitos es puerto, sino host
     if (value.find_first_not_of("0123456789") == std::string::npos) {
       server.setPort(config::utils::stringToInt(value));
@@ -287,23 +294,19 @@ void ConfigParser::parseHost(ServerConfig& server,
   if (tokens.size() < 2) {
     throw ConfigException(config::errors::missing_args_in_host);
   }
-  
+
   std::string hostValue = config::utils::removeSemicolon(tokens[1]);
-  
-  // if (hostValue.empty()) {
-  //   throw ConfigException("Host value cannot be empty");
-  // }
-  
+
   // Validate host format (IP address or hostname)
   if (!config::utils::isValidHost(hostValue)) {
     throw ConfigException(config::errors::invalid_ip_format + ": " + hostValue);
   }
-  
+
   server.setHost(hostValue);
 }
 
 void ConfigParser::parseMaxSizeBody(ServerConfig& server,
-									const std::vector<std::string>& tokens) {
+                                    const std::vector<std::string>& tokens) {
   const std::string& maxSizeStr = config::utils::removeSemicolon(tokens[1]);
   if (!maxSizeStr.empty()) {
     config::utils::removeSemicolon(maxSizeStr);
@@ -312,16 +315,16 @@ void ConfigParser::parseMaxSizeBody(ServerConfig& server,
 }
 
 /**
- * Lógica especial para múltiples códigos de error
+ * Special logic when have multiples error_pages
  * error_page 404 500 /error.html;
  * error_page 404 /404.html;
  * error_page 500 502 503 504 /50x.html;
- * el último token es siempre la ruta del archivo (ej. /404.html)
+ * always the last parameter is the path of file
+ * minim of tokens in line is 3: error_page 404  /path
  */
 void ConfigParser::parseErrorPage(ServerConfig& server,
                                   std::vector<std::string>& tokens) {
   if (tokens.size() >= 3)
-  // el mínimo son 3 tokens: error_page, 404 y /ruta)
   {
     std::string path = config::utils::removeSemicolon(tokens.back());
     for (size_t i = 1; i < tokens.size() - 1; ++i) {
@@ -364,9 +367,10 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
         uploadPathClean);
   }
   // TODO: verificar que el directorio existe o se
-  /*
-                      (!config::utils::directoryExists(uploadPath))
-                      upload_store directory does not exist: "uploadPath;}
+   /*
+	if (!config::utils::directoryExists(uploadPath)) {
+	  throw ConfigException("upload_store directory does not exist: " + uploadPath);
+	}
   */
   loc.setUploadStore(uploadPathClean);
 }
@@ -463,6 +467,7 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
 
   while (std::getline(ss, line)) {
     line = config::utils::trimLine(line);
+    validateDirectiveLine(line);
 
     if (line.empty()) continue;
     std::vector<std::string> locTokens = config::utils::tokenize(line);
@@ -470,26 +475,31 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     const std::string& directive = locTokens[0];
     if (directive == "}") {
       break;  // End of location block
-    } else if (directive == config::section::location) {
+    }
+    if (directive == config::section::location) {
       throw ConfigException(config::errors::invalid_new_location_block + line);
-    } else if (directive == config::section::root) {
+    }
+    if (directive == config::section::root) {
       loc.setRoot(config::utils::removeSemicolon(locTokens[1]));
     } else if (directive == config::section::index) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         loc.addIndex(config::utils::removeSemicolon(locTokens[i]));
       }
     } else if (directive == config::section::autoindex) {
+      if (locTokens.size() > 2) {
+        throw ConfigException(config::errors::invalid_autoindex_params);
+      }
+
       std::string val = config::utils::removeSemicolon(locTokens[1]);
       if (val != config::section::autoindex_on &&
           val != config::section::autoindex_off) {
         throw ConfigException(config::errors::invalid_autoindex);
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
-    } else if (directive == config::section::methods ||
-               directive == config::section::allow_methods ||
-               directive == config::section::limit_except) {
+    } else if (directive == config::section::allow_methods) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
+        if (method.empty()) continue;
         if (!config::utils::isValidHttpMethod(method)) {
           throw ConfigException(config::errors::invalid_http_method + ": " +
                                 method);
@@ -529,18 +539,17 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   while (getline(ss, line)) {
     int indexTokens = 0;
     line = config::utils::trimLine(line);
+    validateDirectiveLine(line);
 
     std::vector<std::string> tokens = config::utils::tokenize(line);
     if (tokens.empty()) continue;
 
     const std::string& directive = tokens[indexTokens];
 
-    //	LISTEN
-    // std::cout << "current directive: [" << directive << "]" << std::endl;
     if (directive == config::section::listen) {
       parseListen(server, tokens);
     } else if (directive == config::section::host) {
-		parseHost(server, tokens);
+      parseHost(server, tokens);
     } else if (directive == config::section::server_name) {
       parseServerName(server, tokens);
     } else if (directive == config::section::root) {
@@ -560,3 +569,50 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   }
   return server;
 }
+
+/**
+ * Skip if it's a start or end of block (checks last char)
+ * Check if it ends with semicolon
+ * Check if there is a space before semicolon
+ * @param line
+ */
+void ConfigParser::validateDirectiveLine(const std::string& line) const {
+  if (line.empty()) return;
+
+  char lastChar = line[line.size() - 1];
+  if (lastChar == '{' || lastChar == '}') return;
+
+  if (lastChar != ';') {
+    throw ConfigException(
+        config::errors::missing_semicolon_at_the_end_of_directive + line);
+  }
+
+  if (line.size() > 1) {
+    if (std::isspace(line[line.size() - 2])) {
+      throw ConfigException(
+          config::errors::semicolon_must_be_attached_to_the_last_word + line);
+    }
+  }
+}
+
+/**
+ * Validation after parsing all server blocks.
+ * This method will iterate through the servers_ vector and compare each server
+ * against every other server. Comparison criteria: port, host, and server_name.
+ * If a duplicate is found, throw ConfigException.
+ * @return exception in case of error
+ */
+void ConfigParser::checkDuplicateServerConfig() const {
+  if (servers_.size() < 2) return;
+
+  for (size_t i = 0; i < servers_.size(); ++i) {
+    for (size_t j = i + 1; j < servers_.size(); ++j) {
+      if (servers_[i].getPort() == servers_[j].getPort() &&
+          servers_[i].getHost() == servers_[j].getHost() &&
+          servers_[i].getServerName() == servers_[j].getServerName()) {
+        throw ConfigException(config::errors::duplicate_server_config);
+      }
+    }
+  }
+}
+

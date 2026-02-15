@@ -12,9 +12,9 @@
 // 3) Matching location (LocationConfig por URI)
 // 4) Validaciones (método, tamaño body, redirect)
 // 5) Resolver path real (root/alias + uri)
-// 6) Decidir respuesta (estático o CGI) + errores
-// 7) Rellenar HttpResponse
-void RequestProcessor::process(const HttpRequest& request,
+// 6) Si es CGI → retorna false para que Client ejecute CgiExecutor
+// 7) Si no, servir estático o errores, retorna true
+bool RequestProcessor::process(const HttpRequest& request,
                                const std::vector<ServerConfig>* configs,
                                int listenPort, int parseErrorCode,
                                HttpResponse& response) {
@@ -32,7 +32,7 @@ void RequestProcessor::process(const HttpRequest& request,
     body = toBody(getErrorDescription(statusCode));
     shouldClose = true;
     fillBaseResponse(response, request, statusCode, shouldClose, body);
-    return;
+    return true;
   }
 
   // 2) Seleccionar servidor por puerto y buscar location que coincida con el path
@@ -48,10 +48,10 @@ void RequestProcessor::process(const HttpRequest& request,
         body.clear();
         fillBaseResponse(response, request, validationCode, shouldClose, body);
         response.setHeader("Location", location->getRedirectUrl());
-        return;
+        return true;
       }
       buildErrorResponse(response, request, validationCode, true, server);
-      return;
+      return true;
     }
 
     resolvedPath = resolvePath(*server, location, request.getPath());
@@ -65,17 +65,21 @@ void RequestProcessor::process(const HttpRequest& request,
     if (isCgi) {
       std::cout << "-------- Llamomos a CGI" << std::endl;
       //startCgiIfNeeded(request);
+      // CGI: delegar a Client::startCgiIfNeeded → CgiExecutor.
+      // No rellenar response; el Client ejecutará el script y construirá la respuesta.
+      return false;
     }
 
     // Servir archivo estático (o error 403/404)
     if (handleStaticPath(request, server, location, resolvedPath, body,
                          response))
-      return;
+      return true;
   } else {
     // No hay location que coincida -> 404
     buildErrorResponse(response, request, 404, false, server);
-    return;
+    return true;
   }
 
   fillBaseResponse(response, request, statusCode, shouldClose, body);
+  return true;
 }

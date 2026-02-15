@@ -13,7 +13,9 @@
 // HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
  public:
-  void process(const HttpRequest& request,
+  // Retorna true si la petición fue manejada (respuesta lista).
+  // Retorna false si es CGI y debe delegarse a Client::startCgiIfNeeded.
+  bool process(const HttpRequest& request,
                const std::vector<ServerConfig>* configs, int listenPort,
                int parseErrorCode, HttpResponse& response);
 

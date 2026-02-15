@@ -1,10 +1,13 @@
 #include "ServerConfig.hpp"
 
+#include <sstream>
+#include <string>
+
 #include "ConfigException.hpp"
 #include "LocationConfig.hpp"
 
 ServerConfig::ServerConfig()
-	: listen_port_(config::section::default_port),
+    : listen_port_(config::section::default_port),
       max_body_size_(config::section::max_body_size),
       autoindex_(false),
       redirect_code_(-1) {}
@@ -41,7 +44,7 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other) {
 
 ServerConfig::~ServerConfig() {}
 
-//	GETTERS AND SETTERS
+//	SETTERS
 void ServerConfig::setPort(int port) {
   if (port < 1 || port > config::section::max_port) {
     throw ConfigException(config::errors::invalid_port_range);
@@ -65,9 +68,11 @@ void ServerConfig::setMaxBodySize(size_t size) { max_body_size_ = size; }
 
 void ServerConfig::addErrorPage(int code, const std::string& path) {
   if (code < 100 || code > 599) {
-    throw ConfigException(config::errors::invalid_http_status_code);
+    std::stringstream ss;
+    ss << code;
+    throw ConfigException(config::errors::invalid_http_status_code + ss.str());
   }
-  error_pages_.insert(std::make_pair(code, path));
+  error_pages_[code] = path;
 }
 
 void ServerConfig::addLocation(const LocationConfig& location) {

@@ -34,12 +34,21 @@ static bool getPathInfo(const std::string& path, bool& isDir, bool& isReg) {
   return true;
 }
 
+static bool isImageExtension(const std::string& name) {
+  std::string::size_type dot = name.rfind('.');
+  if (dot == std::string::npos) return false;
+  std::string ext = name.substr(dot);
+  return (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" ||
+          ext == ".webp" || ext == ".svg" || ext == ".bmp");
+}
+
 static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
                                                const std::string& requestPath) {
   std::string base = requestPath;
   if (base.empty()) base = "/";
   if (base[base.size() - 1] != '/') base += "/";
 
+  bool isImagesDir = (base.find("/images") != std::string::npos);
   std::ostringstream items;
 
   DIR* dir = opendir(dirPath.c_str());
@@ -56,12 +65,28 @@ static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
 
       struct stat st;
       bool isDir = (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+      bool isImg = !isDir && isImageExtension(name);
 
-      items << "      <li><a href=\"" << base << name;
-      if (isDir) items << "/";
-      items << "\">" << name;
-      if (isDir) items << "/";
-      items << "</a></li>\n";
+      std::string href = base + name;
+      if (isDir) href += "/";
+
+      if (isImagesDir && isImg) {
+        std::string safeName;
+        for (size_t i = 0; i < name.size(); ++i) {
+          if (name[i] == '"') safeName += "&quot;";
+          else if (name[i] == '&') safeName += "&amp;";
+          else if (name[i] == '<') safeName += "&lt;";
+          else safeName += name[i];
+        }
+        items << "          <li class=\"ray-img\"><a href=\"" << href
+              << "\"><img src=\"" << href << "\" alt=\"" << safeName
+              << "\"></a><span>" << safeName << "</span></li>\n";
+      } else {
+        items << "      <li" << (isDir ? " class=\"dir\"" : "") << "><a href=\""
+              << href << "\">" << name;
+        if (isDir) items << "/";
+        items << "</a></li>\n";
+      }
     }
     closedir(dir);
   }

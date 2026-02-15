@@ -8,6 +8,20 @@
 
 #include "ConfigUtils.hpp"
 
+/**
+ * @brief Represents the configuration for a specific location within a server
+ * block.
+ *
+ * This class handles parsing and storing settings defined in a 'location block',
+ * such as:
+ * - content root directory
+ * - allowed HTTP methods (GET, POST, DELETE, HEAD)
+ * - default index files in a vector
+ * - autoindex status boolean
+ * - file upload directory
+ * - HTTP redirection
+ * - CGI handlers like a map
+ */
 class LocationConfig {
  public:
   LocationConfig();
@@ -50,16 +64,17 @@ class LocationConfig {
   void print() const;
 
  private:
-  std::string path_;                          // /upload, /, /api, etc.
-  std::string root_;                          // root ./www
-  std::vector<std::string> indexes_;          // index index.html index.htm ...
-  std::vector<std::string> allowed_methods_;  // methods GET POST DELETE
-  bool autoindex_;                            // autoindex on/off
-  std::string upload_store_;                  // upload_store ./uploads
-  int redirect_code_;                         // return 301 /new-path (optional)
-  std::string redirect_url_;                  // return /new-path (optional)
-  int redirect_param_count_;  // Number of params in return directive
-  size_t max_body_size_;      // client_max_body_size
+  std::string path_;
+  std::string root_;
+  std::vector<std::string> indexes_;
+  std::vector<std::string> allowed_methods_;
+  bool autoindex_;
+  std::string upload_store_;
+  int redirect_code_;
+  std::string redirect_url_;
+  int redirect_param_count_;
+  size_t max_body_size_;
+
   std::map<std::string, std::string> cgi_handlers_;
 };
 
