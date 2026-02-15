@@ -67,6 +67,7 @@ namespace config
 			"Invalid HTTP status code.";
 		static const std::string invalid_autoindex =
 			"autoindex must be 'on' or 'off'.";
+		static const std::string invalid_autoindex_params = "Invalid number of arguments in directive 'autoindex'.";
 		static const std::string missing_args_in_index =
 			"Missing arguments in 'index' directive.";
 		static const std::string invalid_new_location_block =
