@@ -155,6 +155,14 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     }
 
     const char* exec_path = args[0];
+
+#ifdef DEBUG
+    std::cerr << "[CGI CMD] Executing: " << exec_path << std::endl;
+    for (int i = 0; args[i] != NULL; ++i) {
+      std::cerr << "  [CGI ARG " << i << "] " << args[i] << std::endl;
+    }
+#endif
+
     execve(exec_path, args, envp);
 
     // If execve fails
