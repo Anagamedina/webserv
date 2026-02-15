@@ -315,16 +315,16 @@ void ConfigParser::parseMaxSizeBody(ServerConfig& server,
 }
 
 /**
- * Lógica especial para múltiples códigos de error
+ * Special logic when have multiples error_pages
  * error_page 404 500 /error.html;
  * error_page 404 /404.html;
  * error_page 500 502 503 504 /50x.html;
- * el último token es siempre la ruta del archivo (ej. /404.html)
+ * always the last parameter is the path of file
+ * minim of tokens in line is 3: error_page 404  /path
  */
 void ConfigParser::parseErrorPage(ServerConfig& server,
                                   std::vector<std::string>& tokens) {
   if (tokens.size() >= 3)
-  // el mínimo son 3 tokens: error_page, 404 y /ruta)
   {
     std::string path = config::utils::removeSemicolon(tokens.back());
     for (size_t i = 1; i < tokens.size() - 1; ++i) {
@@ -367,9 +367,11 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
         uploadPathClean);
   }
   // TODO: verificar que el directorio existe o se
+   /*
 	if (!config::utils::directoryExists(uploadPath)) {
 	  throw ConfigException("upload_store directory does not exist: " + uploadPath);
-	  }
+	}
+  */
   loc.setUploadStore(uploadPathClean);
 }
 
