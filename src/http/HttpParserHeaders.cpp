@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <iostream>
 
 #include "HttpHeaderUtils.hpp"
 #include "HttpParser.hpp"
@@ -37,6 +38,14 @@ void HttpParser::handleHeader(const std::string& key,
     // cuántos bytes exactos debe esperar antes de marcar la petición como
     // COMPLETE.
     _contentLength = std::strtoul(value.c_str(), 0, 10);
+#ifdef DEBUG
+    std::cerr << "[PARSER HEADER] Content-Length: " << _contentLength 
+              << " bytes";
+    if (_contentLength > 1024 * 1024) {
+      std::cerr << " (" << (_contentLength / 1024 / 1024) << " MB)";
+    }
+    std::cerr << ", Max allowed: " << (_maxBodySize > 0 ? _maxBodySize : 0) << std::endl;
+#endif
     return;
   }
 
