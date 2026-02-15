@@ -32,6 +32,7 @@ void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
 
 void Client::buildResponse() {
   const HttpRequest& request = _parser.getRequest();
+  // TODO: this must change, starting cgi will be inside process
   if (startCgiIfNeeded(request)) return;
   _processor.process(request, _configs, _listenPort,
                      _parser.getErrorStatusCode(), _response);

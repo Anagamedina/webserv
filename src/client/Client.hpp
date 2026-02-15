@@ -71,6 +71,7 @@ class Client {
   // Saved request state for CGI
   bool _savedShouldClose;
   HttpVersion _savedVersion;
+
  public:
   Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
   ~Client();

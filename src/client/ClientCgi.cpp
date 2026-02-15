@@ -47,6 +47,7 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
   const LocationConfig* location = matchLocation(*server, request.getPath());
   if (location == 0) return false;
 
+  // TODO: this validation will be done in process no need to do it TWICE
   // Validate that the method is allowed for this location
   // I belive this is already done earlier
   std::string methodStr;

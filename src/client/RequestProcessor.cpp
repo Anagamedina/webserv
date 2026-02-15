@@ -64,6 +64,7 @@ void RequestProcessor::process(const HttpRequest& request,
 
     if (isCgi) {
       std::cout << "-------- Llamomos a CGI" << std::endl;
+      //startCgiIfNeeded(request);
     }
 
     // Servir archivo estático (o error 403/404)
