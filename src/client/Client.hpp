@@ -58,7 +58,11 @@ class Client {
   bool hasPendingData() const;
   time_t getLastActivity() const;
 
-
+  // ---- Manejo de eventos (llamados desde ServerManager/epoll) ----
+  void setServerManager(ServerManager* serverManager);
+  void handleRead();
+  void handleWrite();
+  void handleCgiPipe(int pipe_fd, size_t events);
 
   // ---- Construcción de respuesta (llamado internamente) ----
   void buildResponse();
@@ -99,14 +103,8 @@ class Client {
   bool startCgiIfNeeded(const HttpRequest& request);
   void finalizeCgiResponse();
 
-	// ---- Manejo de eventos (llamados desde epoll) ----
-	void handleRead();   // EPOLLIN: hay datos para leer
-	void handleWrite(); // EPOLLOUT: se puede escribir
-	void handleCgiPipe(int pipe_fd, size_t events);
-	void setServerManager(ServerManager* serverManager);
-
-	// Invocado cuando el parser marca una HttpRequest como completa.
-	void processRequests();
+  // Invocado cuando el parser marca una HttpRequest como completa.
+  void processRequests();
 };
 
 #endif  // CLIENT_HPP
