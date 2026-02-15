@@ -60,6 +60,7 @@ void ConfigParser::parse() {
 
   loadServerBlocks();
   parseAllServerBlocks();
+  checkDuplicateServerConfig();
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other)
@@ -274,7 +275,7 @@ void ConfigParser::parseListen(ServerConfig& server,
       server.setPort(config::utils::stringToInt(second));
     }
   } else {
-    // Case: PORT (8080) or only HOST (localhost)
+    // TODO: Case: PORT (8080) or only HOST (localhost)
     // Simple heurística: Si tiene digitos es puerto, sino host
     if (value.find_first_not_of("0123456789") == std::string::npos) {
       server.setPort(config::utils::stringToInt(value));
@@ -366,11 +367,9 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
         uploadPathClean);
   }
   // TODO: verificar que el directorio existe o se
-  /*
-                                          (!config::utils::directoryExists(uploadPath))
-                                          upload_store directory does not exist:
-     "uploadPath;}
-  */
+	if (!config::utils::directoryExists(uploadPath)) {
+	  throw ConfigException("upload_store directory does not exist: " + uploadPath);
+	  }
   loc.setUploadStore(uploadPathClean);
 }
 
@@ -496,7 +495,6 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
     } else if (directive == config::section::allow_methods) {
-      // TODO: fix error when token equal ';' we have a error
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
         if (method.empty()) continue;
@@ -559,20 +557,23 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   return server;
 }
 
+/**
+ * Skip if it's a start or end of block (checks last char)
+ * Check if it ends with semicolon
+ * Check if there is a space before semicolon
+ * @param line
+ */
 void ConfigParser::validateDirectiveLine(const std::string& line) const {
   if (line.empty()) return;
 
-  // Skip if it's a start or end of block (checks last char)
   char lastChar = line[line.size() - 1];
   if (lastChar == '{' || lastChar == '}') return;
 
-  // Check if it ends with semicolon
   if (lastChar != ';') {
     throw ConfigException(
         config::errors::missing_semicolon_at_the_end_of_directive + line);
   }
 
-  // Check if there is a space before semicolon
   if (line.size() > 1) {
     if (std::isspace(line[line.size() - 2])) {
       throw ConfigException(
@@ -580,3 +581,25 @@ void ConfigParser::validateDirectiveLine(const std::string& line) const {
     }
   }
 }
+
+/**
+ * Validation after parsing all server blocks.
+ * This method will iterate through the servers_ vector and compare each server
+ * against every other server. Comparison criteria: port, host, and server_name.
+ * If a duplicate is found, throw ConfigException.
+ * @return exception in case of error
+ */
+void ConfigParser::checkDuplicateServerConfig() const {
+  if (servers_.size() < 2) return;
+
+  for (size_t i = 0; i < servers_.size(); ++i) {
+    for (size_t j = i + 1; j < servers_.size(); ++j) {
+      if (servers_[i].getPort() == servers_[j].getPort() &&
+          servers_[i].getHost() == servers_[j].getHost() &&
+          servers_[i].getServerName() == servers_[j].getServerName()) {
+        throw ConfigException(config::errors::duplicate_server_config);
+      }
+    }
+  }
+}
+

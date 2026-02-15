@@ -59,6 +59,7 @@ class ConfigParser {
                           std::string& line, std::vector<std::string>& tokens);
   ServerConfig parseSingleServerBlock(const std::string& blockContent);
   void validateDirectiveLine(const std::string& line) const;
+  void checkDuplicateServerConfig() const;
 };
 
 #endif  // WEBSERV_CONFIGPARSER_HPP

@@ -57,7 +57,8 @@ static const std::string invalid_characters_in_upload_directive =
 static const std::string empty_path_in_upload_directive =
     "Empty path in 'upload_store' directive";
 static const std::string invalid_port_range = "Invalid port: must be 1 - 65535";
-static const std::string invalid_http_status_code = "Invalid range of HTTP status code ";
+static const std::string invalid_http_status_code =
+    "Invalid range of HTTP status code ";
 static const std::string invalid_autoindex = "autoindex must be 'on' or 'off'.";
 static const std::string invalid_autoindex_params =
     "Invalid number of arguments in directive 'autoindex'.";
@@ -89,6 +90,9 @@ static const std::string missing_semicolon_at_the_end_of_directive =
     "Directive must end with semicolon: ";
 static const std::string semicolon_must_be_attached_to_the_last_word =
     "Semicolon must be attached to the last word: ";
+static const std::string duplicate_server_config =
+    "Duplicate server configuration detected (same port, host, and "
+    "server_name)";
 }  // namespace errors
 
 namespace section {
