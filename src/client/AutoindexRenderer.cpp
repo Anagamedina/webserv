@@ -23,4 +23,5 @@ std::vector<char> renderAutoindexHtml(const std::string& base,
 
   std::string content = html.str();
   return std::vector<char>(content.begin(), content.end());
+
 }
