@@ -97,7 +97,7 @@ int validateLocation(const HttpRequest& request, const ServerConfig* server,
   // TODO: check info
   if (!location->getRedirectCode()) return 301;
 
-  // 2) Metodo permitido
+  // 2) Metodo permitido (HEAD rechazado por defecto a menos que esté explícitamente permitido)
   if (!location->isMethodAllowed(methodToString(request.getMethod())))
     return 405;
 
