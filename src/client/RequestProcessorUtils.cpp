@@ -1,4 +1,5 @@
 #include "RequestProcessorUtils.hpp"
+#include "http/HttpResponse.hpp"
 
 #include <sys/stat.h>
 
@@ -70,12 +71,13 @@ std::string resolvePath(const ServerConfig& server,
   std::string aliasPath;
   std::string rootPath;
 
+  // TODO: revisar si añadir alias dentro de la configuracion (daru no quiere)
   // If URI starts with the location path, replace that prefix with root.
   if (uri.find(locationPath) == 0) {
     aliasPath = root; 
     if (!aliasPath.empty() && aliasPath[aliasPath.size() - 1] != '/')
       aliasPath += "/";
-    
+
     std::string remainder = uri.substr(locationPath.length());
     if (!remainder.empty() && remainder[0] == '/')
         aliasPath += remainder.substr(1);
@@ -155,7 +157,7 @@ int validateLocation(const HttpRequest& request, const ServerConfig* server,
   size_t maxBodySize = server ? server->getMaxBodySize() : 0;
   if (location) maxBodySize = location->getMaxBodySize();
 
-  if (maxBodySize > 0 && request.getBody().size() > maxBodySize) return 413;
+  if (maxBodySize > 0 && request.getBody().size() > maxBodySize) return HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE ;
 
   return 0;
 }

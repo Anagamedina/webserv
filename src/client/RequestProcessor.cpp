@@ -55,15 +55,15 @@ void RequestProcessor::process(const HttpRequest& request,
     }
 
     resolvedPath = resolvePath(*server, location, request.getPath());
+#ifdef DEBUG
     std::cout << " DEBUG: Intentando abrir: [" << resolvedPath << "]"
               << std::endl;
+#endif // DEBUG
     isCgi =
         isCgiRequest(resolvedPath) || isCgiRequestByConfig(location, resolvedPath);
 
     if (isCgi) {
-      // CGI no implementado aún -> 501
-      buildErrorResponse(response, request, 501, true, server);
-      return;
+      std::cout << "-------- Llamomos a CGI" << std::endl;
     }
 
     // Servir archivo estático (o error 403/404)
