@@ -1,0 +1,15 @@
+agregar mas validacion con la directrices:
+- autoindex on on;
+- autoindex off on;
+
+que deberia ocurrir si  en este caso: (deberia quedarse ./docs para la config de server o deberia quedarse ./docs para el server? )
+    root ./www;
+    root ./docs;
+
+terminar de validar los los caracteres : '} {' derberia dar error pero no lo hace.
+
+al limpiar el archvo por primera vez, eliminamos los ';' que nos encontramos al principio de cada palabra
+
+
+En Linux/Unix, los puertos por debajo del 1024 (como el 80 estándar) están reservados y
+requieren sudo. Usar el 8080 te permite ejecutar ./webserv sin pedir contraseña de administrador.

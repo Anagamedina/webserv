@@ -1,11 +1,9 @@
 #include "ServerConfig.hpp"
-
 #include "ConfigException.hpp"
 #include "LocationConfig.hpp"
 
 ServerConfig::ServerConfig()
-	: listen_port_(config::section::default_port),
-      max_body_size_(config::section::max_body_size),
+	: listen_port_(config::section::default_port), max_body_size_(config::section::max_body_size),
       autoindex_(false),
       redirect_code_(-1) {}
 
@@ -41,7 +39,7 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other) {
 
 ServerConfig::~ServerConfig() {}
 
-//	GETTERS AND SETTERS
+//	SETTERS
 void ServerConfig::setPort(int port) {
   if (port < 1 || port > config::section::max_port) {
     throw ConfigException(config::errors::invalid_port_range);

@@ -30,14 +30,7 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
- * manage if config_file_path_:
- * has valid size of length
- * has extension '.conf'
- * @return true or false
- */
-/**
  * main function of parsing
- *
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
@@ -290,10 +283,6 @@ void ConfigParser::parseHost(ServerConfig& server,
   
   std::string hostValue = config::utils::removeSemicolon(tokens[1]);
   
-  // if (hostValue.empty()) {
-  //   throw ConfigException("Host value cannot be empty");
-  // }
-  
   // Validate host format (IP address or hostname)
   if (!config::utils::isValidHost(hostValue)) {
     throw ConfigException(config::errors::invalid_ip_format + ": " + hostValue);
@@ -485,15 +474,14 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
         throw ConfigException(config::errors::invalid_autoindex);
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
-    } else if (directive == config::section::methods ||
-               directive == config::section::allow_methods) {
-      // Lista positiva: solo los métodos listados están permitidos.
-      // No soportamos limit_except (lógica negativa de NGINX).
+    } else if (directive == config::section::allow_methods) {
+    	// TODO: fix error when token equal ';' we have a error
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
+        if (method.empty())
+        	continue;
         if (!config::utils::isValidHttpMethod(method)) {
-          throw ConfigException(config::errors::invalid_http_method + ": " +
-                                method);
+          throw ConfigException(config::errors::invalid_http_method + ": " + method);
         }
         loc.addMethod(method);
       }
@@ -525,8 +513,6 @@ ServerConfig ConfigParser::parseSingleServerBlock(
 
     const std::string& directive = tokens[indexTokens];
 
-    //	LISTEN
-    // std::cout << "current directive: [" << directive << "]" << std::endl;
     if (directive == config::section::listen) {
       parseListen(server, tokens);
     } else if (directive == config::section::host) {

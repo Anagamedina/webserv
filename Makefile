@@ -89,7 +89,6 @@ $(NAME): $(OBJ_FILES)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@printf "$(CYAN)==> Compiling $(WHITE_BOLD)$(notdir $<)...$(RESET)\n"
 	@mkdir -p $(dir $@)
-	#@mkdir -p $(BUILD_DIR)
 	@$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@ \
 		&& printf "$(BLUE)$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@$(RESET)\n" \
 		|| { printf "$(RED)==> ✖ Compilation failed: $(notdir $<)$(RESET)\n"; exit 1; }

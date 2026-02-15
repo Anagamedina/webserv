@@ -108,7 +108,6 @@ namespace config
 		static const std::string autoindex_off = "off";
 		static const std::string upload_bonus = "upload_store";
 		static const std::string uploads_bonus = "upload_store";
-		static const std::string methods = "methods";
 		static const std::string allow_methods = "allow_methods";
 		static const std::string limit_except = "limit_except";
 		static const std::string return_str = "return";
@@ -122,11 +121,13 @@ namespace config
 		static const std::string preferential_prefix_modifier = "^~";
 
 		static const int default_return_code = 302;
-		static const int default_port = 80;
+		static const int default_port = 8080;
 		static const std::string default_host_name = "127.0.0.1";
 		static const size_t max_body_size = 1048576;
 		static const int max_port = 65535;
 		static const std::string method_get = "GET";
+		static const std::string method_post= "POST";
+		static const std::string method_delete = "DELETE";
 		static const std::string method_head = "HEAD";
 		static const std::string cgi = "cgi";
 		static const std::string cgi_fast = "fastcgi_pass";
