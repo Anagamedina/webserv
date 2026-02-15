@@ -86,6 +86,7 @@ class Client {
   void handleRead();
   void handleWrite();
   void handleCgiPipe(int pipe_fd, size_t events);
+  bool checkCgiTimeout();
   void setServerManager(ServerManager* serverManager);
 
   // Construccion de respuesta

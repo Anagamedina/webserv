@@ -142,6 +142,11 @@ void ServerManager::checkTimeouts() {
 
   for (std::map<int, Client*>::iterator it = clients_.begin();
        it != clients_.end(); ++it) {
+    if (it->second->checkCgiTimeout()) {
+      updateClientEvents(it->first);
+      continue;
+    }
+
     if (difftime(now, it->second->getLastActivity()) > timeout_seconds) {
       timeout_fds.push_back(it->first);
     }

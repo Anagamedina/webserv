@@ -167,6 +167,7 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       // Real error occurred
       _serverManager->unregisterCgiPipe(pipe_fd);
       _cgiProcess->closePipeOut();
+      _cgiProcess->terminateProcess();
       // TODO: Maybe set error 500 in response?
       finalizeCgiResponse();
       delete _cgiProcess;
@@ -174,4 +175,46 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       return;
     }
   }
+}
+
+bool Client::checkCgiTimeout() {
+  if (_cgiProcess == 0) {
+    return false;
+  }
+
+  if (!_cgiProcess->isTimedOut()) {
+    return false;
+  }
+
+  int pipeIn = _cgiProcess->getPipeIn();
+  int pipeOut = _cgiProcess->getPipeOut();
+
+  if (_serverManager) {
+    if (pipeIn >= 0) {
+      _serverManager->unregisterCgiPipe(pipeIn);
+    }
+    if (pipeOut >= 0) {
+      _serverManager->unregisterCgiPipe(pipeOut);
+    }
+  }
+
+  _cgiProcess->closePipeIn();
+  _cgiProcess->closePipeOut();
+  _cgiProcess->terminateProcess();
+  delete _cgiProcess;
+  _cgiProcess = 0;
+
+  _response.clear();
+  _response.setStatusCode(HTTP_STATUS_INTERNAL_SERVER_ERROR);
+  if (_savedVersion == HTTP_VERSION_1_0)
+    _response.setVersion("HTTP/1.0");
+  else
+    _response.setVersion("HTTP/1.1");
+  _response.setHeader("Connection", "close");
+  _response.setHeader("Content-Type", "text/plain");
+  _response.setBody("CGI timeout\n");
+
+  enqueueResponse(_response.serialize(), true);
+  _lastActivity = std::time(0);
+  return true;
 }
