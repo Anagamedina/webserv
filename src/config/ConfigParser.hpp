@@ -58,6 +58,7 @@ class ConfigParser {
   void parseLocationBlock(ServerConfig& server, std::stringstream& ss,
                           std::string& line, std::vector<std::string>& tokens);
   ServerConfig parseSingleServerBlock(const std::string& blockContent);
+  void validateDirectiveLine(const std::string& line) const;
 };
 
 #endif  // WEBSERV_CONFIGPARSER_HPP
