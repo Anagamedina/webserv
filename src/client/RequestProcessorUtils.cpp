@@ -29,6 +29,16 @@ const LocationConfig* matchLocation(const ServerConfig& server,
           bestLoc = &locations[i];
         }
       }
+    } else {
+        // Handle case where URI is "/directory" and location is "/directory/"
+        // We want to match this so we can later redirect or handle it
+        if (path.size() > 1 && path[path.size() - 1] == '/' && 
+            uri == path.substr(0, path.size() - 1)) {
+            if (path.size() > bestLen) {
+                bestLen = path.size(); // Use the full path length as metric
+                bestLoc = &locations[i];
+            }
+        }
     }
   }
 
@@ -48,13 +58,40 @@ std::string resolvePath(const ServerConfig& server,
     root = server.getRoot();
 
   std::string path = root;
-  if (!path.empty() && path[path.size() - 1] == '/' && !uri.empty() &&
-      uri[0] == '/')
-    path.erase(path.size() - 1);
-  else if (!path.empty() && path[path.size() - 1] != '/' && !uri.empty() &&
-           uri[0] != '/')
-    path += "/";
-  path += uri;
+  std::string locationPath = (location) ? location->getPath() : "/";
+
+  // If URI starts with the location path, replace that prefix with root.
+  // This behaves like Nginx 'alias' directive, which is often required
+  // by 42 testers/subjects even when 'root' is used in config.
+  if (uri.find(locationPath) == 0) {
+    if (!path.empty() && path[path.size() - 1] != '/')
+      path += "/";
+    
+    std::string remainder = uri.substr(locationPath.length());
+    if (!remainder.empty() && remainder[0] == '/')
+      path += remainder.substr(1);
+    else
+      path += remainder;
+  } 
+  // Handle case: URI is "/directory", location is "/directory/"
+  else if (locationPath.size() > 1 && locationPath[locationPath.size() - 1] == '/' &&
+           uri == locationPath.substr(0, locationPath.size() - 1)) {
+      // Map exactly to root (which is the alias target)
+      path = root;
+      // Ensure we don't end up with trailing slash if root doesn't have one?
+      // Actually, if it's a directory, having slash is fine or not.
+      // But typically "path" is the file system path.
+  }
+  else {
+    // Fallback: standard append behavior (should usually not happen if matched)
+    if (!path.empty() && path[path.size() - 1] == '/' && !uri.empty() &&
+        uri[0] == '/')
+      path.erase(path.size() - 1);
+    else if (!path.empty() && path[path.size() - 1] != '/' && !uri.empty() &&
+             uri[0] != '/')
+      path += "/";
+    path += uri;
+  }
   return path;
 }
 
