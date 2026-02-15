@@ -1,1 +1,0 @@
-2026/02/15 01:20:48 [error] 3279063#0: *1 open() "/home/carles/Documents/42bcn/webserv/www/YoupiBanane/directory" failed (2: No such file or directory), client: 127.0.0.1, server: localhost, request: "GET /directory HTTP/1.1", host: "localhost:8080"

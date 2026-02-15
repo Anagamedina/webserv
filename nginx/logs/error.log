@@ -1,6 +1,0 @@
-2026/02/14 16:26:57 [emerg] 3014856#0: bind() to 0.0.0.0:80 failed (13: Permission denied)
-2026/02/14 20:52:18 [warn] 3128724#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /home/carles/Documents/42bcn/webserv/nginx/tester.conf:1
-2026/02/14 20:52:18 [emerg] 3128724#0: open() "/var/log/nginx/access.log" failed (13: Permission denied)
-2026/02/14 20:53:55 [warn] 3129701#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /home/carles/Documents/42bcn/webserv/nginx/tester.conf:1
-2026/02/14 20:53:55 [emerg] 3129702#0: open() "/run/nginx.pid" failed (13: Permission denied)
-2026/02/15 01:19:59 [emerg] 3278784#0: open() "/home/carles/Documents/42bcn/webserv/nginx/nginx/tester.conf" failed (20: Not a directory)
