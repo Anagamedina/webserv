@@ -50,9 +50,8 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
-  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
-    throw ConfigException("Invalid number of curly brackets " +
+    throw ConfigException(config::errors::invalid_brackets_length_or_invalid_start_end +
                           config_file_path_);
   } else {
     std::cout << "VALID CURLY BRACKETS PAIRS: ✅\n";
@@ -99,8 +98,7 @@ bool ConfigParser::validateFilePermissions() const {
 }
 
 /**
- * Usar un contador dinámico (incrementa con {, decrementa con }) que nunca baje
-de 0
+ * Usar un contador dinámico (incrementa con {, decrementa con }) que nunca baje de 0
  * Detectar { y }solo cuando son estructurales (inicio/fin de bloque, no dentro
 de valores)
  * Manejar casos como:
@@ -116,15 +114,27 @@ de valores)
  */
 bool ConfigParser::validateBalancedBrackets() const {
   int countBrackets = 0;
+  bool hasContentBeforeBrace = false;
 
   for (size_t Index = 0; Index < clean_file_str_.size(); ++Index) {
-    if (clean_file_str_.at(Index) == '{') {
+    char c = clean_file_str_.at(Index);
+
+    if (c == config::section::open_bracket) {
+      if (!hasContentBeforeBrace) {
+        return false;  // Error: Block without directive name (anonymous block)
+      }
       ++countBrackets;
-    } else if (clean_file_str_.at(Index) == '}') {
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::close_bracket) {
       --countBrackets;
       if (countBrackets < 0) {
         return false;
       }
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::semicolon) {
+      hasContentBeforeBrace = false;
+    } else if (!isspace(c)) {
+      hasContentBeforeBrace = true;
     }
   }
   return countBrackets == 0;
@@ -280,19 +290,19 @@ void ConfigParser::parseHost(ServerConfig& server,
   if (tokens.size() < 2) {
     throw ConfigException(config::errors::missing_args_in_host);
   }
-  
+
   std::string hostValue = config::utils::removeSemicolon(tokens[1]);
-  
+
   // Validate host format (IP address or hostname)
   if (!config::utils::isValidHost(hostValue)) {
     throw ConfigException(config::errors::invalid_ip_format + ": " + hostValue);
   }
-  
+
   server.setHost(hostValue);
 }
 
 void ConfigParser::parseMaxSizeBody(ServerConfig& server,
-									const std::vector<std::string>& tokens) {
+                                    const std::vector<std::string>& tokens) {
   const std::string& maxSizeStr = config::utils::removeSemicolon(tokens[1]);
   if (!maxSizeStr.empty()) {
     config::utils::removeSemicolon(maxSizeStr);
@@ -475,13 +485,13 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
     } else if (directive == config::section::allow_methods) {
-    	// TODO: fix error when token equal ';' we have a error
+      // TODO: fix error when token equal ';' we have a error
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
-        if (method.empty())
-        	continue;
+        if (method.empty()) continue;
         if (!config::utils::isValidHttpMethod(method)) {
-          throw ConfigException(config::errors::invalid_http_method + ": " + method);
+          throw ConfigException(config::errors::invalid_http_method + ": " +
+                                method);
         }
         loc.addMethod(method);
       }
@@ -516,7 +526,7 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     if (directive == config::section::listen) {
       parseListen(server, tokens);
     } else if (directive == config::section::host) {
-		parseHost(server, tokens);
+      parseHost(server, tokens);
     } else if (directive == config::section::server_name) {
       parseServerName(server, tokens);
     } else if (directive == config::section::root) {
