@@ -1,6 +1,7 @@
 #include "Client.hpp"
 #include "RequestProcessorUtils.hpp"
 
+#include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -40,9 +41,27 @@ bool Client::handleCompleteRequest() {
   const HttpRequest& request = _parser.getRequest();
   bool shouldClose =
       (_parser.getState() == ERROR) || request.shouldCloseConnection();
-  buildResponse();
-  if (_cgiProcess) {
-    return true;
+  
+#ifdef DEBUG
+  std::cerr << "[CLIENT] Request complete: " << request.getMethod()
+            << " " << request.getPath()
+            << " (body size: " << request.getBody().size() << " bytes";
+  if (request.getBody().size() > 1024 * 1024) {
+    std::cerr << " = " << (request.getBody().size() / 1024 / 1024) << " MB";
+  }
+  std::cerr << ")" << std::endl;
+#endif
+
+  // If parser is in ERROR state, we should generate error response immediately
+  // and NOT try to run CGI (which requires valid body/headers)
+  if (_parser.getState() == ERROR) {
+      _processor.process(request, _configs, _listenPort,
+                         _parser.getErrorStatusCode(), _response);
+  } else {
+      buildResponse();
+      if (_cgiProcess) {
+        return true;
+      }
   }
   std::vector<char> serialized = _response.serialize();
   enqueueResponse(serialized, shouldClose);
@@ -73,7 +92,7 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _savedShouldClose(false),
       _savedVersion(HTTP_VERSION_1_1) {
   const ServerConfig* server = selectServerByPort(listenPort, configs);
-  if (server) _parser.setMaxBodySize(server->getMaxBodySize());
+  if (server) _parser.setMaxBodySize(server->getGlobalMaxBodySize());
 }
 
 Client::~Client() {}

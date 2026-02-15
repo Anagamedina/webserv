@@ -1,5 +1,7 @@
 #include "RequestProcessorUtils.hpp"
 
+#include <sys/stat.h>
+
 const ServerConfig* selectServerByPort(
     int port, const std::vector<ServerConfig>* configs) {
   if (configs == 0 || configs->empty()) return 0;
@@ -23,19 +25,26 @@ const LocationConfig* matchLocation(const ServerConfig& server,
     const std::string& path = locations[i].getPath();
     if (path.empty()) continue;
     if (uri.compare(0, path.size(), path) == 0) {
-      if (path == "/" || uri.size() == path.size() || uri[path.size()] == '/') {
+      // If path is "/" or uri is exact match -> match.
+      // If path ends with '/' -> match (boundary is implied).
+      // If uri has '/' at the end of the path prefix -> match (boundary explicit).
+      bool endsWithSlash = (path.size() > 0 && path[path.size() - 1] == '/');
+
+      if (path == "/" || uri.size() == path.size() || endsWithSlash || uri[path.size()] == '/') {
         if (path.size() > bestLen) {
           bestLen = path.size();
           bestLoc = &locations[i];
         }
       }
     } else {
-        // Handle case where URI is "/directory" and location is "/directory/"
+        // Handle case where URI does not end with / but location does,
+        // for example:
+        // is "/directory" and location is "/directory/"
         // We want to match this so we can later redirect or handle it
         if (path.size() > 1 && path[path.size() - 1] == '/' && 
             uri == path.substr(0, path.size() - 1)) {
             if (path.size() > bestLen) {
-                bestLen = path.size(); // Use the full path length as metric
+                bestLen = path.size();
                 bestLoc = &locations[i];
             }
         }
@@ -57,51 +66,55 @@ std::string resolvePath(const ServerConfig& server,
   else if (!server.getRoot().empty())
     root = server.getRoot();
 
-  std::string path = root;
   std::string locationPath = (location) ? location->getPath() : "/";
+  std::string aliasPath;
+  std::string rootPath;
 
   // If URI starts with the location path, replace that prefix with root.
-  // This behaves like Nginx 'alias' directive, which is often required
-  // by 42 testers/subjects even when 'root' is used in config.
   if (uri.find(locationPath) == 0) {
-    if (!path.empty() && path[path.size() - 1] != '/')
-      path += "/";
+    aliasPath = root; 
+    if (!aliasPath.empty() && aliasPath[aliasPath.size() - 1] != '/')
+      aliasPath += "/";
     
     std::string remainder = uri.substr(locationPath.length());
     if (!remainder.empty() && remainder[0] == '/')
-      path += remainder.substr(1);
+        aliasPath += remainder.substr(1);
     else
-      path += remainder;
-  } 
-  // Handle case: URI is "/directory", location is "/directory/"
-  else if (locationPath.size() > 1 && locationPath[locationPath.size() - 1] == '/' &&
-           uri == locationPath.substr(0, locationPath.size() - 1)) {
-      // Map exactly to root (which is the alias target)
-      path = root;
-      // Ensure we don't end up with trailing slash if root doesn't have one?
-      // Actually, if it's a directory, having slash is fine or not.
-      // But typically "path" is the file system path.
+        aliasPath += remainder;
+  } else if (locationPath.size() > 1 && locationPath[locationPath.size() - 1] == '/' &&
+             uri == locationPath.substr(0, locationPath.size() - 1)) {
+        aliasPath = root;
+        // Strip trailing slash from root if we mapped exactly to directory without slash
+        if (!aliasPath.empty() && aliasPath[aliasPath.size() - 1] == '/')
+            aliasPath.erase(aliasPath.size() - 1);
   }
-  else {
-    // Fallback: standard append behavior (should usually not happen if matched)
-    if (!path.empty() && path[path.size() - 1] == '/' && !uri.empty() &&
-        uri[0] == '/')
-      path.erase(path.size() - 1);
-    else if (!path.empty() && path[path.size() - 1] != '/' && !uri.empty() &&
-             uri[0] != '/')
-      path += "/";
-    path += uri;
+
+  // Standard Root behavior (append URI to root)
+  rootPath = root;
+  if (!rootPath.empty() && rootPath[rootPath.size() - 1] == '/' && !uri.empty() && uri[0] == '/')
+      rootPath.erase(rootPath.size() - 1);
+  else if (!rootPath.empty() && rootPath[rootPath.size() - 1] != '/' && !uri.empty() && uri[0] != '/')
+      rootPath += "/";
+  rootPath += uri;
+
+  // Decision logic:
+  // If aliasPath works (exists), use it. 
+  // Otherwise use rootPath (standard Nginx behavior).
+  struct stat st;
+  if (!aliasPath.empty() && stat(aliasPath.c_str(), &st) == 0) {
+      return aliasPath;
   }
-  return path;
+
+  return rootPath;
 }
 
 bool isCgiRequest(const std::string& path) {
-  // Borrador: por ahora, CGI si la extension es .py o .php
+  // Borrador: por ahora, CGI si la extension es .py o .sh
   std::string::size_type dotPos = path.find_last_of('.');
   if (dotPos == std::string::npos) return false;
   std::string ext = path;
   ext.erase(0, dotPos);
-  return (ext == ".py" || ext == ".php");
+  return (ext == ".py" || ext == ".sh");
 }
 
 std::string getFileExtension(const std::string& path) {
@@ -138,8 +151,11 @@ int validateLocation(const HttpRequest& request, const ServerConfig* server,
   if (!location->isMethodAllowed(methodToString(request.getMethod())))
     return 405;
 
-  // 3) Body size (usar limite del server por ahora)
-  if (server && request.getBody().size() > server->getMaxBodySize()) return 413;
+  // 3) Body size
+  size_t maxBodySize = server ? server->getMaxBodySize() : 0;
+  if (location) maxBodySize = location->getMaxBodySize();
+
+  if (maxBodySize > 0 && request.getBody().size() > maxBodySize) return 413;
 
   return 0;
 }

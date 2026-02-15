@@ -47,6 +47,18 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
   const LocationConfig* location = matchLocation(*server, request.getPath());
   if (location == 0) return false;
 
+  // Validate that the method is allowed for this location
+  std::string methodStr;
+  if (request.getMethod() == HTTP_METHOD_GET) methodStr = "GET";
+  else if (request.getMethod() == HTTP_METHOD_POST) methodStr = "POST";
+  else if (request.getMethod() == HTTP_METHOD_DELETE) methodStr = "DELETE";
+  else if (request.getMethod() == HTTP_METHOD_HEAD) methodStr = "HEAD";
+  
+  if (!location->isMethodAllowed(methodStr)) {
+    buildErrorResponse(_response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
+    return true;
+  }
+
   if (server && request.getBody().size() > server->getMaxBodySize()) {
     buildErrorResponse(_response, request, HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE,
                        true, server);

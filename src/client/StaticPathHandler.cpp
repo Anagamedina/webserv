@@ -136,7 +136,10 @@ static bool handleDirectory(const HttpRequest& request,
     return false;
   }
 
-  buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
+  // If no index found and autoindex is off, return 404 (Not Found) instead of 403
+  // to prevent directory enumeration / hide existence of directory.
+  // This is often required by 42 Subject/Tester.
+  buildErrorResponse(response, request, HTTP_STATUS_NOT_FOUND, false, server);
   return true;
 }
 
