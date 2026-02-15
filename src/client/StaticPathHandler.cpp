@@ -57,7 +57,8 @@ static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
       struct stat st;
       bool isDir = (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
 
-      items << "      <li><a href=\"" << base << name;
+      items << "      <li" << (isDir ? " class=\"dir\"" : "") << "><a href=\""
+            << base << name;
       if (isDir) items << "/";
       items << "\">" << name;
       if (isDir) items << "/";
