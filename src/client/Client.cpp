@@ -41,7 +41,7 @@ bool Client::handleCompleteRequest() {
   const HttpRequest& request = _parser.getRequest();
   bool shouldClose =
       (_parser.getState() == ERROR) || request.shouldCloseConnection();
-  
+
 #ifdef DEBUG
   std::cerr << "[CLIENT] Request complete: " << request.getMethod()
             << " " << request.getPath()
