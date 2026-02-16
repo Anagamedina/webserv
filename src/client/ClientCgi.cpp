@@ -47,6 +47,19 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
   const LocationConfig* location = matchLocation(*server, request.getPath());
   if (location == 0) return false;
 
+  // TODO: this validation will be done in process no need to do it TWICE
+  // Validate that the method is allowed for this location
+  // I belive this is already done earlier
+  std::string methodStr;
+  if (request.getMethod() == HTTP_METHOD_GET) methodStr = "GET";
+  else if (request.getMethod() == HTTP_METHOD_POST) methodStr = "POST";
+  else if (request.getMethod() == HTTP_METHOD_DELETE) methodStr = "DELETE";
+
+  if (!location->isMethodAllowed(methodStr)) {
+    buildErrorResponse(_response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
+    return true;
+  }
+
   if (server && request.getBody().size() > server->getMaxBodySize()) {
     buildErrorResponse(_response, request, HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE,
                        true, server);
@@ -78,11 +91,11 @@ bool Client::startCgiIfNeeded(const HttpRequest& request) {
 
 
   _state = STATE_READING_BODY;
-  
+
   // Save request state needed for finalization
   _savedShouldClose = request.shouldCloseConnection();
   _savedVersion = request.getVersion();
-  
+
   return true;
 }
 
@@ -99,7 +112,7 @@ void Client::finalizeCgiResponse() {
 
   std::vector<char> serialized = _response.serialize();
   enqueueResponse(serialized, _savedShouldClose);
-  
+
   // Resume processing requests (in case pipelined data is waiting)
   processRequests();
 }
@@ -155,6 +168,7 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       // Real error occurred
       _serverManager->unregisterCgiPipe(pipe_fd);
       _cgiProcess->closePipeOut();
+      _cgiProcess->terminateProcess();
       // TODO: Maybe set error 500 in response?
       finalizeCgiResponse();
       delete _cgiProcess;
@@ -162,4 +176,46 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       return;
     }
   }
+}
+
+bool Client::checkCgiTimeout() {
+  if (_cgiProcess == 0) {
+    return false;
+  }
+
+  if (!_cgiProcess->isTimedOut()) {
+    return false;
+  }
+
+  int pipeIn = _cgiProcess->getPipeIn();
+  int pipeOut = _cgiProcess->getPipeOut();
+
+  if (_serverManager) {
+    if (pipeIn >= 0) {
+      _serverManager->unregisterCgiPipe(pipeIn);
+    }
+    if (pipeOut >= 0) {
+      _serverManager->unregisterCgiPipe(pipeOut);
+    }
+  }
+
+  _cgiProcess->closePipeIn();
+  _cgiProcess->closePipeOut();
+  _cgiProcess->terminateProcess();
+  delete _cgiProcess;
+  _cgiProcess = 0;
+
+  _response.clear();
+  _response.setStatusCode(HTTP_STATUS_INTERNAL_SERVER_ERROR);
+  if (_savedVersion == HTTP_VERSION_1_0)
+    _response.setVersion("HTTP/1.0");
+  else
+    _response.setVersion("HTTP/1.1");
+  _response.setHeader("Connection", "close");
+  _response.setHeader("Content-Type", "text/plain");
+  _response.setBody("CGI timeout\n");
+
+  enqueueResponse(_response.serialize(), true);
+  _lastActivity = std::time(0);
+  return true;
 }

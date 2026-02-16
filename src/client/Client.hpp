@@ -46,6 +46,7 @@ class Client {
   // Saved request state for CGI
   bool _savedShouldClose;
   HttpVersion _savedVersion;
+
  public:
   // ---- Constructor y destructor ----
   Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
@@ -63,6 +64,7 @@ class Client {
   void handleRead();
   void handleWrite();
   void handleCgiPipe(int pipe_fd, size_t events);
+  bool checkCgiTimeout();
 
   // ---- Construcción de respuesta (llamado internamente) ----
   void buildResponse();

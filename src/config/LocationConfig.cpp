@@ -3,7 +3,10 @@
 #include <iostream>
 
 LocationConfig::LocationConfig()
-    : autoindex_(false), redirect_code_(-1), redirect_param_count_(0) {}
+    : autoindex_(false),
+      redirect_code_(-1),
+      redirect_param_count_(0),
+      max_body_size_(config::section::max_body_size) {}
 
 LocationConfig::LocationConfig(const LocationConfig& other)
     : path_(other.path_),
@@ -15,6 +18,7 @@ LocationConfig::LocationConfig(const LocationConfig& other)
       redirect_code_(other.redirect_code_),
       redirect_url_(other.redirect_url_),
       redirect_param_count_(other.redirect_param_count_),
+      max_body_size_(other.max_body_size_),
       cgi_handlers_(other.cgi_handlers_) {}
 
 LocationConfig& LocationConfig::operator=(const LocationConfig& other) {
@@ -28,6 +32,7 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other) {
     redirect_code_ = other.redirect_code_;
     redirect_url_ = other.redirect_url_;
     redirect_param_count_ = other.redirect_param_count_;
+    max_body_size_ = other.max_body_size_;
     cgi_handlers_ = other.cgi_handlers_;
   }
   return *this;
@@ -66,6 +71,8 @@ void LocationConfig::setRedirectParamCount(const int count) {
   redirect_param_count_ = count;
 }
 
+void LocationConfig::setMaxBodySize(size_t size) { max_body_size_ = size; }
+
 void LocationConfig::addCgiHandler(const std::string& extension,
                                    const std::string& binaryPath) {
   cgi_handlers_.insert(
@@ -99,6 +106,8 @@ int LocationConfig::getRedirectParamCount() const {
   return redirect_param_count_;
 }
 
+size_t LocationConfig::getMaxBodySize() const { return max_body_size_; }
+
 std::string LocationConfig::getCgiPath(const std::string& extension) const {
   const std::map<std::string, std::string>::const_iterator it =
       cgi_handlers_.find(extension);
@@ -124,20 +133,15 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const {
   if (method.empty()) {
     return false;
   }
-  // Per HTTP spec (RFC 2616 §5.1.1 / RFC 9110 §9.3.2):
-  // HEAD is identical to GET except the server MUST NOT return a body.
-  // A server that supports GET MUST also support HEAD.
-  // So we treat HEAD as GET for method-validation purposes.
-  std::string effectiveMethod = method;
-  if (effectiveMethod == config::section::method_head) {
-    effectiveMethod = config::section::method_get;
-  }
+  // HEAD must be explicitly allowed in config (not implicitly via GET)
+  // Each method is independent and must be listed in limit_except
+  // This is necessary to past the HEAD test
   if (allowed_methods_.empty()) {
-    return (effectiveMethod == config::section::method_get);
+    return (method == config::section::method_get);
   }
 
   for (size_t i = 0; i < allowed_methods_.size(); ++i) {
-    if (allowed_methods_[i] == effectiveMethod) return true;
+    if (allowed_methods_[i] == method) return true;
   }
   return false;
 }

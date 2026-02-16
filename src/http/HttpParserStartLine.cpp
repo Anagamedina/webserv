@@ -20,8 +20,6 @@ bool HttpParser::extractLine(std::string& line) {
   // Borrarla significa: “ya está consumida”,
   line = _buffer.substr(0, pos);
   _buffer.erase(0, pos + 2);
-  // DEBUG:
-  // std::cout << "[extractLine] line=" << line << std::endl;
   return true;
 }
 
@@ -39,9 +37,6 @@ bool HttpParser::extractLine(std::string& line) {
  */
 bool HttpParser::splitStartLine(const std::string& line, std::string& method,
                                 std::string& uri, std::string& version) {
-  // DEBUG:
-  // std::cout << "[splitStartLine] raw line=" << line << std::endl;
-
   // METHOD SP URI SP VERSION -> 3 partes
   std::string::size_type firstSpace;
   std::string::size_type secondSpace;
@@ -57,10 +52,6 @@ bool HttpParser::splitStartLine(const std::string& line, std::string& method,
                     secondSpace - firstSpace - 1);  // size de la uri
   version = line.substr(secondSpace + 1);
 
-  // DEBUG:
-  // std::cout << "[splitStartLine] method=" << method
-  //           << " uri=" << uri
-  //           << " version=" << version << std::endl;
   return true;
 }
 

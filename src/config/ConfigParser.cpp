@@ -514,9 +514,20 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     } else if (directive == config::section::cgi ||
                directive == config::section::cgi_fast) {
       parseCgi(loc, locTokens);
+    } else if (directive == config::section::client_max_body_size) {
+      parseMaxSizeBody(loc, locTokens);
     }
   }
   server.addLocation(loc);
+}
+
+void ConfigParser::parseMaxSizeBody(LocationConfig& loc,
+                                    const std::vector<std::string>& tokens) {
+  const std::string& maxSizeStr = config::utils::removeSemicolon(tokens[1]);
+  if (!maxSizeStr.empty()) {
+    config::utils::removeSemicolon(maxSizeStr);
+    loc.setMaxBodySize(config::utils::parseSize(maxSizeStr));
+  }
 }
 
 ServerConfig ConfigParser::parseSingleServerBlock(

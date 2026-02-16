@@ -1,4 +1,4 @@
-# colors 
+# colors
 RESET			= \033[0m
 BLACK_BOLD		= \033[1;30m
 RED_BOLD		= \033[1;31m
@@ -24,6 +24,7 @@ NAME 		= webserver
 CXX			= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -DDEBUG -g # -g is esential for valgrind
 LDFLAGS		=
+
 
 SRC_DIR		= src
 BIN_DIR		= bin

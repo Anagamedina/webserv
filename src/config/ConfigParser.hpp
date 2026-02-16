@@ -46,6 +46,8 @@ class ConfigParser {
   void parseHost(ServerConfig& server, const std::vector<std::string>& tokens);
   void parseMaxSizeBody(ServerConfig& server,
                         const std::vector<std::string>& tokens);
+  void parseMaxSizeBody(LocationConfig& loc,
+                        const std::vector<std::string>& tokens);
   void parseErrorPage(ServerConfig& server, std::vector<std::string>& tokens);
   void parseUploadBonus(LocationConfig& loc,
                         std::vector<std::string>& locTokens);

@@ -55,12 +55,16 @@ bool RequestProcessor::process(const HttpRequest& request,
     }
 
     resolvedPath = resolvePath(*server, location, request.getPath());
+#ifdef DEBUG
     std::cout << " DEBUG: Intentando abrir: [" << resolvedPath << "]"
               << std::endl;
+#endif // DEBUG
     isCgi =
         isCgiRequest(resolvedPath) || isCgiRequestByConfig(location, resolvedPath);
 
     if (isCgi) {
+      std::cout << "-------- Llamomos a CGI" << std::endl;
+      //startCgiIfNeeded(request);
       // CGI: delegar a Client::startCgiIfNeeded → CgiExecutor.
       // No rellenar response; el Client ejecutará el script y construirá la respuesta.
       return false;
