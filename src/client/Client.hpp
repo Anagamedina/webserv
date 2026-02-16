@@ -51,6 +51,7 @@ class Client {
   ServerManager* _serverManager;
   CgiProcess* _cgiProcess;
   bool _closeAfterWrite;
+  bool _forceCloseCurrentResponse;
   bool _sent100Continue;  // Para Expect: 100-continue (respuesta intermedia)
   struct PendingResponse {
     std::string data;

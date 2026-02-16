@@ -33,6 +33,7 @@ void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
 
 void Client::buildResponse() {
   const HttpRequest& request = _parser.getRequest();
+  _forceCloseCurrentResponse = false;
   
   RequestProcessor::ProcessingResult result = _processor.process(
       request, _configs, _listenPort, _parser.getErrorStatusCode());
@@ -44,6 +45,7 @@ void Client::buildResponse() {
     // Fallback if pipe creation failed
      const ServerConfig* server = selectServerByPort(_listenPort, _configs);
      buildErrorResponse(_response, request, 500, true, server);
+      _forceCloseCurrentResponse = true;
      return;
   }
   
@@ -73,6 +75,9 @@ bool Client::handleCompleteRequest() {
       _response = result.response;
   } else {
       buildResponse();
+      if (_forceCloseCurrentResponse) {
+        shouldClose = true;
+      }
       if (_cgiProcess) {
         return true;
       }
@@ -101,6 +106,7 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _cgiProcess(0),
 
       _closeAfterWrite(false),
+      _forceCloseCurrentResponse(false),
       _sent100Continue(false),
       _responseQueue(),
       _savedShouldClose(false),

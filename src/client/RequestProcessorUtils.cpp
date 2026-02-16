@@ -146,8 +146,8 @@ std::string methodToString(HttpMethod method) {
 int validateLocation(const HttpRequest& request, const ServerConfig* server,
                      const LocationConfig* location) {
   // 1) Redirect -> responder y salir (pendiente de getters de LocationConfig)
-  // TODO: check info
-  if (!location->getRedirectCode()) return 301;
+  int redirectCode = location->getRedirectCode();
+  if (redirectCode == 301 || redirectCode == 302) return redirectCode;
 
   // 2) Metodo permitido (HEAD rechazado por defecto a menos que esté explícitamente permitido)
   if (!location->isMethodAllowed(methodToString(request.getMethod())))

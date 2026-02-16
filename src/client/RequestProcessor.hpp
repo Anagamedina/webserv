@@ -1,6 +1,7 @@
 #ifndef REQUEST_PROCESSOR_HPP
 #define REQUEST_PROCESSOR_HPP
 
+#include <string>
 #include <vector>
 
 #include "../config/ServerConfig.hpp"
@@ -19,12 +20,15 @@ class RequestProcessor {
   };
 
   struct CgiInfo {
+    CgiInfo() : server(0) {}
     std::string scriptPath;
     std::string interpreterPath;
+    const ServerConfig* server;
     // We can add more info here if needed by CgiExecutor
   };
 
   struct ProcessingResult {
+    ProcessingResult() : action(ACTION_SEND_RESPONSE) {}
     ActionType action;
     HttpResponse response; // For static/error
     CgiInfo cgiInfo;       // For CGI

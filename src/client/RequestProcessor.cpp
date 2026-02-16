@@ -14,11 +14,10 @@
 // 5) Resolver path real (root/alias + uri)
 // 6) Decidir respuesta (estático o CGI) + errores
 // 7) Rellenar HttpResponse
-RequestProcessor::ProcessingResult RequestProcessor::process(const HttpRequest& request,
-                               const std::vector<ServerConfig>* configs,
-                               int listenPort, int parseErrorCode) {
+RequestProcessor::ProcessingResult RequestProcessor::process(
+    const HttpRequest& request, const std::vector<ServerConfig>* configs,
+    int listenPort, int parseErrorCode) {
   ProcessingResult result;
-  result.action = ACTION_SEND_RESPONSE;
 
   int statusCode = HTTP_STATUS_OK;
   std::string resolvedPath = "";
@@ -30,7 +29,8 @@ RequestProcessor::ProcessingResult RequestProcessor::process(const HttpRequest& 
 
   // 1) Errores primero
   if (parseErrorCode != 0 || request.getMethod() == HTTP_METHOD_UNKNOWN) {
-    statusCode = (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
+    statusCode =
+        (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
     body = toBody(getErrorDescription(statusCode));
     shouldClose = true;
     fillBaseResponse(result.response, request, statusCode, shouldClose, body);
@@ -47,39 +47,46 @@ RequestProcessor::ProcessingResult RequestProcessor::process(const HttpRequest& 
     if (validationCode != 0) {
       if (validationCode == 301 || validationCode == 302) {
         body.clear();
-        fillBaseResponse(result.response, request, validationCode, shouldClose, body);
+        fillBaseResponse(result.response, request, validationCode, shouldClose,
+                         body);
         result.response.setHeader("Location", location->getRedirectUrl());
         return result;
       }
-      buildErrorResponse(result.response, request, validationCode, true, server);
+      buildErrorResponse(result.response, request, validationCode, true,
+                         server);
       return result;
     }
 
     resolvedPath = resolvePath(*server, location, request.getPath());
 #ifdef DEBUG
-    std::cout << " DEBUG: Intentando abrir: [" << resolvedPath << "]" << std::endl;
+    std::cout << " DEBUG: Trying to open: [" << resolvedPath << "]"
+              << std::endl;
 #endif
 
-    isCgi = isCgiRequest(resolvedPath) || isCgiRequestByConfig(location, resolvedPath);
+    isCgi = isCgiRequest(resolvedPath) ||
+            isCgiRequestByConfig(location, resolvedPath);
 
     if (isCgi) {
-       // Validar longitud de contenido para CGI tambien
-       if (server && request.getBody().size() > server->getMaxBodySize()) {
-          buildErrorResponse(result.response, request, HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE, true, server);
-          return result;
-       }
+      // Validar longitud de contenido para CGI tambien
+      if (server && request.getBody().size() > server->getMaxBodySize()) {
+        buildErrorResponse(result.response, request,
+                           HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE, true, server);
+        return result;
+      }
 
-       result.action = ACTION_EXECUTE_CGI;
-       result.cgiInfo.scriptPath = resolvedPath;
-       if (location) {
-         std::string ext = getFileExtension(resolvedPath);
-         result.cgiInfo.interpreterPath = location->getCgiPath(ext);
-       }
-       return result;
+      result.action = ACTION_EXECUTE_CGI;
+      result.cgiInfo.scriptPath = resolvedPath;
+      result.cgiInfo.server = server;
+      if (location) {
+        std::string ext = getFileExtension(resolvedPath);
+        result.cgiInfo.interpreterPath = location->getCgiPath(ext);
+      }
+      return result;
     }
 
     // Servir archivo estático
-    if (handleStaticPath(request, server, location, resolvedPath, body, result.response)) {
+    if (handleStaticPath(request, server, location, resolvedPath, body,
+                         result.response)) {
       return result;
     }
   } else {
