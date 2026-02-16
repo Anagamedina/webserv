@@ -63,7 +63,8 @@ class Client {
   bool handleCompleteRequest();
   void enqueueResponse(const std::vector<char>& data, bool closeAfter);
   void handleExpect100();
-  bool startCgiIfNeeded(const HttpRequest& request);
+  
+  bool executeCgi(const RequestProcessor::CgiInfo& cgiInfo);
 
   void finalizeCgiResponse();
   void processRequests();

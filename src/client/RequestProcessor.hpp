@@ -13,9 +13,26 @@
 // HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
  public:
-  void process(const HttpRequest& request,
-               const std::vector<ServerConfig>* configs, int listenPort,
-               int parseErrorCode, HttpResponse& response);
+  enum ActionType {
+    ACTION_SEND_RESPONSE,
+    ACTION_EXECUTE_CGI
+  };
+
+  struct CgiInfo {
+    std::string scriptPath;
+    std::string interpreterPath;
+    // We can add more info here if needed by CgiExecutor
+  };
+
+  struct ProcessingResult {
+    ActionType action;
+    HttpResponse response; // For static/error
+    CgiInfo cgiInfo;       // For CGI
+  };
+
+  ProcessingResult process(const HttpRequest& request,
+                           const std::vector<ServerConfig>* configs,
+                           int listenPort, int parseErrorCode);
 
  private:
 };

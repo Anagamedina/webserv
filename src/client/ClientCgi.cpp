@@ -38,57 +38,28 @@ static void parseCgiHeaders(const std::string& headers,
   }
 }
 
-bool Client::startCgiIfNeeded(const HttpRequest& request) {
+bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   if (_configs == 0 || _serverManager == 0) return false;
 
   const ServerConfig* server = selectServerByPort(_listenPort, _configs);
   if (server == 0) return false;
 
-  const LocationConfig* location = matchLocation(*server, request.getPath());
-  if (location == 0) return false;
-
-  // TODO: this validation will be done in process no need to do it TWICE
-  // Validate that the method is allowed for this location
-  // I belive this is already done earlier
-  std::string methodStr;
-  if (request.getMethod() == HTTP_METHOD_GET) methodStr = "GET";
-  else if (request.getMethod() == HTTP_METHOD_POST) methodStr = "POST";
-  else if (request.getMethod() == HTTP_METHOD_DELETE) methodStr = "DELETE";
-
-  if (!location->isMethodAllowed(methodStr)) {
-    buildErrorResponse(_response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false, server);
-    return true;
-  }
-
-  if (server && request.getBody().size() > server->getMaxBodySize()) {
-    buildErrorResponse(_response, request, HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE,
-                       true, server);
-    return true;
-  }
-
-  std::string scriptPath = resolvePath(*server, location, request.getPath());
-
-  if (!isCgiRequest(scriptPath) && !isCgiRequestByConfig(location, scriptPath))
-    return false;
-
-  std::string interpreterPath;
-  if (location) {
-    std::string ext = getFileExtension(scriptPath);
-    interpreterPath = location->getCgiPath(ext);
-  }
-
+  // No need to validate location or method here, RequestProcessor did it.
+  
   CgiExecutor exec;
-  _cgiProcess = exec.executeAsync(request, scriptPath, interpreterPath, *server);
+  const HttpRequest& request = _parser.getRequest();
+  
+  _cgiProcess = exec.executeAsync(request, cgiInfo.scriptPath, cgiInfo.interpreterPath, *server);
+  
   if (_cgiProcess == 0) {
-    buildErrorResponse(_response, request, 500, true, server);
-    return true;
+    // If execution fails (e.g. pipe error), return false so caller can send 500
+    return false;
   }
 
   _serverManager->registerCgiPipe(_cgiProcess->getPipeOut(),
                                   EPOLLIN | EPOLLRDHUP, this);
   _serverManager->registerCgiPipe(_cgiProcess->getPipeIn(),
                                   EPOLLOUT | EPOLLRDHUP, this);
-
 
   _state = STATE_READING_BODY;
 
