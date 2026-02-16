@@ -93,6 +93,7 @@ static const std::string semicolon_must_be_attached_to_the_last_word =
 static const std::string duplicate_server_config =
     "Duplicate server configuration detected (same port, host, and "
     "server_name)";
+	static const std::string invalid_parameters_in_location = "Location modifiers ('=' or '^~') are not supported by design: ";
 }  // namespace errors
 
 namespace section {

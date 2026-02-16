@@ -259,7 +259,11 @@ void ConfigParser::parseListen(ServerConfig& server,
     std::string second = value.substr(pos + 1);
 
     if (first.find_first_not_of("0123456789") == std::string::npos) {
-      server.setPort(config::utils::stringToInt(first));
+      int port = config::utils::stringToInt(first);
+      if (port < 1 || port > config::section::max_port) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
       if (!config::utils::isValidHost(second)) {
         throw ConfigException(config::errors::invalid_ip_format + ": " +
                               second);
@@ -272,13 +276,21 @@ void ConfigParser::parseListen(ServerConfig& server,
         throw ConfigException(config::errors::invalid_ip_format + ": " + first);
       }
       server.setHost(first);
-      server.setPort(config::utils::stringToInt(second));
+      int port = config::utils::stringToInt(second);
+      if (port < 1 || port > 65535) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
     }
   } else {
     // TODO: Case: PORT (8080) or only HOST (localhost)
     // Simple heurística: Si tiene digitos es puerto, sino host
     if (value.find_first_not_of("0123456789") == std::string::npos) {
-      server.setPort(config::utils::stringToInt(value));
+      int port = config::utils::stringToInt(value);
+      if (port < 1 || port > 65535) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
     } else {
       if (!config::utils::isValidHost(value)) {
         throw ConfigException(config::errors::invalid_ip_format + ": " + value);
@@ -324,11 +336,15 @@ void ConfigParser::parseMaxSizeBody(ServerConfig& server,
  */
 void ConfigParser::parseErrorPage(ServerConfig& server,
                                   std::vector<std::string>& tokens) {
-  if (tokens.size() >= 3)
-  {
+  if (tokens.size() >= 3) {
     std::string path = config::utils::removeSemicolon(tokens.back());
     for (size_t i = 1; i < tokens.size() - 1; ++i) {
-      server.addErrorPage(config::utils::stringToInt(tokens[i].c_str()), path);
+      int code = config::utils::stringToInt(tokens[i].c_str());
+      if (code < 100 || code > 599) {
+        throw ConfigException(config::errors::invalid_http_status_code +
+                              tokens[i]);
+      }
+      server.addErrorPage(code, path);
     }
   }
 }
@@ -367,11 +383,12 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
         uploadPathClean);
   }
   // TODO: verificar que el directorio existe o se
-   /*
-	if (!config::utils::directoryExists(uploadPath)) {
-	  throw ConfigException("upload_store directory does not exist: " + uploadPath);
-	}
-  */
+  /*
+       if (!config::utils::directoryExists(uploadPath)) {
+         throw ConfigException("upload_store directory does not exist: " +
+     uploadPath);
+       }
+ */
   loc.setUploadStore(uploadPathClean);
 }
 
@@ -442,20 +459,26 @@ void ConfigParser::parseServerName(ServerConfig& server,
   server.setServerName(config::utils::removeSemicolon(tokens[1]));
 }
 
+/**
+ *
+ * @param server
+ * @param ss
+ * @param line
+ * @param tokens
+ */
 void ConfigParser::parseLocationBlock(ServerConfig& server,
                                       std::stringstream& ss, std::string& line,
-                                      std::vector<std::string>& tokens) {
+                                      const std::vector<std::string>& tokens) {
   size_t pathIndex = 1;
-  std::string modifier = "";  // +, ~, ~*, ^~
 
-  if (tokens.size() > 2 &&
-      (tokens[1] == config::section::exact_match_modifier ||
-       tokens[1] == config::section::preferential_prefix_modifier)) {
-    modifier = tokens[1];
-    pathIndex = 2;
+  if (tokens.size() > 2) {
+    if (tokens[1] == "=" || tokens[1] == "^~") {
+      throw ConfigException(config::errors::invalid_parameters_in_location +
+          line);
+    }
   }
 
-  std::string locationPath = tokens[pathIndex];
+  const std::string& locationPath = tokens[pathIndex];
 
   if (!config::utils::isValidLocationPath(locationPath)) {
     throw ConfigException(config::errors::invalid_location_path + ": " +
@@ -496,7 +519,8 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
         throw ConfigException(config::errors::invalid_autoindex);
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
-    } else if (directive == config::section::allow_methods) {
+    } else if (directive == config::section::allow_methods ||
+               directive == config::section::limit_except) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
         if (method.empty()) continue;
@@ -615,4 +639,3 @@ void ConfigParser::checkDuplicateServerConfig() const {
     }
   }
 }
-

@@ -74,7 +74,6 @@ class LocationConfig {
   std::string redirect_url_;
   int redirect_param_count_;
   size_t max_body_size_;
-
   std::map<std::string, std::string> cgi_handlers_;
 };
 
