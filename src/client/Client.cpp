@@ -1,6 +1,8 @@
 #include "Client.hpp"
 #include "ErrorUtils.hpp"
 #include "RequestProcessorUtils.hpp"
+#include "cgi/CgiProcess.hpp"
+#include "network/ServerManager.hpp"
 
 #include <iostream>
 #include <sys/socket.h>
@@ -115,7 +117,23 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
   if (server) _parser.setMaxBodySize(server->getGlobalMaxBodySize());
 }
 
-Client::~Client() {}
+Client::~Client() {
+  if (_cgiProcess == 0) return;
+
+  int pipeIn = _cgiProcess->getPipeIn();
+  int pipeOut = _cgiProcess->getPipeOut();
+
+  if (_serverManager) {
+    if (pipeIn >= 0) _serverManager->unregisterCgiPipe(pipeIn);
+    if (pipeOut >= 0) _serverManager->unregisterCgiPipe(pipeOut);
+  }
+
+  _cgiProcess->closePipeIn();
+  _cgiProcess->closePipeOut();
+  _cgiProcess->terminateProcess();
+  delete _cgiProcess;
+  _cgiProcess = 0;
+}
 
 int Client::getFd() const { return _fd; }
 
@@ -175,7 +193,7 @@ void Client::processRequests() {
     // The parser holds the request that started the CGI. We must reset it
     // so we can parse the *next* request (if any) later.
     // BUT we must have saved the necessary info from the request first
-    // (done in startCgiIfNeeded).
+    // (done in executeCgi).
     if (_cgiProcess) {
        _response.clear();
        _parser.reset();

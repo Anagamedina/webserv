@@ -1,5 +1,9 @@
 #include "RequestProcessor.hpp"
 
+#include <cerrno>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "ErrorUtils.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "ResponseUtils.hpp"
@@ -67,20 +71,47 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
             isCgiRequestByConfig(location, resolvedPath);
 
     if (isCgi) {
-      // Validar longitud de contenido para CGI tambien
-      if (server && request.getBody().size() > server->getMaxBodySize()) {
-        buildErrorResponse(result.response, request,
-                           HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE, true, server);
-        return result;
+      std::string interpreterPath;
+      if (location) {
+        std::string ext = getFileExtension(resolvedPath);
+        interpreterPath = location->getCgiPath(ext);
+      }
+
+      if (interpreterPath.empty()) {
+        struct stat st;
+        if (stat(resolvedPath.c_str(), &st) != 0) {
+          int code = (errno == ENOENT || errno == ENOTDIR)
+                         ? HTTP_STATUS_NOT_FOUND
+                         : HTTP_STATUS_FORBIDDEN;
+          buildErrorResponse(result.response, request, code, true, server);
+          return result;
+        }
+
+        if (!S_ISREG(st.st_mode)) {
+          buildErrorResponse(result.response, request, HTTP_STATUS_FORBIDDEN,
+                             true, server);
+          return result;
+        }
+
+        if (access(resolvedPath.c_str(), X_OK) != 0) {
+          int code = (errno == ENOENT || errno == ENOTDIR)
+                         ? HTTP_STATUS_NOT_FOUND
+                         : HTTP_STATUS_FORBIDDEN;
+          buildErrorResponse(result.response, request, code, true, server);
+          return result;
+        }
+      } else {
+        if (access(interpreterPath.c_str(), X_OK) != 0) {
+          buildErrorResponse(result.response, request,
+                             HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);
+          return result;
+        }
       }
 
       result.action = ACTION_EXECUTE_CGI;
       result.cgiInfo.scriptPath = resolvedPath;
       result.cgiInfo.server = server;
-      if (location) {
-        std::string ext = getFileExtension(resolvedPath);
-        result.cgiInfo.interpreterPath = location->getCgiPath(ext);
-      }
+      result.cgiInfo.interpreterPath = interpreterPath;
       return result;
     }
 

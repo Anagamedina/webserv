@@ -172,7 +172,7 @@ std::string HttpRequest::getPath() const { return _path; }
 
 std::string HttpRequest::getQuery() const { return _query; }
 
-std::vector<char> HttpRequest::getBody() const { return _body; }
+const std::vector<char>& HttpRequest::getBody() const { return _body; }
 
 HttpStatus HttpRequest::getStatus() const { return _status; }
 

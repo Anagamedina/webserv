@@ -67,7 +67,7 @@ class Client {
   
   bool executeCgi(const RequestProcessor::CgiInfo& cgiInfo);
 
-  void finalizeCgiResponse();
+  void finalizeCgiResponse(const CgiProcess* finishedProcess);
   void processRequests();
 
   // Saved request state for CGI

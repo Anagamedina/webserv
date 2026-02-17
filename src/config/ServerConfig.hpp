@@ -39,6 +39,7 @@ class ServerConfig {
   void setRoot(const std::string& root);
   void addIndex(const std::string& index);
   void setMaxBodySize(size_t size);
+  void setCgiTimeout(int seconds);
   void addErrorPage(int code, const std::string& path);
   void addLocation(const LocationConfig& location);
   void setAutoIndex(bool autoindex);
@@ -52,6 +53,7 @@ class ServerConfig {
   const std::string& getRoot() const;
   const std::vector<std::string>& getIndexVector() const;
   size_t getMaxBodySize() const;
+  int getCgiTimeout() const;
   const std::map<int, std::string>& getErrorPages() const;
   const std::vector<LocationConfig>& getLocations() const;
   bool getAutoindex() const;
@@ -69,6 +71,7 @@ class ServerConfig {
   std::string root_;
   std::vector<std::string> indexes_;
   size_t max_body_size_;  // max is 1048576 (bytes)
+  int cgi_timeout_;
   std::map<int, std::string> error_pages_;
   std::vector<LocationConfig> locations_;
   bool autoindex_;
