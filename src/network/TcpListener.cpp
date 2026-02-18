@@ -414,7 +414,12 @@ int TcpListener::acceptConnection() {
   std::memset(&client_addr, 0, size_t(addr_len));
   int client_fd = accept(socket_fd_, (struct sockaddr*)&client_addr, &addr_len);
 
-  if (client_fd < 0) return -1;
+  if (client_fd < 0) {
+     if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        std::cerr << "accept failed: " << std::strerror(errno) << std::endl;
+     }
+     return -1;
+  }
 
   int flags = fcntl(client_fd, F_GETFL, 0);
   if (flags != -1) {

@@ -1,6 +1,7 @@
 #ifndef REQUEST_PROCESSOR_HPP
 #define REQUEST_PROCESSOR_HPP
 
+#include <string>
 #include <vector>
 
 #include "../config/ServerConfig.hpp"
@@ -13,11 +14,29 @@
 // HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
  public:
-  // Retorna true si la petición fue manejada (respuesta lista).
-  // Retorna false si es CGI y debe delegarse a Client::startCgiIfNeeded.
-  bool process(const HttpRequest& request,
-               const std::vector<ServerConfig>* configs, int listenPort,
-               int parseErrorCode, HttpResponse& response);
+  enum ActionType {
+    ACTION_SEND_RESPONSE,
+    ACTION_EXECUTE_CGI
+  };
+
+  struct CgiInfo {
+    CgiInfo() : server(0) {}
+    std::string scriptPath;
+    std::string interpreterPath;
+    const ServerConfig* server;
+    // We can add more info here if needed by CgiExecutor
+  };
+
+  struct ProcessingResult {
+    ProcessingResult() : action(ACTION_SEND_RESPONSE) {}
+    ActionType action;
+    HttpResponse response; // For static/error
+    CgiInfo cgiInfo;       // For CGI
+  };
+
+  ProcessingResult process(const HttpRequest& request,
+                           const std::vector<ServerConfig>* configs,
+                           int listenPort, int parseErrorCode);
 
  private:
 };

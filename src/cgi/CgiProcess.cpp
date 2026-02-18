@@ -6,14 +6,15 @@
 
 #include "CgiProcess.hpp"
 
+#include <signal.h>
 #include <sys/signal.h>
 #include <sys/wait.h>
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <cerrno>
 #include <ctime>
 #include <sstream>
 

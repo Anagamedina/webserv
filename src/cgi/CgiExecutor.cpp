@@ -13,6 +13,8 @@
 
 #include "CgiExecutor.hpp"
 
+#include "client/RequestProcessorUtils.hpp"
+
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -28,15 +30,11 @@
 #include <sstream>
 #include <vector>
 
-static std::string methodToString(HttpMethod method) {
-  if (method == HTTP_METHOD_GET) return "GET";
-  if (method == HTTP_METHOD_POST) return "POST";
-  if (method == HTTP_METHOD_DELETE) return "DELETE";
-  return "";
-}
-
-static std::string bodyToString(const std::vector<char>& body) {
-  return std::string(body.begin(), body.end());
+static void closeIfValid(int& fd) {
+  if (fd >= 0) {
+    close(fd);
+    fd = -1;
+  }
 }
 
 CgiExecutor::CgiExecutor() {}
@@ -51,15 +49,15 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
   // pipe_in: parent writes request body to child stdin
   // pipe_out: parent reads CGI output from child stdout
 
-  int pipe_in[2];   // Parent → Child (request body)
-  int pipe_out[2];  // Child → Parent (response)
+  int pipe_in[2] = {-1, -1};   // Parent → Child (request body)
+  int pipe_out[2] = {-1, -1};  // Child → Parent (response)
 
   if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
     std::cerr << "Failed to create pipes for CGI" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -68,10 +66,10 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
   if (!setNonBlocking(pipe_in[1]) || !setNonBlocking(pipe_out[0])) {
     std::cerr << "Failed to set pipes non-blocking" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -80,10 +78,10 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
   pid_t pid = fork();
   if (pid == -1) {
     std::cerr << "Failed to fork CGI process" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -181,11 +179,12 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // Create CgiProcess tracker object
     // The Client will own this and clean it up when done
-    std::string body = bodyToString(request.getBody());
+    const std::vector<char>& requestBody = request.getBody();
+    std::string body(requestBody.begin(), requestBody.end());
     CgiProcess* proc =
         new CgiProcess(script_path, interpreter_path,
-                       pipe_in[1],           // Pass write end to CgiProcess
-                       pipe_out[0], pid, 5,  // 5 second timeout
+               pipe_in[1],                          // Write end
+               pipe_out[0], pid, serverConfig.getCgiTimeout(),
                        body);
 
     return proc;
