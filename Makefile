@@ -79,9 +79,9 @@ DEP_FILES = $(OBJ_FILES:.o=.d)
 all: $(NAME)
 
 #$(BIN_DIR)/$(NAME): $(OBJ_FILES)
+#@mkdir -p $(BIN_DIR)
 $(NAME): $(OBJ_FILES)
 	@printf "$(LIGHT_MAGENTA)==> Linking objects...$(RESET)\n"
-	#@mkdir -p $(BIN_DIR)
 	@$(CXX) $(OBJ_FILES) $(LDFLAGS) -o $@ \
 		&& printf "$(CXX) $(OBJ_FILES) $(LDFLAGS) -o $@\n" \
 		|| { printf "$(RED)==> ✖ Linking failed: $(notdir $<)$(RESET)\n"; exit 1; }
@@ -93,8 +93,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@ \
 		&& printf "$(BLUE)$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@$(RESET)\n" \
 		|| { printf "$(RED)==> ✖ Compilation failed: $(notdir $<)$(RESET)\n"; exit 1; }
-	@#printf "$(GREEN)==> Compilation complete.$(RESET)\n"
 
+#printf "$(GREEN)==> Compilation complete.$(RESET)\n"
 clean:
 	@rm -rf $(BIN_DIR) $(BUILD_DIR)
 	@printf "$(YELLOW)==> ✔ Objects and dependencies removed.$(RESET)\n"
