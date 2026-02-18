@@ -1,12 +1,15 @@
 #include "Client.hpp"
+
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <iostream>
+
 #include "ErrorUtils.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "cgi/CgiProcess.hpp"
 #include "network/ServerManager.hpp"
-
-#include <iostream>
-#include <sys/socket.h>
-#include <unistd.h>
 
 // ============================
 // FUNCIONES AUXILIARES
@@ -16,8 +19,8 @@ void Client::handleExpect100() {
   if (_parser.getState() == PARSING_BODY &&
       _parser.getRequest().hasExpect100Continue() && !_sent100Continue) {
     std::string continueMsg("HTTP/1.1 100 Continue\r\n\r\n");
-    enqueueResponse(
-        std::vector<char>(continueMsg.begin(), continueMsg.end()), false);
+    enqueueResponse(std::vector<char>(continueMsg.begin(), continueMsg.end()),
+                    false);
     _sent100Continue = true;
   }
 }
@@ -33,25 +36,33 @@ void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
   _responseQueue.push(PendingResponse(payload, closeAfter));
 }
 
+bool Client::startCgi(const RequestProcessor::CgiInfo& cgiInfo) {
+  return executeCgi(cgiInfo);
+}
+
+void Client::dispatchAction(const HttpRequest& request,
+                            const RequestProcessor::ProcessingResult& result) {
+  if (result.action == RequestProcessor::ACTION_EXECUTE_CGI) {
+    if (startCgi(result.cgiInfo)) {
+      return;
+    }
+    const ServerConfig* server = selectServerByPort(_listenPort, _configs);
+    buildErrorResponse(_response, request, 500, true, server);
+    _forceCloseCurrentResponse = true;
+    return;
+  }
+
+  _response = result.response;
+}
+
 void Client::buildResponse() {
   const HttpRequest& request = _parser.getRequest();
   _forceCloseCurrentResponse = false;
-  
+
   RequestProcessor::ProcessingResult result = _processor.process(
       request, _configs, _listenPort, _parser.getErrorStatusCode());
 
-  if (result.action == RequestProcessor::ACTION_EXECUTE_CGI) {
-    if (executeCgi(result.cgiInfo)) {
-       return;
-    }
-    // Fallback if pipe creation failed
-     const ServerConfig* server = selectServerByPort(_listenPort, _configs);
-     buildErrorResponse(_response, request, 500, true, server);
-      _forceCloseCurrentResponse = true;
-     return;
-  }
-  
-  _response = result.response;
+  dispatchAction(request, result);
 }
 
 bool Client::handleCompleteRequest() {
@@ -60,9 +71,9 @@ bool Client::handleCompleteRequest() {
       (_parser.getState() == ERROR) || request.shouldCloseConnection();
 
 #ifdef DEBUG
-  std::cerr << "[CLIENT] Request complete: " << request.getMethod()
-            << " " << request.getPath()
-            << " (body size: " << request.getBody().size() << " bytes";
+  std::cerr << "[CLIENT] Request complete: " << request.getMethod() << " "
+            << request.getPath() << " (body size: " << request.getBody().size()
+            << " bytes";
   if (request.getBody().size() > 1024 * 1024) {
     std::cerr << " = " << (request.getBody().size() / 1024 / 1024) << " MB";
   }
@@ -72,17 +83,17 @@ bool Client::handleCompleteRequest() {
   // If parser is in ERROR state, we should generate error response immediately
   // and NOT try to run CGI (which requires valid body/headers)
   if (_parser.getState() == ERROR) {
-      RequestProcessor::ProcessingResult result = _processor.process(
-          request, _configs, _listenPort, _parser.getErrorStatusCode());
-      _response = result.response;
+    RequestProcessor::ProcessingResult result = _processor.process(
+        request, _configs, _listenPort, _parser.getErrorStatusCode());
+    _response = result.response;
   } else {
-      buildResponse();
-      if (_forceCloseCurrentResponse) {
-        shouldClose = true;
-      }
-      if (_cgiProcess) {
-        return true;
-      }
+    buildResponse();
+    if (_forceCloseCurrentResponse) {
+      shouldClose = true;
+    }
+    if (_cgiProcess) {
+      return true;
+    }
   }
   std::vector<char> serialized = _response.serialize();
   enqueueResponse(serialized, shouldClose);
@@ -118,21 +129,26 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
 }
 
 Client::~Client() {
-  if (_cgiProcess == 0) return;
+  if (_cgiProcess) {
+    int pipeIn = _cgiProcess->getPipeIn();
+    int pipeOut = _cgiProcess->getPipeOut();
 
-  int pipeIn = _cgiProcess->getPipeIn();
-  int pipeOut = _cgiProcess->getPipeOut();
+    if (_serverManager) {
+      if (pipeIn >= 0) _serverManager->unregisterCgiPipe(pipeIn);
+      if (pipeOut >= 0) _serverManager->unregisterCgiPipe(pipeOut);
+    }
 
-  if (_serverManager) {
-    if (pipeIn >= 0) _serverManager->unregisterCgiPipe(pipeIn);
-    if (pipeOut >= 0) _serverManager->unregisterCgiPipe(pipeOut);
+    _cgiProcess->closePipeIn();
+    _cgiProcess->closePipeOut();
+    _cgiProcess->terminateProcess();
+    delete _cgiProcess;
+    _cgiProcess = 0;
   }
 
-  _cgiProcess->closePipeIn();
-  _cgiProcess->closePipeOut();
-  _cgiProcess->terminateProcess();
-  delete _cgiProcess;
-  _cgiProcess = 0;
+  if (_fd >= 0) {
+    close(_fd);
+    _fd = -1;
+  }
 }
 
 int Client::getFd() const { return _fd; }
@@ -142,7 +158,7 @@ ClientState Client::getState() const { return _state; }
 bool Client::needsWrite() const { return !_outBuffer.empty(); }
 
 bool Client::hasPendingData() const {
-  return !_outBuffer.empty() || !_responseQueue.empty();
+  return _cgiProcess != 0 || !_outBuffer.empty() || !_responseQueue.empty();
 }
 
 time_t Client::getLastActivity() const { return _lastActivity; }
@@ -177,6 +193,9 @@ void Client::handleRead() {
   } else if (bytesRead == 0) {
     _state = STATE_CLOSED;
   } else {
+    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+      return;
+    }
     _state = STATE_CLOSED;
   }
 }
@@ -189,15 +208,15 @@ void Client::processRequests() {
 
     bool shouldClose = handleCompleteRequest();
 
-    // If CGI started, handleCompleteRequest returned true (and set _cgiProcess).
-    // The parser holds the request that started the CGI. We must reset it
-    // so we can parse the *next* request (if any) later.
-    // BUT we must have saved the necessary info from the request first
-    // (done in executeCgi).
+    // If CGI started, handleCompleteRequest returned true (and set
+    // _cgiProcess). The parser holds the request that started the CGI. We must
+    // reset it so we can parse the *next* request (if any) later. BUT we must
+    // have saved the necessary info from the request first (done in
+    // executeCgi).
     if (_cgiProcess) {
-       _response.clear();
-       _parser.reset();
-       return;
+      _response.clear();
+      _parser.reset();
+      return;
     }
 
     if (shouldClose) return;
@@ -207,8 +226,6 @@ void Client::processRequests() {
     _parser.consume("");
   }
 }
-
-
 
 // ============================
 // ESCRITURA AL SOCKET (EPOLLOUT)
@@ -226,6 +243,9 @@ void Client::handleWrite() {
     _lastActivity = std::time(0);
     _outBuffer.erase(0, bytesSent);
   } else if (bytesSent < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+      return;
+    }
     _state = STATE_CLOSED;
     return;
   }
