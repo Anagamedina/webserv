@@ -2,7 +2,7 @@
 import html, os, sys
 from pathlib import Path
 
-IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg" , ".avif"}
 
 def resolve_images_dir():
     script_path = Path(__file__).resolve()

@@ -120,5 +120,4 @@ void buildErrorResponse(HttpResponse& response, const HttpRequest& request,
   fillBaseResponse(response, request, statusCode, shouldClose, body);
 }
 
-
 */
