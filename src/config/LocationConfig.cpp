@@ -40,6 +40,7 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other) {
 
 LocationConfig::~LocationConfig() {}
 
+//	SETTERS
 void LocationConfig::setPath(const std::string& path) { path_ = path; }
 void LocationConfig::setRoot(const std::string& root) { root_ = root; }
 
@@ -73,6 +74,7 @@ void LocationConfig::setRedirectParamCount(const int count) {
 
 void LocationConfig::setMaxBodySize(size_t size) { max_body_size_ = size; }
 
+//	GETTERS
 void LocationConfig::addCgiHandler(const std::string& extension,
                                    const std::string& binaryPath) {
   cgi_handlers_.insert(
@@ -147,3 +149,4 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const {
 }
 
 void LocationConfig::print() const { std::cout << *this << std::endl; }
+

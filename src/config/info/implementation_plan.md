@@ -1,56 +1,38 @@
-# Análisis de Configuración y Mejoras Propuestas
+# Implementation Plan - Advanced Config Validation
 
-## Resumen de Hallazgos
+Beyond the basic fixes, we need to ensure the parser is robust against malformed configuration files by enforcing strict rules.
 
-### ❌ Errores Críticos (Bugs)
-- **`LocationConfig::isMethodAllowed`**: Hay un error de lógica. La función tiene un `return false` prematuro que impide que el bucle de comprobación de métodos se ejecute correctamente. Actualmente, solo permite `GET` y `HEAD` e ignora lo que diga el archivo `.conf`.
-- **Validación de Autoindex**: En `ConfigParser.cpp`, la condición `val != "on" || val != "off"` siempre es verdadera (lógicamente), lo que causa que cualquier valor (incluso "on" u "off") lance una excepción.
+## User Review Required
 
-### ⚠️ Validaciones Faltantes
-- **Directivas Duplicadas**: Si pones dos veces `listen` o `root` en un mismo bloque, el programa no avisa; simplemente usa el último valor, lo cual puede causar confusiones.
-- **Punto y Coma (Strictness)**: El parsing actual es un poco permisivo con los `;`. Sería mejor validar estrictamente que cada directiva termine con uno para evitar comportamientos inesperados.
-- **Métodos HTTP**: No se valida si los métodos en `limit_except` o `methods` son válidos (ej. `GET`, `POST`, `DELETE`). Se aceptan strings arbitrarios.
-- **Formato de IP**: La directiva `listen` acepta cualquier string como host sin validar si es una IP válida o un nombre de dominio razonable.
+> [!IMPORTANT]
+> **Strict Validation**: I will implement an "Unknown Directive" check. This means ANY word not recognized by the parser will throw an error instead of being ignored.
 
----
+> [!CAUTION]
+> **Argument Count Verification**: Directives like `root`, `listen`, and `client_max_body_size` will now throw an error if they receive more than one argument.
 
-## Recomendaciones Técnicas
+## Proposed Changes
 
-### 1. Corregir Errores Lógicos
-- Arreglar el bucle en `isMethodAllowed`.
-- Cambiar el `||` por `&&` en la validación de `autoindex` (o usar una lógica más clara).
+### `src/config`
 
-### 2. Control de Duplicados
-- Usar un set o mapa temporal durante el parseo de cada bloque para asegurar que una directiva no se repita.
+#### [MODIFY] [ConfigParser.cpp](file:///home/daruuu/CLionProjects/webserv/src/config/ConfigParser.cpp)
+- **`parseSingleServerBlock`**:
+    - Add a final `else` clause at the end of the directive chain to throw `ConfigException("Unknown directive in server block")`.
+    - Check `tokens.size()` for each directive to ensure exactly the expected number of arguments are provided.
+- **`parseLocationBlock`**:
+    - Add a final `else` clause at the end of the directive chain to throw `ConfigException("Unknown directive in location block")`.
+    - Enforce argument counts for `root`, `autoindex`, `allow_methods`, etc.
+- **`preprocessConfigFile`**:
+    - Consider adding a check for text found *outside* of `server` blocks.
 
-### 3. Mejorar ConfigUtils
-- Añadir una función `isValidIp` para validar direcciones.
-- Añadir un listado de métodos soportados para validarlos durante el parsing.
+#### [MODIFY] [ConfigUtils.cpp](file:///home/daruuu/CLionProjects/webserv/src/config/ConfigUtils.cpp)
+- Add or verify helpers for checking path existence or execution permissions (for CGI).
 
----
+## Verification Plan
 
-## Cambios Propuestos
+### Automated Tests
+- Test with `unknown_directive.conf` (e.g., `server { random_word; }`) and expect failure.
+- Test with `extra_args.conf` (e.g., `root /var /tmp;`) and expect failure.
+- Test with `missing_args.conf` (e.g., `listen;`) and expect failure.
 
-### [Configuración]
-
-#### [MODIFY] [ConfigParser.cpp](file:///home/daruuu/CLionProjects/webserv-fork/src/config/ConfigParser.cpp)
-- Corregir lógica de `autoindex`.
-- Implementar detección de directivas duplicadas.
-- Validación más estricta de tokens.
-
-#### [MODIFY] [LocationConfig.cpp](file:///home/daruuu/CLionProjects/webserv-fork/src/config/LocationConfig.cpp)
-- Corregir `isMethodAllowed`.
-
-#### [MODIFY] [ConfigUtils.cpp](file:///home/daruuu/CLionProjects/webserv-fork/src/config/ConfigUtils.cpp)
-- Añadir utilidades de validación de IP y métodos.
-
-## Plan de Verificación
-
-### Pruebas Automatizadas
-- Crear un archivo `.conf` con casos de error:
-    - Autoindex con valores raros.
-    - IPs mal formadas.
-    - Métodos no soportados.
-
-### Verificación Manual
-- Ejecutar el servidor y comprobar que los mensajes de error son claros y específicos (especificando qué directiva falló).
+### Manual Verification
+- Re-run existing `tester.conf` to ensure no regressions were introduced.

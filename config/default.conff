@@ -1,34 +1,42 @@
 # Configuration NGINX for WebServer
 # Testing all routes in www/
-#Testing all routes in www/
 
-server {
-    listen 8080:127.0.0.1;
+server { 
     #listen 8080:127.0.0.1;
     listen 127.0.0.1:1024;
-    
+    #server_name localhost;
+    server_name ab;
+    server_name abc;
+
     # Global root for this server block
     root ./www;
-    
+#     root ./wwww;
+
     # Default index files
-    index index.html index.htm;
+    #index index.html index.htm;
     
     # Max body size (e.g. 10MB)
-    client_max_body_size 10485760;
-#     root ./wwww;
+#   client_max_body_size 10485760;
     client_max_body_size 10485761;
 
     # Custom Error Pages
     error_page 404 /errors/404.html;
     error_page 500 502 503 504 /errors/500.html;
+    error_page 500 502 503 504 /errors/500.htm;
+#     error_page 10 /errors/404.htm;
 
     # Main location
     location / {
-        #autoindex on;
-        autoindex off;
-        allow_methods GET POST HEAD DELETE;
-    }
+        autoindex on;
+        #autoindex on off;
+        allow_methods GET POST HEAD DELETE GET;
+    } 
 
+#     location \ }
+#         autoindex on;
+#         #autoindex on off;
+#         allow_methods GET POST HEAD DELETE;
+#     {
     # Images directory
 #     location /images {
 #         root ./www;
@@ -91,19 +99,13 @@ server {
 #         root ./www;
 #         methods GET;
 #     }
-    error_page 500 502 503 504 /errors/500.htm;
-    location / {
-        autoindex on;
-        #autoindex on off;
-        allow_methods GET POST HEAD DELETE GET;
-    } 
 }
+server {
+    #listen 8080:127.0.0.1;
+    listen 127.0.0.1:1024;
+    #server_name localhost;
+    server_name a;
 
-server		{
-	server_name								80;
-    # CGI Scripts Specific files test
-     location /about.html {
-         root ./www;
-         allow_methods GET;
+    # Global root for this server block
+    root ./www;
 }
-     }

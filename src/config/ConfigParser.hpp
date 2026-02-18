@@ -58,7 +58,7 @@ class ConfigParser {
   void parseServerName(ServerConfig& server,
                        const std::vector<std::string>& tokens);
   void parseLocationBlock(ServerConfig& server, std::stringstream& ss,
-                          std::string& line, std::vector<std::string>& tokens);
+                          std::string& line, const std::vector<std::string>& tokens);
   ServerConfig parseSingleServerBlock(const std::string& blockContent);
   void validateDirectiveLine(const std::string& line) const;
   void checkDuplicateServerConfig() const;
