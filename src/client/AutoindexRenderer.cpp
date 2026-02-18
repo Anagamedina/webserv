@@ -25,6 +25,7 @@ std::vector<char> renderAutoindexHtml(const std::string& base,
        << "<head>\n"
        << "  <meta charset=\"UTF-8\">\n"
        << "  <title>" << escapeHtml(title) << "</title>\n"
+       << "  <link rel=\"stylesheet\" href=\"/css/laserweb.css\">\n"
        << "</head>\n"
        << "<body>\n"
        << "  <h1>" << escapeHtml(title) << "</h1>\n"
