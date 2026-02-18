@@ -157,7 +157,7 @@ static bool handleDirectory(const HttpRequest& request,
 
   if (location && location->getAutoIndex()) {
     body = generateAutoIndexBody(path, request.getPath());
-    response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Type", "text/html; charset=UTF-8");
     return false;
   }
 
