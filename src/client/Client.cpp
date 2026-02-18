@@ -118,21 +118,17 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _configs(configs),
       _state(STATE_IDLE),
       _lastActivity(std::time(0)),
+      _forceCloseCurrentResponse(false),
       _outBuffer(),
       _responseQueue(),
       _parser(),
       _response(),
       _serverManager(0),
-      _cgiProcess(0),
-      _closeAfterWrite(false),
-      _forceCloseCurrentResponse(false),
-      _sent100Continue(false),
-      _responseQueue(),
-      _savedShouldClose(false),
-      _savedVersion(HTTP_VERSION_1_1) {
-      _sent100Continue(false) {
-  const ServerConfig* server = selectServerByPort(listenPort, configs);
-  if (server) _parser.setMaxBodySize(server->getGlobalMaxBodySize());
+      _cgiProcess(0){
+        const ServerConfig* server = selectServerByPort(listenPort, configs);
+        if (server)
+          _parser.setMaxBodySize(server->getGlobalMaxBodySize());
+        
 }
 
 Client::~Client() {
