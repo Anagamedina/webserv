@@ -1,0 +1,493 @@
+.charge-panel {
+    margin-top: 1rem;
+    border: 1px solid #00f5ff;
+    background: linear-gradient(145deg, rgba(0, 245, 255, 0.08), rgba(57, 255, 20, 0.05));
+    box-shadow: 0 0 16px rgba(0, 245, 255, 0.35), inset 0 0 20px rgba(57, 255, 20, 0.08);
+    padding: 1.2rem;
+}
+
+.charge-label {
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #00f5ff;
+    margin-bottom: 0.7rem;
+}
+
+.charge-track {
+    height: 12px;
+    border: 1px solid #39ff14;
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: inset 0 0 8px rgba(57, 255, 20, 0.2);
+    overflow: hidden;
+}
+
+.charge-beam {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #00f5ff, #39ff14);
+    box-shadow: 0 0 12px rgba(0, 245, 255, 0.8), 0 0 16px rgba(57, 255, 20, 0.6);
+    animation: energy-charge 2.8s linear infinite;
+}
+
+@keyframes energy-charge {
+    0% { width: 0; }
+    85% { width: 100%; }
+    100% { width: 100%; }
+}
+
+.flux-note {
+    margin-top: 0.85rem;
+    color: #808090;
+    font-size: 0.82rem;
+}
+
+.mission-note {
+    margin-top: 0.8rem;
+    color: #808090;
+    font-size: 0.8rem;
+}
+
+.armory-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.6rem;
+}
+
+/* Evaluacion: esta seccion define la identidad visual neon/cyberpunk */
+.scanner-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 1.2rem;
+    align-items: start;
+}
+
+.system-card {
+    border: 1px solid #00f5ff;
+    background: rgba(0, 245, 255, 0.05);
+    box-shadow: 0 0 14px rgba(0, 245, 255, 0.22);
+    padding: 1rem;
+}
+
+.system-card p {
+    color: #808090;
+    font-size: 0.84rem;
+    margin-top: 0.55rem;
+}
+
+.rays-gallery {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.9rem;
+}
+
+.ray-img {
+    border: 1px solid #39ff14;
+    background: rgba(57, 255, 20, 0.06);
+    box-shadow: 0 0 12px rgba(57, 255, 20, 0.28), inset 0 0 10px rgba(0, 245, 255, 0.12);
+    padding: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 210px;
+}
+
+.ray-img img {
+    width: 100%;
+    height: 96px;
+    object-fit: cover;
+    border: 1px solid #00f5ff;
+    box-shadow: 0 0 8px rgba(0, 245, 255, 0.32);
+}
+
+.ray-img span {
+    margin-top: 0.45rem;
+    font-size: 0.72rem;
+    color: #e0e0e0;
+    text-align: center;
+    width: 100%;
+    word-break: break-word;
+}
+
+.destroy-form {
+    width: 100%;
+    margin-top: auto;
+}
+
+.btn-destroy {
+    width: 100%;
+    margin-top: 0.6rem;
+    border: 1px solid #ff073a;
+    color: #ff073a;
+    background: transparent;
+    box-shadow: 0 0 10px rgba(255, 7, 58, 0.25);
+    text-transform: uppercase;
+    font-family: "Courier New", "Consolas", monospace;
+    letter-spacing: 0.08em;
+    padding: 0.45rem 0.5rem;
+    cursor: pointer;
+}
+
+.btn-destroy:hover {
+    background: #ff073a;
+    color: #050505;
+    box-shadow: 0 0 12px rgba(255, 7, 58, 0.5);
+}
+
+.no-data {
+    grid-column: 1 / -1;
+    border: 1px dashed #39ff14;
+    color: #808090;
+    padding: 0.7rem;
+    text-align: center;
+}
+
+.squads-form-panel {
+    margin-top: 1rem;
+}
+
+.squad-hint {
+    color: #808090;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.squad-comment {
+    margin-top: 0.8rem;
+    color: #808090;
+    font-size: 0.8rem;
+}
+
+.squad-result-card {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid #39ff14;
+    background: rgba(57, 255, 20, 0.05);
+    box-shadow: 0 0 12px rgba(57, 255, 20, 0.2);
+}
+
+.squad-result-card h3 {
+    color: #00f5ff;
+    font-size: 0.95rem;
+}
+
+.squad-result-list {
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+}
+
+.squad-result-list li {
+    padding: 0.6rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #00f5ff;
+    background: rgba(0, 245, 255, 0.07);
+}
+
+
+.squad-header {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+    padding-bottom: 0.8rem;
+}
+
+.profile-thumb {
+    width: 70px;
+    height: 70px;
+    border: 2px solid var(--neon-blue);
+    border-radius: 4px;
+    object-fit: cover;
+    box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+.codename {
+    color: var(--neon-green);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 0;
+}
+
+
+
+/* --- Estética de Combate Laser Tag --- */
+:root {
+    --neon-green: #39ff14;
+    --neon-cyan: #00f5ff;
+    --neon-red: #ff003c;
+    --laser-glow: 0 0 10px rgba(0, 245, 255, 0.7);
+}
+
+/* Animación de fondo: Rayos láser cruzando la pantalla */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: 
+        linear-gradient(90deg, transparent 49.5%, rgba(0, 245, 255, 0.05) 50%, transparent 50.5%),
+        linear-gradient(0deg, transparent 49.5%, rgba(0, 245, 255, 0.05) 50%, transparent 50.5%);
+    background-size: 50px 50px;
+    z-index: -2;
+}
+
+/* El Rayo que cruza de fondo */
+.laser-beam {
+    position: fixed;
+    width: 2px;
+    height: 100%;
+    top: 0;
+    opacity: 0;
+    z-index: -1;
+    animation: laser-shoot 4s infinite;
+}
+
+@keyframes laser-shoot {
+    0% { transform: translateY(-100%) rotate(20deg); opacity: 0; }
+    50% { opacity: 0.6; box-shadow: 0 0 15px var(--neon-cyan); }
+    100% { transform: translateY(100%) rotate(20deg); opacity: 0; }
+}
+
+/* Galería de Rayos (Imágenes) */
+.rays-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 25px;
+    list-style: none;
+    padding: 20px 0;
+}
+
+.ray-img {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--neon-cyan);
+    padding: 15px;
+    position: relative;
+    transition: all 0.3s ease;
+    text-align: center;
+    clip-path: polygon(10% 0, 100% 0, 100% 85%, 90% 100%, 0 100%, 0 15%); /* Corte táctico */
+}
+
+.ray-img:hover {
+    box-shadow: 0 0 20px var(--neon-cyan);
+    transform: translateY(-5px);
+}
+
+.ray-img img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border: 1px solid var(--neon-cyan);
+    filter: grayscale(30%) brightness(1.2);
+}
+
+/* Botón Destruir Rayo */
+.btn-destroy {
+    background: transparent;
+    color: var(--neon-red);
+    border: 1px solid var(--neon-red);
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    margin-top: 10px;
+    transition: 0.2s;
+}
+
+.btn-destroy:hover {
+    background: var(--neon-red);
+    color: white;
+    box-shadow: 0 0 15px var(--neon-red);
+}
+
+.system-card {
+    border: 1px solid var(--neon-green);
+    background: rgba(57, 255, 20, 0.05);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* --- HUD DASHBOARD STYLES --- */
+.hud-dashboard {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Fila de telemetría */
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.stat-card {
+    background: rgba(0, 245, 255, 0.05);
+    border: 1px solid #00f5ff;
+    padding: 1rem;
+    text-align: center;
+    clip-path: polygon(0 0, 100% 0, 100% 80%, 90% 100%, 0 100%);
+}
+
+.stat-card .label {
+    display: block;
+    font-size: 0.7rem;
+    color: #808090;
+    margin-bottom: 0.3rem;
+}
+
+.stat-card .value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #00f5ff;
+}
+
+.green-glow {
+    color: #39ff14 !important;
+    text-shadow: 0 0 8px #39ff14;
+}
+
+/* Caja de Consola */
+.console-box {
+    background: #050505;
+    border: 1px solid #1a1a2e;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    position: relative;
+}
+
+.console-box::before {
+    content: "SYSTEM_LOG";
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    background: #050505;
+    padding: 0 5px;
+    font-size: 0.6rem;
+    color: #1a1a2e;
+}
+
+.typing-effect {
+    color: #39ff14;
+    font-size: 0.9rem;
+    margin: 0.2rem 0;
+    border-right: 2px solid #39ff14;
+    white-space: nowrap;
+    overflow: hidden;
+    width: fit-content;
+    animation: typing 3s steps(40, end), blink 0.5s step-end infinite alternate;
+}
+
+/* Barra de Energía */
+.energy-bars {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem;
+    border: 1px solid #1a1a2e;
+}
+
+/* --- ARCHITECTURE DIAGRAM --- */
+.architecture-map {
+    margin: 1.6rem 0;
+    padding: 1.2rem 1.4rem;
+    border: 1px dashed #1a1a2e;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.diagram-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 1.2rem 0;
+    text-align: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.node {
+    border: 2px solid #00f5ff;
+    padding: 0.6rem 0.9rem;
+    background: rgba(0, 245, 255, 0.1);
+    font-size: 0.8rem;
+    color: #fff;
+    min-width: 110px;
+}
+
+.node span {
+    display: block;
+    font-size: 0.7rem;
+    color: #bbbbc5;
+}
+
+.server-node {
+    border-color: #39ff14;
+    box-shadow: 0 0 15px #39ff14;
+    background: rgba(57, 255, 20, 0.1);
+}
+
+.connector {
+    color: #808090;
+    font-size: 0.7rem;
+    font-family: "Courier New", monospace;
+}
+
+.diagram-caption {
+    font-size: 0.75rem;
+    color: #808090;
+    text-align: center;
+    font-style: italic;
+}
+
+.mission-briefing h2 {
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    margin: 1.4rem 0 0.4rem;
+}
+
+.mission-briefing p {
+    font-size: 0.85rem;
+    color: #c0c0d0;
+}
+
+/* Blinking cursor */
+.blink {
+    animation: blink-anim 1s infinite;
+    color: #39ff14;
+}
+
+@keyframes blink-anim {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.bar-container label {
+    font-size: 0.7rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.bar {
+    height: 10px;
+    background: #1a1a2e;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00f5ff, #39ff14);
+    box-shadow: 0 0 10px #00f5ff;
+    transition: width 1s ease-in-out;
+}
+
+/* Animaciones */
+@keyframes typing { from { width: 0 } to { width: 100% } }
+@keyframes blink { from { border-color: transparent } to { border-color: #39ff14 } }

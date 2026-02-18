@@ -1,65 +1,108 @@
 #!/usr/bin/env python3
-"""CGI que recibe POST del formulario de escuadrones y devuelve página LaserWeb con los datos."""
+import html
 import os
 import sys
 import urllib.parse
+from pathlib import Path
+
 
 def parse_form(body):
     data = urllib.parse.parse_qs(body)
-    team = data.get("team_name", [""])[0]
-    members = data.get("members", [""])[0]
+    team = data.get("team_name", [""])[0].strip()
+    members = data.get("members", [""])[0].strip()
     return team, members
 
-def html_escape(s):
-    return (s.replace("&", "&amp;").replace("<", "&lt;")
-            .replace(">", "&gt;").replace('"', "&quot;"))
+
+def storage_file():
+    root_data = Path(os.getcwd()) / "www" / "data"
+    fallback_data = Path(__file__).resolve().parent.parent / "data"
+    target_data = root_data if root_data.exists() else fallback_data
+    target_data.mkdir(parents=True, exist_ok=True)
+    return target_data / "squads.db"
+
+
+def append_squad(db_path, team, members):
+    if not team:
+        return
+    line = urllib.parse.quote(team, safe="") + "|" + urllib.parse.quote(members, safe="") + "\n"
+    with open(str(db_path), "a") as db_file:
+        db_file.write(line)
+
+
+def read_squads(db_path):
+    squads = []
+    if not db_path.exists():
+        return squads
+    with open(str(db_path), "r") as db_file:
+        for raw in db_file:
+            line = raw.strip()
+            if not line:
+                continue
+            parts = line.split("|", 1)
+            team = urllib.parse.unquote(parts[0]) if parts else ""
+            members = urllib.parse.unquote(parts[1]) if len(parts) > 1 else ""
+            squads.append((team, members))
+    return squads
+
+
+def render_squad_items(squads):
+    if not squads:
+        return "<li>No squads registered yet.</li>"
+    rows = []
+    for team, members in reversed(squads):
+        team_esc = html.escape(team or "(no name)")
+        members_esc = html.escape(members).replace("\n", "<br>") if members else "(no members)"
+        rows.append(
+            "<li>"
+            "<strong>%s</strong><br>"
+            "<span>%s</span>"
+            "</li>" % (team_esc, members_esc)
+        )
+    return "\n".join(rows)
+
 
 length = int(os.environ.get("CONTENT_LENGTH", "0") or "0")
 body = sys.stdin.read(length) if length > 0 else ""
 team_name, members = parse_form(body)
+db = storage_file()
+append_squad(db, team_name, members)
+squads = read_squads(db)
 
-team_esc = html_escape(team_name)
-members_esc = html_escape(members).replace("\n", "<br>") if members else "(sin especificar)"
-
-print("Content-Type: text/html; charset=utf-8")
-print("")
+sys.stdout.write("Content-Type: text/html; charset=utf-8\r\n\r\n")
 print("""<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LaserWeb — Escuadrón registrado</title>
+    <title>LaserWeb - Registered squads</title>
     <link rel="stylesheet" href="/css/laserweb.css">
-    <style>
-        .success-badge{color:#39ff14;font-size:2rem;margin-bottom:1rem}
-        .squad-card{margin:1rem 0;padding:1rem;border:1px solid #39ff14;border-radius:4px;background:rgba(57,255,20,0.05)}
-        .squad-card h3{color:#00f5ff;font-size:0.95rem}
-        .squad-card .members{color:#808090;font-size:0.9rem;margin-top:0.5rem}
-    </style>
+    <link rel="stylesheet" href="/css/laserweb-ops.css">
 </head>
 <body>
     <div class="page">
-        <header><h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1></header>
+        <header><h1 class="logo">L<span>A</span>S<span>E</span>RW<span>E</span>B</h1></header>
         <nav class="nav-hud">
             <a href="/">THE HUD</a>
-            <a href="/upload.html">LOAD LASER</a>
-            <a href="/about.html">THE SQUAD</a>
-            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/upload.html">THE ARMORY</a>
+            <a href="/squad_staff.html">ELITE SQUAD</a>
+            <a href="/cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
             <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
         <main class="panel">
-            <h2>Escuadrones registrados — Rayos en el sistema</h2>
-            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
-            <div class="success-badge">&#9670; NUEVO ESCUADRÓN AÑADIDO</div>
-            <div class="squad-card">
-                <h3>""")
-print(team_esc if team_esc else "(sin nombre)")
-print("""</h3>
-                <p class="members"><strong>Miembros:</strong><br>""")
-print(members_esc)
+            <h2>Active squads</h2>
+            <p class="back-row"><a href="/squads.html" class="btn btn-back">&larr; Register another squad</a></p>
+            <p class="mission-note"><a href="/cgi-bin/junior_squads.py">Open Junior Squads panel</a> to review generated squads.</p>
+            <!-- Evaluation: this is a new HTML page generated by CGI after the POST -->
+            <div class="squad-result-card">
+                <h3>Last squad registered</h3>
+                <p><strong>Team:</strong> """)
+print(html.escape(team_name or "(no name)"))
 print("""</p>
             </div>
-            <p style="margin-top:1.5rem;"><a href="/about.html" class="btn">Registrar otro escuadrón</a></p>
+            <h3 class="page-title">Lista actualizada</h3>
+            <ul class="squad-result-list">""")
+print(render_squad_items(squads))
+print("""</ul>
         </main>
     </div>
 </body>

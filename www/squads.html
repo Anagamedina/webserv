@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb - Squads</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+    <link rel="stylesheet" href="/css/laserweb-ops.css">
+</head>
+<body>
+<div class="page">
+    <header>
+        <h1 class="logo">L<span>A</span>S<span>E</span>RW<span>E</span>B</h1>
+    </header>
+
+    <nav class="nav-hud">
+        <a href="/">THE HUD</a>
+        <a href="/upload.html">THE ARMORY</a>
+        <a href="/squad_staff.html">ELITE SQUAD</a>
+        <a href="/cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
+        <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+    </nav>
+
+    <main class="panel">
+        <h2>Squads - Team registration</h2>
+        <p class="back-row"><a href="/" class="btn btn-back">&larr; Back to HUD</a></p>
+
+        <section class="squads-form-panel">
+            <p class="squad-hint">
+                Define a new squad for the mission. When you submit, the CGI returns a new page with the updated list.
+            </p>
+
+            <!-- Evaluation: this POST sends application/x-www-form-urlencoded to the CGI -->
+            <form action="/cgi-bin/register_squad.py" method="POST">
+                <div class="form-row">
+                    <label for="team-name">Squad name</label>
+                    <input type="text" id="team-name" name="team_name" required placeholder="e.g. Neon Vipers">
+                </div>
+                <div class="form-row">
+                    <label for="team-members">Members and roles</label>
+                    <textarea id="team-members" name="members" rows="4" placeholder="e.g. Nova (Leader), Pulse (Scout)"></textarea>
+                </div>
+                <button type="submit" class="btn">Register squad</button>
+            </form>
+            <p class="squad-comment">The CGI persists the data and you can see them in the JUNIOR SQUADS tab.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>
