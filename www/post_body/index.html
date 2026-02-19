@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaserWeb — Escuadrón registrado</title>
+    <link rel="stylesheet" href="/css/laserweb.css">
+    <style>
+        .success-badge { color: #39ff14; font-size: 2rem; margin-bottom: 1rem; }
+        .squad-confirm { margin: 1.5rem 0; padding: 1rem; border: 1px solid #39ff14; border-radius: 4px; background: rgba(57,255,20,0.05); }
+        .squad-list { margin-top: 1.5rem; }
+        .squad-list h3 { font-size: 0.85rem; color: #00f5ff; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1 class="logo">L<span>Λ</span>S<span>Ξ</span>RW<span>Ξ</span>B</h1>
+        </header>
+
+        <nav class="nav-hud">
+            <a href="/">THE HUD</a>
+            <a href="/upload.html">LOAD LASER</a>
+            <a href="/squad_staff.html">ELITE SQUAD</a>
+            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+        </nav>
+
+        <main class="panel">
+            <h2>Escuadrón registrado — Sistema actualizado</h2>
+            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+
+            <div class="success-badge">&#9670; CONFIRMADO</div>
+            <p style="color: #e0e0e0; margin-bottom: 1rem;">
+                Tu escuadrón láser ha sido registrado correctamente en el sistema de combate.
+            </p>
+
+            <div class="squad-confirm">
+                <p style="font-size: 0.9rem; color: #808090;">
+                    El servidor ha recibido los datos. Con CGI activo se mostrarían aquí el nombre del grupo y los miembros enviados.
+                </p>
+            </div>
+
+            <div class="squad-list">
+                <h3>Escuadrones en el registro</h3>
+                <p style="color: #808090; font-size: 0.9rem;">
+                    Los escuadrones recién añadidos aparecerán aquí cuando el procesamiento CGI esté configurado para esta ruta.
+                </p>
+            </div>
+
+            <p style="margin-top: 1.5rem;">
+                <a href="/squads.html" class="btn">Registrar otro escuadron</a>
+            </p>
+        </main>
+    </div>
+</body>
+</html>

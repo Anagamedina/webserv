@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
+#include <iostream>
 #include <vector>
 
 #include "HttpParser.hpp"
@@ -19,10 +20,22 @@ void HttpParser::parseBody() {
 void HttpParser::parseBodyFixedLength() {
   // Check si el tamano total esperado supera el límite.
   if (_maxBodySize > 0 && _contentLength > _maxBodySize) {
+#ifdef DEBUG
+    std::cerr << "[PARSER BODY LIMIT] Content-Length (" << _contentLength 
+              << ") > Max (" << _maxBodySize << ") -> 413" << std::endl;
+#endif
     _errorStatusCode = 413;
     _state = ERROR;
     return;
   }
+
+#ifdef DEBUG
+  if (_bytesRead == 0 && _contentLength > 0) {
+    std::cerr << "[PARSER BODY START] Content-Length: " << _contentLength 
+              << " bytes, Max allowed: " << (_maxBodySize > 0 ? _maxBodySize : 0)
+              << " (0=unlimited)" << std::endl;
+  }
+#endif
 
   std::size_t remaining = 0;
   if (_contentLength > _bytesRead) remaining = _contentLength - _bytesRead;
@@ -34,11 +47,25 @@ void HttpParser::parseBodyFixedLength() {
     // he leido todo el body.
     //  y comparar con el content-length para saber si he leido todo el body.
     _bytesRead += toRead;
+    
+#ifdef DEBUG
+    if (_bytesRead % (10 * 1024 * 1024) == 0) {  // Log cada 10MB
+      std::cerr << "[PARSER BODY PROGRESS] Read " << (_bytesRead / 1024 / 1024) 
+                << " MB / " << (_contentLength / 1024 / 1024) << " MB" << std::endl;
+    }
+#endif
+    
     // elimino los bytes leidos del buffer para no leerlos de nuevo.
     _buffer.erase(0, toRead);
   }
 
-  if (_bytesRead == _contentLength) _state = COMPLETE;
+  if (_bytesRead == _contentLength) {
+#ifdef DEBUG
+    std::cerr << "[PARSER BODY COMPLETE] Received " << (_bytesRead / 1024 / 1024) 
+              << " MB successfully" << std::endl;
+#endif
+    _state = COMPLETE;
+  }
 }
 
 bool HttpParser::parseChunkSizeLine(std::size_t& size) {

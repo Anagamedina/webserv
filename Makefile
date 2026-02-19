@@ -1,4 +1,4 @@
-# colors 
+# colors
 RESET			= \033[0m
 BLACK_BOLD		= \033[1;30m
 RED_BOLD		= \033[1;31m
@@ -22,8 +22,16 @@ WHITE			= \033[0;37m
 NAME 		= webserver
 
 CXX			= c++
-CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -g	# -g is esential for valgrind
-LDFLAGS		=
+CXXWARNFLAGS	= -Wall -Wextra -Werror -Wshadow
+CXXSTD			= -std=c++98 -pedantic
+COMMON_FLAGS	= $(CXXWARNFLAGS) $(CXXSTD)
+OPT_FLAGS		= -O3
+DEBUG_FLAGS		= -O0 -g -DDEBUG
+LEAK_FLAGS		= -O0 -g3 -DDEBUG -fsanitize=leak
+
+CXXFLAGS		= $(COMMON_FLAGS) $(OPT_FLAGS)
+LDFLAGS			=
+
 
 SRC_DIR		= src
 BIN_DIR		= bin
@@ -78,9 +86,9 @@ DEP_FILES = $(OBJ_FILES:.o=.d)
 all: $(NAME)
 
 #$(BIN_DIR)/$(NAME): $(OBJ_FILES)
+#@mkdir -p $(BIN_DIR)
 $(NAME): $(OBJ_FILES)
 	@printf "$(LIGHT_MAGENTA)==> Linking objects...$(RESET)\n"
-	#@mkdir -p $(BIN_DIR)
 	@$(CXX) $(OBJ_FILES) $(LDFLAGS) -o $@ \
 		&& printf "$(CXX) $(OBJ_FILES) $(LDFLAGS) -o $@\n" \
 		|| { printf "$(RED)==> ✖ Linking failed: $(notdir $<)$(RESET)\n"; exit 1; }
@@ -89,12 +97,11 @@ $(NAME): $(OBJ_FILES)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@printf "$(CYAN)==> Compiling $(WHITE_BOLD)$(notdir $<)...$(RESET)\n"
 	@mkdir -p $(dir $@)
-	#@mkdir -p $(BUILD_DIR)
 	@$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@ \
 		&& printf "$(BLUE)$(CXX) $(CXXFLAGS) $(INCLUDE) -MMD -c $< -o $@$(RESET)\n" \
 		|| { printf "$(RED)==> ✖ Compilation failed: $(notdir $<)$(RESET)\n"; exit 1; }
-	@#printf "$(GREEN)==> Compilation complete.$(RESET)\n"
 
+#printf "$(GREEN)==> Compilation complete.$(RESET)\n"
 clean:
 	@rm -rf $(BIN_DIR) $(BUILD_DIR)
 	@printf "$(YELLOW)==> ✔ Objects and dependencies removed.$(RESET)\n"
@@ -105,12 +112,17 @@ fclean: clean
 
 re: fclean all
 
-leaks: CXXFLAGS += -g -fsanitize=leak -DTDEBUG=1
-leaks: LDFLAGS += -fsanitize=leak
+optimized: CXXFLAGS := $(COMMON_FLAGS) $(OPT_FLAGS)
+optimized: LDFLAGS :=
+optimized: re
+
+release: optimized
+
+leaks: CXXFLAGS := $(COMMON_FLAGS) $(LEAK_FLAGS)
+leaks: LDFLAGS := -fsanitize=leak
 leaks: re
 
-debug: CXXFLAGS += -g -fsanitize=address -DTDEBUG=1
-debug: LDFLAGS += -fsanitize=address
+debug: CXXFLAGS := $(COMMON_FLAGS) $(DEBUG_FLAGS)
 debug: re
 ####################################HTTP TESTS#######################################
 # tests (manual) - HTTP (parser/request)
@@ -174,5 +186,5 @@ bear: fclean
 # extras
 -include $(DEP_FILES)
 
-.PHONY: all clean fclean re bear debug leak test_http_request test_http_parser test_request_processor test_client
+.PHONY: all clean fclean re bear debug leaks optimized release test_http_request test_http_parser test_request_processor test_client
 #.SILENT:

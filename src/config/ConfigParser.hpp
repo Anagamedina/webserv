@@ -13,11 +13,11 @@ class ConfigParser {
   ConfigParser();
   explicit ConfigParser(const std::string& configFile);
   ~ConfigParser();
+
   //	Getters
   const std::string& getConfigFilePath() const;
   size_t getServerCount() const;
   const std::vector<ServerConfig>& getServers() const;
-  // Setters
 
   void parse();
 
@@ -28,7 +28,7 @@ class ConfigParser {
   std::vector<std::string> raw_server_blocks_;
   std::vector<ServerConfig> servers_;
 
-  //	constructors of copy and operator
+  // constructors of copy and operator
   ConfigParser(const ConfigParser& other);
   ConfigParser& operator=(const ConfigParser& other);
 
@@ -36,17 +36,17 @@ class ConfigParser {
   bool validateFileExtension() const;
   bool validateFilePermissions() const;
   bool validateBalancedBrackets() const;
-
   std::string preprocessConfigFile() const;
-
   void loadServerBlocks();
   void splitContentIntoServerBlocks(const std::string& content,
                                     const std::string& typeOfExtraction);
-
   void parseAllServerBlocks();
   void parseListen(ServerConfig& server,
                    const std::vector<std::string>& tokens);
+  void parseHost(ServerConfig& server, const std::vector<std::string>& tokens);
   void parseMaxSizeBody(ServerConfig& server,
+                        const std::vector<std::string>& tokens);
+  void parseMaxSizeBody(LocationConfig& loc,
                         const std::vector<std::string>& tokens);
   void parseErrorPage(ServerConfig& server, std::vector<std::string>& tokens);
   void parseUploadBonus(LocationConfig& loc,
@@ -58,12 +58,10 @@ class ConfigParser {
   void parseServerName(ServerConfig& server,
                        const std::vector<std::string>& tokens);
   void parseLocationBlock(ServerConfig& server, std::stringstream& ss,
-                          std::string& line, std::vector<std::string>& tokens);
-
-  //	TODO: move to serverconfig like function()
+                          std::string& line, const std::vector<std::string>& tokens);
   ServerConfig parseSingleServerBlock(const std::string& blockContent);
+  void validateDirectiveLine(const std::string& line) const;
+  void checkDuplicateServerConfig() const;
 };
-
-// ostream
 
 #endif  // WEBSERV_CONFIGPARSER_HPP

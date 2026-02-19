@@ -29,12 +29,14 @@ class CgiExecutor {
    * @param request: HTTP request from client
    * @param script_path: Full path to CGI script
    * @param interpreter_path: Path to interpreter (empty for executable scripts)
+   * @param serverConfig: Server configuration for environment variables
    * @return Pointer to CgiProcess to track execution
    *         NULL if fork/pipe creation failed
    */
   CgiProcess* executeAsync(const HttpRequest& request,
                            const std::string& script_path,
-                           const std::string& interpreter_path);
+                           const std::string& interpreter_path,
+                           const ServerConfig& serverConfig);
 
  private:
   /**
@@ -42,10 +44,12 @@ class CgiExecutor {
    *
    * @param request: HTTP request
    * @param script_path: CGI script path
+   * @param serverConfig: Server configuration
    * @return Map of environment variables
    */
   std::map<std::string, std::string> prepareEnvironment(
-      const HttpRequest& request, const std::string& script_path);
+      const HttpRequest& request, const std::string& script_path,
+      const ServerConfig& serverConfig);
 
   /**
    * Convert environment map to C-style array for execve

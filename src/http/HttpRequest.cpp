@@ -80,6 +80,8 @@ void HttpRequest::setMethod(const std::string& method) {
     _method = HTTP_METHOD_POST;
   else if (upperMethod == "DELETE")
     _method = HTTP_METHOD_DELETE;
+  else if (upperMethod == "HEAD")
+    _method = HTTP_METHOD_HEAD;
   else
     _method = HTTP_METHOD_UNKNOWN;
 }
@@ -170,7 +172,7 @@ std::string HttpRequest::getPath() const { return _path; }
 
 std::string HttpRequest::getQuery() const { return _query; }
 
-std::vector<char> HttpRequest::getBody() const { return _body; }
+const std::vector<char>& HttpRequest::getBody() const { return _body; }
 
 HttpStatus HttpRequest::getStatus() const { return _status; }
 

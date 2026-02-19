@@ -6,8 +6,13 @@
 
 #include "CgiProcess.hpp"
 
+#include <signal.h>
+#include <sys/signal.h>
+#include <sys/wait.h>
+
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -31,7 +36,28 @@ CgiProcess::CgiProcess(const std::string& script_path,
       timeout_secs_(timeout_secs) {}
 
 CgiProcess::~CgiProcess() {
-  // Pipes will be closed by the caller (Client/ServerManager)
+  terminateProcess();
+  closePipeIn();
+  closePipeOut();
+}
+
+void CgiProcess::terminateProcess() {
+  if (pid_ <= 0) {
+    return;
+  }
+
+  int status = 0;
+  pid_t ret = waitpid(pid_, &status, WNOHANG);
+
+  // Child still running -> terminate and reap.
+  if (ret == 0) {
+    kill(pid_, SIGKILL);
+    while (waitpid(pid_, &status, 0) == -1 && errno == EINTR) {
+    }
+  }
+
+  // If already exited/reaped (ret > 0 or ECHILD), just mark as not owned.
+  pid_ = -1;
 }
 
 bool CgiProcess::appendResponseData(const char* data, size_t len) {

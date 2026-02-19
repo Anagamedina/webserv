@@ -1,0 +1,111 @@
+# Configuration NGINX for WebServer
+# Testing all routes in www/
+
+server { 
+    #listen 8080:127.0.0.1;
+    listen 127.0.0.1:1024;
+    #server_name localhost;
+    server_name ab;
+    server_name abc;
+
+    # Global root for this server block
+    root ./www;
+#     root ./wwww;
+
+    # Default index files
+    #index index.html index.htm;
+    
+    # Max body size (e.g. 10MB)
+#   client_max_body_size 10485760;
+    client_max_body_size 10485761;
+
+    # Custom Error Pages
+    error_page 404 /errors/404.html;
+    error_page 500 502 503 504 /errors/500.html;
+    error_page 500 502 503 504 /errors/500.htm;
+#     error_page 10 /errors/404.htm;
+
+    # Main location
+    location / {
+        autoindex on;
+        #autoindex on off;
+        allow_methods GET POST HEAD DELETE GET;
+    } 
+
+#     location \ }
+#         autoindex on;
+#         #autoindex on off;
+#         allow_methods GET POST HEAD DELETE;
+#     {
+    # Images directory
+#     location /images {
+#         root ./www;
+#         autoindex on;
+#         methods GET;
+#     }
+#
+#     # CSS directory
+#     location /css {
+#         root ./www;
+#         methods GET;
+#     }
+#
+#     # Docs directory
+#     location /docs {
+#         root ./www;
+#         autoindex on;
+#         methods GET;
+#     }
+#
+#     # Head test directory
+#     location /head_test {
+#         root ./www;
+#         autoindex on;
+#         methods GET;
+#     }
+#
+#     # Uploads directory
+#     # Ensure this directory exists in ./www/uploads
+#     location /uploads {
+#         root ./www;
+#         autoindex on;
+#         upload_store ./www/uploads;
+#         method GET POST DELETE;
+#     }
+#
+#     # Redirection test
+#     location /google {
+#         return 301 https://www.google.com;
+#     }
+#
+    # CGI Scripts
+    location /cgi-bin {
+        root ./www;
+        cgi .py /usr/bin/python3;
+        cgi .sh /bin/bash;
+        allow_methods GET POST;
+    }
+
+    # Subject requirement test
+#     location /YoupiBanane {
+#         root ./www;
+#         index youpi.bad_extension;
+#         autoindex on;
+# 		methods GET POST;
+#     }
+
+#     # Specific files test
+#     location /about.html {
+#         root ./www;
+#         methods GET;
+#     }
+}
+server {
+    #listen 8080:127.0.0.1;
+    listen 127.0.0.1:1024;
+    #server_name localhost;
+    server_name a;
+
+    # Global root for this server block
+    root ./www;
+}

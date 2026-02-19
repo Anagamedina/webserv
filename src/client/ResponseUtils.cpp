@@ -32,6 +32,9 @@ void fillBaseResponse(HttpResponse& response, const HttpRequest& request, int st
     if (!response.hasHeader("content-type"))
         response.setContentType(request.getPath());
     response.setBody(body);
+    if (request.getMethod() == HTTP_METHOD_HEAD) {
+        response.setHeadOnly(true);
+    }
 
     addSessionCookieIfNeeded(response, request, statusCode);
 }

@@ -122,9 +122,7 @@ Apuntes extra sobre el flujo correcto (lo que nos recomendaron y ya corregimos):
    - método permitido  
    - body size  
    - redirect  
-   Por qué: son reglas lógicas; si falla aquí, no tocamos disco.
-
-5) Resolver path real  
+   Por qué: son reglas lógicas; si falla aquí, no tocamos disco.5) Resolver path real  
    - root/alias + uri → path físico  
    Por qué: necesitamos la ruta real para acceder al filesystem.6) Decidir respuesta  
    - estático (leer archivo)  

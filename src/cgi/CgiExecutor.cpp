@@ -13,6 +13,8 @@
 
 #include "CgiExecutor.hpp"
 
+#include "client/RequestProcessorUtils.hpp"
+
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -20,21 +22,19 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
-static std::string methodToString(HttpMethod method) {
-  if (method == HTTP_METHOD_GET) return "GET";
-  if (method == HTTP_METHOD_POST) return "POST";
-  if (method == HTTP_METHOD_DELETE) return "DELETE";
-  return "";
-}
-
-static std::string bodyToString(const std::vector<char>& body) {
-  return std::string(body.begin(), body.end());
+static void closeIfValid(int& fd) {
+  if (fd >= 0) {
+    close(fd);
+    fd = -1;
+  }
 }
 
 CgiExecutor::CgiExecutor() {}
@@ -43,20 +43,21 @@ CgiExecutor::~CgiExecutor() {}
 
 CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
                                       const std::string& script_path,
-                                      const std::string& interpreter_path) {
+                                      const std::string& interpreter_path,
+                                      const ServerConfig& serverConfig) {
   // Step 1: Create communication pipes
   // pipe_in: parent writes request body to child stdin
   // pipe_out: parent reads CGI output from child stdout
 
-  int pipe_in[2];   // Parent → Child (request body)
-  int pipe_out[2];  // Child → Parent (response)
+  int pipe_in[2] = {-1, -1};   // Parent → Child (request body)
+  int pipe_out[2] = {-1, -1};  // Child → Parent (response)
 
   if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
     std::cerr << "Failed to create pipes for CGI" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -65,10 +66,10 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
   if (!setNonBlocking(pipe_in[1]) || !setNonBlocking(pipe_out[0])) {
     std::cerr << "Failed to set pipes non-blocking" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -77,10 +78,10 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
   pid_t pid = fork();
   if (pid == -1) {
     std::cerr << "Failed to fork CGI process" << std::endl;
-    close(pipe_in[0]);
-    close(pipe_in[1]);
-    close(pipe_out[0]);
-    close(pipe_out[1]);
+    closeIfValid(pipe_in[0]);
+    closeIfValid(pipe_in[1]);
+    closeIfValid(pipe_out[0]);
+    closeIfValid(pipe_out[1]);
     return NULL;
   }
 
@@ -97,9 +98,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     close(pipe_out[0]);
     close(pipe_out[1]);
 
-    // Set alarm for timeout (5 seconds)
-    alarm(5);
-
     // Extract script directory and filename
     std::string script_dir = ".";
     std::string script_name = script_path;
@@ -111,37 +109,63 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // Change to script directory
     if (chdir(script_dir.c_str()) == -1) {
-      perror("chdir failed");
-      exit(1);
+      std::cerr << "chdir failed: " << std::strerror(errno) << std::endl;
+      kill(getpid(), SIGKILL);
     }
 
     // Prepare environment variables
     // INFO: Use full path for SCRIPT_FILENAME env var
     std::map<std::string, std::string> env_map =
-        prepareEnvironment(request, script_path);
+        prepareEnvironment(request, script_path, serverConfig);
+#ifdef DEBUG
+    std::cout << "[CGI ENV] script=" << script_path << std::endl;
+    for (std::map<std::string, std::string>::const_iterator it =
+             env_map.begin();
+         it != env_map.end(); ++it) {
+      std::cerr << "[CGI ENV] " << it->first << "=" << it->second << std::endl;
+    }
+#endif
     char** envp = createEnvArray(env_map);
 
     // Prepare arguments - use just the script filename after chdir
     // Prefix with ./ for relative paths to work with /usr/bin/env and direct
     // execution
     std::string relative_script = "./" + script_name;
+    // We use a vector to hold the allocated pointers so we can track them if
+    // needed, though in a successful execve they are replaced, and on failure
+    // we kill the process. so we do not need to delete them manually since the
+    // process will wipe memory it self
+
     char* args[3];
+    args[0] = NULL;
+    args[1] = NULL;
+    args[2] = NULL;
+
     if (!interpreter_path.empty()) {
-      args[0] = strdup(interpreter_path.c_str());
-      args[1] = strdup(relative_script.c_str());
-      args[2] = NULL;
+      args[0] = new char[interpreter_path.size() + 1];
+      std::strcpy(args[0], interpreter_path.c_str());
+
+      args[1] = new char[relative_script.size() + 1];
+      std::strcpy(args[1], relative_script.c_str());
     } else {
-      args[0] = strdup(relative_script.c_str());
-      args[1] = NULL;
-      args[2] = NULL;
+      args[0] = new char[relative_script.size() + 1];
+      std::strcpy(args[0], relative_script.c_str());
     }
 
     const char* exec_path = args[0];
+
+#ifdef DEBUG
+    std::cerr << "[CGI CMD] Executing: " << exec_path << std::endl;
+    for (int i = 0; args[i] != NULL; ++i) {
+      std::cerr << "  [CGI ARG " << i << "] " << args[i] << std::endl;
+    }
+#endif
+
     execve(exec_path, args, envp);
 
     // If execve fails
-    perror("execve failed");
-    exit(1);
+    std::cerr << "execve failed: " << std::strerror(errno) << std::endl;
+    kill(getpid(), SIGKILL);
 
   } else {
     // PARENT PROCESS
@@ -155,11 +179,12 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // Create CgiProcess tracker object
     // The Client will own this and clean it up when done
-    std::string body = bodyToString(request.getBody());
+    const std::vector<char>& requestBody = request.getBody();
+    std::string body(requestBody.begin(), requestBody.end());
     CgiProcess* proc =
         new CgiProcess(script_path, interpreter_path,
-                       pipe_in[1],           // Pass write end to CgiProcess
-                       pipe_out[0], pid, 5,  // 5 second timeout
+               pipe_in[1],                          // Write end
+               pipe_out[0], pid, serverConfig.getCgiTimeout(),
                        body);
 
     return proc;
@@ -169,7 +194,8 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 }
 
 std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
-    const HttpRequest& request, const std::string& script_path) {
+    const HttpRequest& request, const std::string& script_path,
+    const ServerConfig& serverConfig) {
   std::map<std::string, std::string> env;
 
   // Step 1: Core CGI/HTTP Variables
@@ -217,9 +243,14 @@ std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
   env["REQUEST_URI"] = uri;
 
   // Step 5b: Server identification (CGI/1.1 spec)
-  // TODO: Extract actual values from ServerConfig when available
-  env["SERVER_NAME"] = "localhost";
-  env["SERVER_PORT"] = "8080";  // TODO: Get from listening socket
+  env["SERVER_NAME"] = serverConfig.getServerName();
+  std::ostringstream port_ss;
+  port_ss << serverConfig.getPort();
+  env["SERVER_PORT"] = port_ss.str();
+  env["PATH_INFO"] =
+      request.getPath();  // We only support direct script execution for now
+  env["PATH_TRANSLATED"] = "";     // Corresponding physical path
+  env["REDIRECT_STATUS"] = "200";  // Required by php-cgi in some setups
 
   // Step 6: HTTP Request Headers as HTTP_* variables
 
@@ -248,7 +279,9 @@ char** CgiExecutor::createEnvArray(
   for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
        it != env_map.end(); ++it) {
     std::string s = it->first + "=" + it->second;
-    envp[i++] = strdup(s.c_str());
+    envp[i] = new char[s.size() + 1];
+    std::strcpy(envp[i], s.c_str());
+    i++;
   }
   envp[i] = NULL;
   return envp;

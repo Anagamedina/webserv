@@ -11,13 +11,12 @@
 
 /**
  * ServerConfig stores configuration for one server { } block
- *
  * Corresponds to nginx-like config:
  * server {
  *     listen 8080;
  *     host 127.0.0.1;
  *     server_name example.com;
- *     max_body_size 1048576;
+ *     max_body_size 1048576 (bytes);
  *     error_page 404 /404.html;
  *     location / { ... }
  * }
@@ -39,6 +38,7 @@ class ServerConfig {
   void setRoot(const std::string& root);
   void addIndex(const std::string& index);
   void setMaxBodySize(size_t size);
+  void setCgiTimeout(int seconds);
   void addErrorPage(int code, const std::string& path);
   void addLocation(const LocationConfig& location);
   void setAutoIndex(bool autoindex);
@@ -52,11 +52,13 @@ class ServerConfig {
   const std::string& getRoot() const;
   const std::vector<std::string>& getIndexVector() const;
   size_t getMaxBodySize() const;
+  int getCgiTimeout() const;
   const std::map<int, std::string>& getErrorPages() const;
   const std::vector<LocationConfig>& getLocations() const;
   bool getAutoindex() const;
   int getRedirectCode() const;
   const std::string& getRedirectUrl() const;
+  size_t getGlobalMaxBodySize() const;
 
   // Debug
   void print() const;
@@ -68,6 +70,7 @@ class ServerConfig {
   std::string root_;
   std::vector<std::string> indexes_;
   size_t max_body_size_;  // max is 1048576 (bytes)
+  int cgi_timeout_;
   std::map<int, std::string> error_pages_;
   std::vector<LocationConfig> locations_;
   bool autoindex_;
@@ -85,7 +88,9 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
      << "\n"
      << "\t" << config::colors::yellow
      << "Server name: " << config::colors::reset << config::colors::green
-     << config.getServerName() << config::colors::reset << "\n";
+     << config.getServerName() << config::colors::reset << "\n"<< config::colors::yellow
+	 << "\tMax body size: " << config::colors::reset << config::colors::green
+	 << config.getMaxBodySize() << config::colors::reset << "\n";
 
   const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
   os << "\t" << config::colors::yellow << "Error pages:\n"
@@ -120,6 +125,7 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
   }
   return os;
 }
+
 /*
 inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
     os << config::colors::blue << "Server Config:\n"

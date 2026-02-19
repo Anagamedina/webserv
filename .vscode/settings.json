@@ -49,6 +49,13 @@
         "variant": "cpp",
         "vector": "cpp",
         "algorithm": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "charconv": "cpp",
+        "forward_list": "cpp",
+        "fstream": "cpp",
+        "future": "cpp",
+        "iomanip": "cpp",
+        "regex": "cpp",
+        "set": "cpp"
     }
 }

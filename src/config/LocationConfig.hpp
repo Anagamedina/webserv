@@ -8,6 +8,20 @@
 
 #include "ConfigUtils.hpp"
 
+/**
+ * @brief Represents the configuration for a specific location within a server
+ * block.
+ *
+ * This class handles parsing and storing settings defined in a 'location block',
+ * such as:
+ * - content root directory
+ * - allowed HTTP methods (GET, POST, DELETE, HEAD)
+ * - default index files in a vector
+ * - autoindex status boolean
+ * - file upload directory
+ * - HTTP redirection
+ * - CGI handlers like a map
+ */
 class LocationConfig {
  public:
   LocationConfig();
@@ -25,6 +39,7 @@ class LocationConfig {
   void setRedirectCode(int integerCode);
   void setRedirectUrl(const std::string& redirectUrl);
   void setRedirectParamCount(int count);
+  void setMaxBodySize(size_t size);
   void addCgiHandler(const std::string& extension,
                      const std::string& binaryPath);
 
@@ -38,6 +53,7 @@ class LocationConfig {
   int getRedirectCode() const;
   const std::string& getRedirectUrl() const;
   int getRedirectParamCount() const;
+  size_t getMaxBodySize() const;
   std::string getCgiPath(const std::string& extension) const;
   const std::map<std::string, std::string>& getCgiHandlers() const;
 
@@ -48,15 +64,16 @@ class LocationConfig {
   void print() const;
 
  private:
-  std::string path_;                          // /upload, /, /api, etc.
-  std::string root_;                          // root ./www
-  std::vector<std::string> indexes_;          // index index.html index.htm ...
-  std::vector<std::string> allowed_methods_;  // methods GET POST DELETE
-  bool autoindex_;                            // autoindex on/off
-  std::string upload_store_;                  // upload_store ./uploads
-  int redirect_code_;                         // return 301 /new-path (optional)
-  std::string redirect_url_;                  // return /new-path (optional)
-  int redirect_param_count_;  // Number of params in return directive
+  std::string path_;
+  std::string root_;
+  std::vector<std::string> indexes_;
+  std::vector<std::string> allowed_methods_;
+  bool autoindex_;
+  std::string upload_store_;
+  int redirect_code_;
+  std::string redirect_url_;
+  int redirect_param_count_;
+  size_t max_body_size_;
   std::map<std::string, std::string> cgi_handlers_;
 };
 
@@ -84,9 +101,12 @@ inline std::ostream& operator<<(std::ostream& os,
        << location.getUploadStore() << config::colors::reset << "\n";
   } else {
     os << "\t" << config::colors::yellow
-       << "Upload Store: " << config::colors::reset << config::colors::red
        << "empty" << config::colors::reset << "\n";
   }
+
+  os << "\t" << config::colors::yellow
+     << "Max Body Size: " << config::colors::reset << config::colors::green
+     << location.getMaxBodySize() << config::colors::reset << "\n";
 
   if (location.getRedirectCode() != -1) {
     os << "\t" << config::colors::yellow << "Return ("

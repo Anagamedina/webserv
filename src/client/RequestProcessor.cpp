@@ -1,5 +1,9 @@
 #include "RequestProcessor.hpp"
 
+#include <cerrno>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "ErrorUtils.hpp"
 #include "RequestProcessorUtils.hpp"
 #include "ResponseUtils.hpp"
@@ -12,12 +16,16 @@
 // 3) Matching location (LocationConfig por URI)
 // 4) Validaciones (método, tamaño body, redirect)
 // 5) Resolver path real (root/alias + uri)
+// 6) Si es CGI → retorna false para que Client ejecute CgiExecutor
+// 7) Si no, servir estático o errores, retorna true
 // 6) Decidir respuesta (estático o CGI) + errores
 // 7) Rellenar HttpResponse
-void RequestProcessor::process(const HttpRequest& request,
-                               const std::vector<ServerConfig>* configs,
-                               int listenPort, int parseErrorCode,
-                               HttpResponse& response) {
+
+RequestProcessor::ProcessingResult RequestProcessor::process(
+    const HttpRequest& request, const std::vector<ServerConfig>* configs,
+    int listenPort, int parseErrorCode) {
+  ProcessingResult result;
+
   int statusCode = HTTP_STATUS_OK;
   std::string resolvedPath = "";
   bool isCgi = false;
@@ -26,55 +34,104 @@ void RequestProcessor::process(const HttpRequest& request,
   const ServerConfig* server = 0;
   const LocationConfig* location = 0;
 
-  // 1) Errores primero: si el parser falló, respondemos con el código adecuado
+  // 1) Errores primero
   if (parseErrorCode != 0 || request.getMethod() == HTTP_METHOD_UNKNOWN) {
-    statusCode = (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
+    statusCode =
+        (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
     body = toBody(getErrorDescription(statusCode));
     shouldClose = true;
-    fillBaseResponse(response, request, statusCode, shouldClose, body);
-    return;
+    //fillBaseResponse(response, request, statusCode, shouldClose, body);
+    //return true;
+    fillBaseResponse(result.response, request, statusCode, shouldClose, body);
+    return result;
   }
 
-  // 2) Seleccionar servidor por puerto y buscar location que coincida con el path
+  // 2) Seleccionar servidor y location
   server = selectServerByPort(listenPort, configs);
   if (server) location = matchLocation(*server, request.getPath());
 
   if (location) {
-    // Hay location: validar y resolver la ruta real en disco
+    // Validar y resolver
     int validationCode = validateLocation(request, server, location);
     if (validationCode != 0) {
       if (validationCode == 301 || validationCode == 302) {
-        // Redirect: enviar respuesta con header Location
         body.clear();
-        fillBaseResponse(response, request, validationCode, shouldClose, body);
-        response.setHeader("Location", location->getRedirectUrl());
-        return;
+        fillBaseResponse(result.response, request, validationCode, shouldClose,
+                         body);
+        result.response.setHeader("Location", location->getRedirectUrl());
+        return result;
       }
-      buildErrorResponse(response, request, validationCode, true, server);
-      return;
+      buildErrorResponse(result.response, request, validationCode, true,
+                         server);
+      return result;
     }
 
     resolvedPath = resolvePath(*server, location, request.getPath());
-    std::cout << " DEBUG: Intentando abrir: [" << resolvedPath << "]"
+#ifdef DEBUG
+    std::cout << " DEBUG: Trying to open: [" << resolvedPath << "]"
               << std::endl;
-    isCgi =
-        isCgiRequest(resolvedPath) || isCgiRequestByConfig(location, resolvedPath);
+#endif
+
+    isCgi = isCgiRequest(resolvedPath) ||
+            isCgiRequestByConfig(location, resolvedPath);
 
     if (isCgi) {
-      // CGI no implementado aún -> 501
-      buildErrorResponse(response, request, 501, true, server);
-      return;
+      std::string interpreterPath;
+      if (location) {
+        std::string ext = getFileExtension(resolvedPath);
+        interpreterPath = location->getCgiPath(ext);
+      }
+
+      if (interpreterPath.empty()) {
+        struct stat st;
+        if (stat(resolvedPath.c_str(), &st) != 0) {
+          int code = (errno == ENOENT || errno == ENOTDIR)
+                         ? HTTP_STATUS_NOT_FOUND
+                         : HTTP_STATUS_FORBIDDEN;
+          buildErrorResponse(result.response, request, code, true, server);
+          return result;
+        }
+
+        if (!S_ISREG(st.st_mode)) {
+          buildErrorResponse(result.response, request, HTTP_STATUS_FORBIDDEN,
+                             true, server);
+          return result;
+        }
+
+        if (access(resolvedPath.c_str(), X_OK) != 0) {
+          int code = (errno == ENOENT || errno == ENOTDIR)
+                         ? HTTP_STATUS_NOT_FOUND
+                         : HTTP_STATUS_FORBIDDEN;
+          buildErrorResponse(result.response, request, code, true, server);
+          return result;
+        }
+      } else {
+        if (access(interpreterPath.c_str(), X_OK) != 0) {
+          buildErrorResponse(result.response, request,
+                             HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);
+          return result;
+        }
+      }
+
+      result.action = ACTION_EXECUTE_CGI;
+      result.cgiInfo.scriptPath = resolvedPath;
+      result.cgiInfo.server = server;
+      result.cgiInfo.interpreterPath = interpreterPath;
+      return result;
     }
 
-    // Servir archivo estático (o error 403/404)
+    // Servir archivo estático
+                         //response))
     if (handleStaticPath(request, server, location, resolvedPath, body,
-                         response))
-      return;
+                         result.response)) {
+      return result;
+    }
   } else {
-    // No hay location que coincida -> 404
-    buildErrorResponse(response, request, 404, false, server);
-    return;
+    // 404 Not Found
+    buildErrorResponse(result.response, request, 404, false, server);
+    return result;
   }
 
-  fillBaseResponse(response, request, statusCode, shouldClose, body);
+  fillBaseResponse(result.response, request, statusCode, shouldClose, body);
+  return result;
 }

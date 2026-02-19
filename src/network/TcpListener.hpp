@@ -4,7 +4,7 @@
 
 class TcpListener {
  public:
-  TcpListener(int port);
+  TcpListener(const std::string& host, int port);
   ~TcpListener();
 
   void listen();
@@ -18,6 +18,7 @@ class TcpListener {
  private:
   int socket_fd_;
   int port_;
+  std::string host_;
 
   void createSocket();
   void setSocketOptions();

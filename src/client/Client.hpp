@@ -15,76 +15,107 @@
 class ServerManager;
 class CgiProcess;
 
-// Representa una conexion TCP con un cliente.
-// Se encarga de:
-// - Acumular bytes que vienen del socket.
-// - Pasarlos al HttpParser.
-// - Cuando hay HttpRequest completa, invocar a RequestProcessor.
-// - Acumular la respuesta serializada y enviarla por el socket.
+// -----------------------------------------------------------------------------
+// TIPOS (fuera de la clase, visibles y reutilizables)
+// -----------------------------------------------------------------------------
 
-// El cliente no puede leer/escribir sin control: necesita saber en que estado
-// esta para que el bucle principal escuche eventos.
 enum ClientState {
-  STATE_IDLE,  // Conexion abierta sin peticion activa (despues de accept).
-  STATE_READING_HEADER,
-  STATE_READING_BODY,
+  STATE_IDLE,           // Sin petición activa
+  STATE_READING_HEADER, // Leyendo headers del cliente
+  STATE_READING_BODY,   // Leyendo body (POST, etc.)
   STATE_WRITING_RESPONSE,
   STATE_CLOSED
 };
 
+struct PendingResponse {
+  std::string data;
+  bool closeAfter;
+  PendingResponse(const std::string& d, bool c) : data(d), closeAfter(c) {}
+};
+
+// -----------------------------------------------------------------------------
+// CLIENT - Representa una conexión TCP con un cliente
+// -----------------------------------------------------------------------------
+// Responsabilidades:
+//   - Recibir datos (recv) y pasarlos al HttpParser
+//   - Cuando hay request completa → RequestProcessor → HttpResponse
+//   - Encolar y enviar respuestas (send)
+// -----------------------------------------------------------------------------
 class Client {
- private:
-  Client(const Client&);
-  Client& operator=(const Client&);
 
-  int _fd;
-  std::string _inBuffer;  // datos recibidos aún sin procesar
-  std::string
-      _outBuffer;  // respuesta lista para enviar (o parcialmente enviada)
-  HttpParser _parser;
-  HttpResponse _response;
-  RequestProcessor _processor;
-  const std::vector<ServerConfig>* _configs;
-  int _listenPort;
-  ClientState _state;
-  time_t _lastActivity;  // para gestionar timeouts
-  ServerManager* _serverManager;
-  CgiProcess* _cgiProcess;
-  bool _closeAfterWrite;
-  bool _sent100Continue;  // Para Expect: 100-continue (respuesta intermedia)
-  struct PendingResponse {
-    std::string data;
-    bool closeAfter;
-    PendingResponse(const std::string& d, bool c) : data(d), closeAfter(c) {}
-  };
-  std::queue<PendingResponse> _responseQueue;
-
-  // Invocado cuando el parser marca una HttpRequest como completa.
-  bool handleCompleteRequest();
-  void enqueueResponse(const std::vector<char>& data, bool closeAfter);
-  void handleExpect100();
-  bool startCgiIfNeeded(const HttpRequest& request);
-  void finalizeCgiResponse();
+  // Saved request state for CGI
+  bool _savedShouldClose;
+  HttpVersion _savedVersion;
 
  public:
+  // ---- Constructor y destructor ----
   Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
   ~Client();
 
-  // Getters
+  // ---- Getters (para que el bucle principal sepa el estado) ----
   int getFd() const;
   ClientState getState() const;
   bool needsWrite() const;
   bool hasPendingData() const;
   time_t getLastActivity() const;
 
-  // Manejo de eventos
+  // ---- Manejo de eventos (llamados desde ServerManager/epoll) ----
+  void setServerManager(ServerManager* serverManager);
   void handleRead();
   void handleWrite();
   void handleCgiPipe(int pipe_fd, size_t events);
-  void setServerManager(ServerManager* serverManager);
+  bool checkCgiTimeout();
 
-  // Construccion de respuesta
+  // ---- Construcción de respuesta (llamado internamente) ----
   void buildResponse();
+
+ private:
+  // ---- Copia prohibida ----
+  Client(const Client&);
+  Client& operator=(const Client&);
+
+  // ---- Datos del socket y conexión ----
+  int _fd;
+  int _listenPort;
+  const std::vector<ServerConfig>* _configs;
+  ClientState _state;
+  time_t _lastActivity;
+  bool _forceCloseCurrentResponse;
+
+  // ---- Buffers ----
+  std::string _outBuffer;  // Respuesta lista para enviar
+  std::queue<PendingResponse> _responseQueue;
+
+  // ---- Parser y respuesta HTTP ----
+  HttpParser _parser;
+  HttpResponse _response;
+  RequestProcessor _processor;
+
+  // ---- CGI (si hay script en ejecución) ----
+  ServerManager* _serverManager;
+  CgiProcess* _cgiProcess;
+
+  // ---- Flags ----
+  bool _closeAfterWrite;
+  bool _sent100Continue;  // Para Expect: 100-continue
+
+  // ---- Funciones auxiliares (solo usadas dentro de la clase) ----
+  bool handleCompleteRequest();  // Request parseada → construir y encolar respuesta
+  void enqueueResponse(const std::vector<char>& data, bool closeAfter);
+  void handleExpect100();  // Expect: 100-continue
+  bool startCgiIfNeeded(const HttpRequest& request);
+  void finalizeCgiResponse();
+
+  // Invocado cuando el parser marca una HttpRequest como completa.
+  void finalizeCgiResponse(const CgiProcess* finishedProcess);
+  void processRequests();
+  //
+  // Invocado cuando el parser marca una HttpRequest como completa.
+  void dispatchAction(const HttpRequest& request, const RequestProcessor::ProcessingResult& result);
+  bool startCgi(const RequestProcessor::CgiInfo& cgiInfo);
+
+  bool executeCgi(const RequestProcessor::CgiInfo& cgiInfo);
+
 };
 
 #endif  // CLIENT_HPP

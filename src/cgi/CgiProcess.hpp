@@ -85,6 +85,10 @@ class CgiProcess {
   int getStatusCode() const { return status_code_; }
   void setStatusCode(int code) { status_code_ = code; }
 
+  // Explicit process termination for timeout/error paths.
+  // Normal destruction must not send signals to avoid PID reuse races.
+  void terminateProcess();
+
   // ========== Timeout Management ==========
   bool isTimedOut() const;
   time_t getStartTime() const { return start_time_; }

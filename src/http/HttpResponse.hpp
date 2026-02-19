@@ -28,6 +28,7 @@ class HttpResponse {
   HeaderMap _headers;
   std::string _reasonPhrase;
   std::vector<char> _body;
+  bool _headOnly;
 
  public:
   HttpResponse();
@@ -41,6 +42,7 @@ class HttpResponse {
   void setBody(const std::vector<char>& body);
   void setHeader(const std::string& key, const std::string& value);
   void setVersion(const std::string& version);
+  void setHeadOnly(bool value);
   // La «razón» (reason phrase) en las respuestas HTTP es un texto breve y
   // legible por humanos que acompaña al código de estado n     //umérico (ej.
   // 200)
@@ -59,6 +61,8 @@ class HttpResponse {
   // comprobar si ya existe un header (se usa para no sobreescribir
   // Content-Type)
   bool hasHeader(const std::string& key) const;
+
+  void clear();
 };
 
 #endif  // HTTP_RESPONSE_HPP

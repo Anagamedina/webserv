@@ -1,13 +1,16 @@
 # Header-only library
 
-# INTERFACE library: no se compila, solo proporciona headers
-# Útil para bibliotecas que solo contienen .hpp sin .cpp
-add_library(common INTERFACE)
+# STATIC library: compila los archivos .cpp en un archivo .a
+add_library(common STATIC
+    StringUtils.cpp
+    StringUtils.hpp
+    StringUtils.tpp
+    namespaces.hpp
+)
 
 # Especificamos donde están los headers para que otros módulos puedan incluirlos
-# INTERFACE: solo quien use 'common' puede acceder a estos directorios
-# Esto permite hacer: #include "common/namespaces.hpp"
-target_include_directories(common INTERFACE
+# PUBLIC: tanto 'common' como quien use 'common' accederán a estos directorios
+target_include_directories(common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR} # src/common/
 )
 

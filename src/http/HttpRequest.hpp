@@ -10,6 +10,7 @@ enum HttpMethod {
   HTTP_METHOD_GET,
   HTTP_METHOD_POST,
   HTTP_METHOD_DELETE,
+  HTTP_METHOD_HEAD,
   HTTP_METHOD_UNKNOWN
 };
 
@@ -67,7 +68,7 @@ class HttpRequest {
   // getters para path y query
   std::string getPath() const;
   std::string getQuery() const;
-  std::vector<char> getBody() const;
+  const std::vector<char>& getBody() const;
 
   // clear
   void clear();

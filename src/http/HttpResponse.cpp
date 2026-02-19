@@ -36,14 +36,16 @@ HttpResponse::HttpResponse()
       _version(HTTP_VERSION_1_1),
       _headers(),
       _reasonPhrase(reasonPhraseForStatus(HTTP_STATUS_OK)),
-      _body() {}
+      _body(),
+      _headOnly(false) {}
 
 HttpResponse::HttpResponse(const HttpResponse& other)
     : _status(other._status),
       _version(other._version),
       _headers(other._headers),
       _reasonPhrase(other._reasonPhrase),
-      _body(other._body) {}
+      _body(other._body),
+      _headOnly(other._headOnly) {}
 
 HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
   if (this != &other) {
@@ -52,6 +54,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
     _headers = other._headers;
     _reasonPhrase = other._reasonPhrase;
     _body = other._body;
+    _headOnly = other._headOnly;
   }
   return *this;
 }
@@ -79,6 +82,8 @@ void HttpResponse::setVersion(const std::string& version) {
 void HttpResponse::setReasonPhrase(const std::string& reason) {
   _reasonPhrase = reason;
 }
+
+void HttpResponse::setHeadOnly(bool value) { _headOnly = value; }
 // el reto es pegar la cabecera
 // setters para binarios (imagenes)
 void HttpResponse::setBody(const std::vector<char>& body) { _body = body; }
@@ -114,8 +119,9 @@ std::vector<char> HttpResponse::serialize() const {
   std::vector<char> response(headStr.begin(), headStr.end());
 
   // insertar el cuerpo binario al final
-
-  response.insert(response.end(), _body.begin(), _body.end());
+  if (!_headOnly) {
+    response.insert(response.end(), _body.begin(), _body.end());
+  }
 
   return (response);
 }
@@ -154,4 +160,13 @@ void HttpResponse::setContentType(const std::string& filename) {
     contentType = "application/pdf";
 
   setHeader("Content-Type", contentType);
+}
+
+void HttpResponse::clear() {
+  _status = HTTP_STATUS_OK;
+  _version = HTTP_VERSION_1_1;
+  _headers.clear();
+  _reasonPhrase = reasonPhraseForStatus(HTTP_STATUS_OK);
+  _body.clear();
+  _headOnly = false;
 }

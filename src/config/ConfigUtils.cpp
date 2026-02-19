@@ -37,7 +37,7 @@ std::string trimLine(const std::string& line) {
 }
 
 /**
- * if line start wirh '#' remove line
+ * if line start with '#' remove line
  * @param line
  */
 void removeComments(std::string& line) {
@@ -84,7 +84,9 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
   std::istringstream tokenStream(str);
 
   if (delimiter == ' ') {
-    while (tokenStream >> token) tokens.push_back(token);
+    while (tokenStream >> token) {
+    	tokens.push_back(token);
+    }
   } else {
     while (std::getline(tokenStream, token, delimiter)) {
       tokens.push_back(token);
@@ -97,7 +99,6 @@ std::vector<std::string> tokenize(const std::string& line) {
   std::vector<std::string> tokens;
   std::string currentToken;
   bool inQuotes = false;
-  // char quoteChar = 0; // ' or "
 
   for (size_t i = 0; i < line.size(); ++i) {
     char c = line[i];
@@ -105,11 +106,6 @@ std::vector<std::string> tokenize(const std::string& line) {
     if (inQuotes) {
       if (c == '"') {
         inQuotes = false;
-        // quoteChar = 0;
-        // Don't add quote to token?
-        // Nginx usually strips quotes.
-        // tokens.push_back(currentToken);
-        // currentToken.clear();
       } else {
         currentToken += c;
       }
@@ -400,21 +396,22 @@ bool isValidLocationPath(const std::string& path) {
   return true;
 }
 
-// Validates HTTP method against whitelist (GET, POST, DELETE only)
 bool isValidHttpMethod(const std::string& method) {
-  return (method == "GET" || method == "POST" || method == "DELETE");
+  return (method == config::section::method_get || method == config::section::method_post || method == config::section::method_delete || method == config::section::method_head);
 }
 
-// Checks if a root path exists and is accessible.
-// Returns empty string if OK, warning message if not.
-// Following NGINX behavior: warns but does not fail at startup.
+/**
+ * Checks if a root path exists and is accessible.
+ * Returns empty string if OK, warning message if not.
+ * Following NGINX behavior: warns but does not fail at startup.
+*/
 std::string checkRootPath(const std::string& path) {
   if (path.empty()) {
     return config::errors::root_path_warning + ": path is empty";
   }
 
   // Use stat to check if path exists and is a directory
-  struct stat info;
+  struct stat info = {};
   if (stat(path.c_str(), &info) != 0) {
     return config::errors::root_path_warning + ": " + path + " does not exist";
   }
@@ -427,16 +424,18 @@ std::string checkRootPath(const std::string& path) {
   return "";
 }
 
-// Ensures upload store path exists, creating it if necessary.
-// Throws ConfigException if creation fails.
-// Following NGINX behavior: creates directory or fails at startup.
+/**
+ * Ensures upload store path exists, creating it if necessary.
+ * Throws ConfigException if creation fails.
+ * Following NGINX behavior: creates directory or fails at startup.
+*/
 void ensureUploadStorePath(const std::string& path) {
   if (path.empty()) {
     throw ConfigException(config::errors::upload_store_creation_failed +
                           ": path is empty");
   }
 
-  struct stat info;
+  struct stat info = {};
   if (stat(path.c_str(), &info) == 0) {
     if (!(info.st_mode & S_IFDIR)) {
       throw ConfigException(config::errors::upload_store_creation_failed +

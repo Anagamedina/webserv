@@ -1,5 +1,6 @@
 #include "ConfigParser.hpp"
 
+#include <fstream>
 #include <sstream>
 
 #include "../common/namespaces.hpp"
@@ -29,14 +30,7 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
- * manage if config_file_path_:
- * has valid size of length
- * has extension '.conf'
- * @return true or false
- */
-/**
  * main function of parsing
- *
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
@@ -56,16 +50,17 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
-  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
-    throw ConfigException("Invalid number of curly brackets " +
-                          config_file_path_);
+    throw ConfigException(
+        config::errors::invalid_brackets_length_or_invalid_start_end +
+        config_file_path_);
   } else {
     std::cout << "VALID CURLY BRACKETS PAIRS: ✅\n";
   }
 
   loadServerBlocks();
   parseAllServerBlocks();
+  checkDuplicateServerConfig();
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other)
@@ -122,15 +117,28 @@ de valores)
  */
 bool ConfigParser::validateBalancedBrackets() const {
   int countBrackets = 0;
+  bool hasContentBeforeBrace = false;
 
   for (size_t Index = 0; Index < clean_file_str_.size(); ++Index) {
-    if (clean_file_str_.at(Index) == '{') {
+    char c = clean_file_str_.at(Index);
+
+    if (c == config::section::open_bracket) {
+      if (!hasContentBeforeBrace) {
+        return false;
+        // Error: Block without directive name (anonymous block)
+      }
       ++countBrackets;
-    } else if (clean_file_str_.at(Index) == '}') {
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::close_bracket) {
       --countBrackets;
       if (countBrackets < 0) {
         return false;
       }
+      hasContentBeforeBrace = false;
+    } else if (c == config::section::semicolon) {
+      hasContentBeforeBrace = false;
+    } else if (!isspace(c)) {
+      hasContentBeforeBrace = true;
     }
   }
   return countBrackets == 0;
@@ -187,27 +195,41 @@ void ConfigParser::loadServerBlocks() {
 void ConfigParser::splitContentIntoServerBlocks(
     const std::string& content, const std::string& typeOfExtraction) {
   size_t currentPos = 0;
+  size_t lastPos = 0;
   size_t countServers = 1;
 
   while ((currentPos = content.find(typeOfExtraction, currentPos)) !=
          std::string::npos) {
+    // Check if there is anything between blocks
+    std::string skipped = content.substr(lastPos, currentPos - lastPos);
+    if (skipped.find_first_not_of(" \t\n\r") != std::string::npos) {
+      throw ConfigException("Unknown directive outside of server block: " +
+                            skipped);
+    }
+
     size_t braceStart = content.find('{', currentPos);
-    if (braceStart == std::string::npos) break;
+    if (braceStart == std::string::npos) {
+      throw ConfigException("Missing '{' for server block at: " +
+                            content.substr(currentPos, 20));
+    }
 
     // Find matching closing brace
     int countBrackets = 1;
     size_t braceEnd = braceStart + 1;
 
-    while (braceEnd < content.size() - 1 && countBrackets > 0) {
-      if (content[braceEnd] == '\n') {
-        braceEnd++;
-      }
+    while (braceEnd < content.size() && countBrackets > 0) {
       if (content[braceEnd] == '{') {
         countBrackets++;
       } else if (content[braceEnd] == '}') {
         countBrackets--;
       }
       braceEnd++;
+    }
+
+    if (countBrackets > 0) {
+      throw ConfigException(
+          "Unbalanced brackets in server block starting at: " +
+          content.substr(currentPos, 20));
     }
 
     // Extract the complete server block
@@ -219,8 +241,19 @@ void ConfigParser::splitContentIntoServerBlocks(
 
     raw_server_blocks_.push_back(getBlock);
     currentPos = braceEnd;
+    lastPos = braceEnd;
     ++countServers;
   }
+
+  // Check if there is anything after the last block
+  if (lastPos < content.size()) {
+    std::string skipped = content.substr(lastPos);
+    if (skipped.find_first_not_of(" \t\n\r") != std::string::npos) {
+      throw ConfigException("Unknown directive after server blocks: " +
+                            skipped);
+    }
+  }
+
   servers_count_ = raw_server_blocks_.size();
 }
 
@@ -240,24 +273,22 @@ void ConfigParser::parseAllServerBlocks() {
 void ConfigParser::parseListen(ServerConfig& server,
                                const std::vector<std::string>& tokens) {
   if (tokens.size() < 2) {
-    throw ConfigException("Missing argument for listen");
+    throw ConfigException(config::errors::missing_args_in_listen);
   }
   std::string value = config::utils::removeSemicolon(tokens[1]);
   size_t pos = value.find(':');
 
-  /*
-  std::cout << "current directive: [" << directive << "]" << std::endl;
-  std::cout << "value [" << value << "]" << std::endl;
-      function to check if pattern is correct respect to PORT:IP
-  8080:192.178.1.1
-  */
   if (pos != std::string::npos) {
     // Case: IP:PORT (127.0.0.1:8080)
     std::string first = value.substr(0, pos);
     std::string second = value.substr(pos + 1);
 
     if (first.find_first_not_of("0123456789") == std::string::npos) {
-      server.setPort(config::utils::stringToInt(first));
+      int port = config::utils::stringToInt(first);
+      if (port < 1 || port > config::section::max_port) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
       if (!config::utils::isValidHost(second)) {
         throw ConfigException(config::errors::invalid_ip_format + ": " +
                               second);
@@ -270,13 +301,21 @@ void ConfigParser::parseListen(ServerConfig& server,
         throw ConfigException(config::errors::invalid_ip_format + ": " + first);
       }
       server.setHost(first);
-      server.setPort(config::utils::stringToInt(second));
+      int port = config::utils::stringToInt(second);
+      if (port < 1 || port > 65535) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
     }
   } else {
-    // Case: PORT (8080) or only HOST (localhost)
+    // TODO: Case: PORT (8080) or only HOST (localhost)
     // Simple heurística: Si tiene digitos es puerto, sino host
     if (value.find_first_not_of("0123456789") == std::string::npos) {
-      server.setPort(config::utils::stringToInt(value));
+      int port = config::utils::stringToInt(value);
+      if (port < 1 || port > 65535) {
+        throw ConfigException(config::errors::invalid_port_range);
+      }
+      server.setPort(port);
     } else {
       if (!config::utils::isValidHost(value)) {
         throw ConfigException(config::errors::invalid_ip_format + ": " + value);
@@ -285,6 +324,22 @@ void ConfigParser::parseListen(ServerConfig& server,
       server.setPort(80);  // DEFAULT ?
     }
   }
+}
+
+void ConfigParser::parseHost(ServerConfig& server,
+                             const std::vector<std::string>& tokens) {
+  if (tokens.size() < 2) {
+    throw ConfigException(config::errors::missing_args_in_host);
+  }
+
+  std::string hostValue = config::utils::removeSemicolon(tokens[1]);
+
+  // Validate host format (IP address or hostname)
+  if (!config::utils::isValidHost(hostValue)) {
+    throw ConfigException(config::errors::invalid_ip_format + ": " + hostValue);
+  }
+
+  server.setHost(hostValue);
 }
 
 void ConfigParser::parseMaxSizeBody(ServerConfig& server,
@@ -297,20 +352,24 @@ void ConfigParser::parseMaxSizeBody(ServerConfig& server,
 }
 
 /**
- * Lógica especial para múltiples códigos de error
+ * Special logic when have multiples error_pages
  * error_page 404 500 /error.html;
  * error_page 404 /404.html;
  * error_page 500 502 503 504 /50x.html;
- * el último token es siempre la ruta del archivo (ej. /404.html)
+ * always the last parameter is the path of file
+ * minim of tokens in line is 3: error_page 404  /path
  */
 void ConfigParser::parseErrorPage(ServerConfig& server,
                                   std::vector<std::string>& tokens) {
-  if (tokens.size() >= 3)
-  // el mínimo son 3 tokens: error_page, 404 y /ruta)
-  {
+  if (tokens.size() >= 3) {
     std::string path = config::utils::removeSemicolon(tokens.back());
     for (size_t i = 1; i < tokens.size() - 1; ++i) {
-      server.addErrorPage(config::utils::stringToInt(tokens[i].c_str()), path);
+      int code = config::utils::stringToInt(tokens[i].c_str());
+      if (code < 100 || code > 599) {
+        throw ConfigException(config::errors::invalid_http_status_code +
+                              tokens[i]);
+      }
+      server.addErrorPage(code, path);
     }
   }
 }
@@ -350,9 +409,11 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
   }
   // TODO: verificar que el directorio existe o se
   /*
-                      (!config::utils::directoryExists(uploadPath))
-                      upload_store directory does not exist: "uploadPath;}
-  */
+       if (!config::utils::directoryExists(uploadPath)) {
+         throw ConfigException("upload_store directory does not exist: " +
+     uploadPath);
+       }
+ */
   loc.setUploadStore(uploadPathClean);
 }
 
@@ -423,20 +484,26 @@ void ConfigParser::parseServerName(ServerConfig& server,
   server.setServerName(config::utils::removeSemicolon(tokens[1]));
 }
 
+/**
+ *
+ * @param server
+ * @param ss
+ * @param line
+ * @param tokens
+ */
 void ConfigParser::parseLocationBlock(ServerConfig& server,
                                       std::stringstream& ss, std::string& line,
-                                      std::vector<std::string>& tokens) {
+                                      const std::vector<std::string>& tokens) {
   size_t pathIndex = 1;
-  std::string modifier = "";  // +, ~, ~*, ^~
 
-  if (tokens.size() > 2 &&
-      (tokens[1] == config::section::exact_match_modifier ||
-       tokens[1] == config::section::preferential_prefix_modifier)) {
-    modifier = tokens[1];
-    pathIndex = 2;
+  if (tokens.size() > 2) {
+    if (tokens[1] == "=" || tokens[1] == "^~") {
+      throw ConfigException(config::errors::invalid_parameters_in_location +
+                            line);
+    }
   }
 
-  std::string locationPath = tokens[pathIndex];
+  const std::string& locationPath = tokens[pathIndex];
 
   if (!config::utils::isValidLocationPath(locationPath)) {
     throw ConfigException(config::errors::invalid_location_path + ": " +
@@ -448,6 +515,7 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
 
   while (std::getline(ss, line)) {
     line = config::utils::trimLine(line);
+    validateDirectiveLine(line);
 
     if (line.empty()) continue;
     std::vector<std::string> locTokens = config::utils::tokenize(line);
@@ -455,26 +523,35 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     const std::string& directive = locTokens[0];
     if (directive == "}") {
       break;  // End of location block
-    } else if (directive == config::section::location) {
+    }
+    if (directive == "{") {
+      continue;
+    }
+    if (directive == config::section::location) {
       throw ConfigException(config::errors::invalid_new_location_block + line);
-    } else if (directive == config::section::root) {
+    }
+    if (directive == config::section::root) {
       loc.setRoot(config::utils::removeSemicolon(locTokens[1]));
     } else if (directive == config::section::index) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         loc.addIndex(config::utils::removeSemicolon(locTokens[i]));
       }
     } else if (directive == config::section::autoindex) {
+      if (locTokens.size() > 2) {
+        throw ConfigException(config::errors::invalid_autoindex_params);
+      }
+
       std::string val = config::utils::removeSemicolon(locTokens[1]);
       if (val != config::section::autoindex_on &&
           val != config::section::autoindex_off) {
         throw ConfigException(config::errors::invalid_autoindex);
       }
       loc.setAutoIndex(val == config::section::autoindex_on);
-    } else if (directive == config::section::methods ||
-               directive == config::section::allow_methods ||
+    } else if (directive == config::section::allow_methods ||
                directive == config::section::limit_except) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         std::string method = config::utils::removeSemicolon(locTokens[i]);
+        if (method.empty()) continue;
         if (!config::utils::isValidHttpMethod(method)) {
           throw ConfigException(config::errors::invalid_http_method + ": " +
                                 method);
@@ -489,9 +566,23 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     } else if (directive == config::section::cgi ||
                directive == config::section::cgi_fast) {
       parseCgi(loc, locTokens);
+    } else if (directive == config::section::client_max_body_size) {
+      parseMaxSizeBody(loc, locTokens);
+    } else {
+      throw ConfigException("Unknown directive in location block: " +
+                            directive);
     }
   }
   server.addLocation(loc);
+}
+
+void ConfigParser::parseMaxSizeBody(LocationConfig& loc,
+                                    const std::vector<std::string>& tokens) {
+  const std::string& maxSizeStr = config::utils::removeSemicolon(tokens[1]);
+  if (!maxSizeStr.empty()) {
+    config::utils::removeSemicolon(maxSizeStr);
+    loc.setMaxBodySize(config::utils::parseSize(maxSizeStr));
+  }
 }
 
 ServerConfig ConfigParser::parseSingleServerBlock(
@@ -503,16 +594,20 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   while (getline(ss, line)) {
     int indexTokens = 0;
     line = config::utils::trimLine(line);
+    validateDirectiveLine(line);
 
     std::vector<std::string> tokens = config::utils::tokenize(line);
     if (tokens.empty()) continue;
 
     const std::string& directive = tokens[indexTokens];
+    if (directive == "server" || directive == "{" || directive == "}") {
+      continue;
+    }
 
-    //	LISTEN
-    // std::cout << "current directive: [" << directive << "]" << std::endl;
     if (directive == config::section::listen) {
       parseListen(server, tokens);
+    } else if (directive == config::section::host) {
+      parseHost(server, tokens);
     } else if (directive == config::section::server_name) {
       parseServerName(server, tokens);
     } else if (directive == config::section::root) {
@@ -527,8 +622,56 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     //	TODO: this case fail(the char '='): location = /50x.html {
     else if (directive == config::section::location) {
       parseLocationBlock(server, ss, line, tokens);
+    } else {
+      throw ConfigException("Unknown directive in server block: " + directive);
     }
     ++indexTokens;
   }
   return server;
+}
+
+/**
+ * Skip if it's a start or end of block (checks last char)
+ * Check if it ends with semicolon
+ * Check if there is a space before semicolon
+ * @param line
+ */
+void ConfigParser::validateDirectiveLine(const std::string& line) const {
+  if (line.empty()) return;
+
+  char lastChar = line[line.size() - 1];
+  if (lastChar == '{' || lastChar == '}') return;
+
+  if (lastChar != ';') {
+    throw ConfigException(
+        config::errors::missing_semicolon_at_the_end_of_directive + line);
+  }
+
+  if (line.size() > 1) {
+    if (std::isspace(line[line.size() - 2])) {
+      throw ConfigException(
+          config::errors::semicolon_must_be_attached_to_the_last_word + line);
+    }
+  }
+}
+
+/**
+ * Validation after parsing all server blocks.
+ * This method will iterate through the servers_ vector and compare each server
+ * against every other server. Comparison criteria: port, host, and server_name.
+ * If a duplicate is found, throw ConfigException.
+ * @return exception in case of error
+ */
+void ConfigParser::checkDuplicateServerConfig() const {
+  if (servers_.size() < 2) return;
+
+  for (size_t i = 0; i < servers_.size(); ++i) {
+    for (size_t j = i + 1; j < servers_.size(); ++j) {
+      if (servers_[i].getPort() == servers_[j].getPort() &&
+          servers_[i].getHost() == servers_[j].getHost() &&
+          servers_[i].getServerName() == servers_[j].getServerName()) {
+        throw ConfigException(config::errors::duplicate_server_config);
+      }
+    }
+  }
 }
