@@ -3,8 +3,8 @@
 # ---------------------------
 # Configuration
 # ---------------------------
-SERVER_EXEC=./webserv
-CONFIG_FILE=config/tester.conf
+#SERVER_EXEC=./webserv
+#CONFIG_FILE=config/tester.conf
 TESTER_EXEC=testers/tester
 
 # Default URL if none provided
