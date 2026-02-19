@@ -23,7 +23,7 @@ NAME 		= webserver
 
 CXX			= c++
 #CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -DDEBUG -g # -g is esential for valgrind
-CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -O3 # -g is esential for valgrind
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -O3
 LDFLAGS		=
 
 

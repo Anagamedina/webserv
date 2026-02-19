@@ -128,7 +128,7 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
         const ServerConfig* server = selectServerByPort(listenPort, configs);
         if (server)
           _parser.setMaxBodySize(server->getGlobalMaxBodySize());
-        
+
 }
 
 Client::~Client() {
