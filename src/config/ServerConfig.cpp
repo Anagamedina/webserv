@@ -5,6 +5,7 @@
 
 #include "ConfigException.hpp"
 #include "LocationConfig.hpp"
+#include "../common/namespaces.hpp"
 
 ServerConfig::ServerConfig()
     : listen_port_(config::section::default_port),

@@ -11,7 +11,6 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
-#include <stdexcept>
 
 #include "ConfigException.hpp"
 
@@ -19,11 +18,11 @@ namespace config {
 namespace utils {
 /**
  * remove in line: space, tab, newline and carriage return
+ *
+ * "  hello  " -> "hello"
+ * "\t\ntest\r\n" -> "test"
  * @param line The string to trim
  * @return New string without leading/trailing whitespace
- *
- *   "  hello  " -> "hello"
- *   "\t\ntest\r\n" -> "test"
  */
 std::string trimLine(const std::string& line) {
   const std::string whitespace = "\t\n\r";
@@ -197,9 +196,14 @@ bool isValidPath(const std::string& path) {
   return true;
 }
 
+/**
+ * We check validation of size.
+ * @param str
+ * @return
+ */
 long parseSize(const std::string& str) {
   if (str.empty()) {
-    throw ConfigException("Empty size string");
+    throw ConfigException(errors::empty_size_string);
   }
 
   char* end;
@@ -251,11 +255,9 @@ long parseSize(const std::string& str) {
   return value;
 }
 
-// ============================================================================
-// New validation functions for TDD
-// ============================================================================
-
-// Validates IPv4 address format (xxx.xxx.xxx.xxx where xxx is 0-255)
+/* @brief Validates IPv4 address format (xxx.xxx.xxx.xxx where xxx is 0-255)
+ * return true or false
+ */
 bool isValidIPv4(const std::string& ip) {
   if (ip.empty()) {
     return false;
@@ -296,11 +298,13 @@ bool isValidIPv4(const std::string& ip) {
   return true;
 }
 
-// Validates hostname format following RFC 952 and RFC 1123
-// - Can contain alphanumeric characters, dots, and hyphens
-// - Cannot start or end with hyphen or dot
-// - Hyphens cannot be immediately before or after dots
-// - No consecutive dots
+/**
+ * @brief Validates hostname format following RFC 952 and RFC 1123
+ * - Can contain alphanumeric characters, dots, and hyphens
+ * - Cannot start or end with hyphen or dot
+ * - Hyphens cannot be immediately before or after dots
+ * - No consecutive dots
+ */
 bool isValidHostname(const std::string& hostname) {
   if (hostname.empty()) {
     return false;
@@ -341,7 +345,10 @@ bool isValidHostname(const std::string& hostname) {
   return true;
 }
 
-// Validates a host string (either IPv4 or hostname)
+/**
+ * @brief Validates a host string (either IPv4 or hostname)
+ *
+ */
 bool isValidHost(const std::string& host) {
   if (host.empty()) {
     return false;
@@ -365,11 +372,13 @@ bool isValidHost(const std::string& host) {
   return isValidHostname(host);
 }
 
-// Validates location path format:
-// - Must start with '/'
-// - Cannot be empty
-// - No leading/trailing whitespace
-// - No double slashes
+/**
+ * Validates location path format:
+ * - Must start with '/'
+ * - Cannot be empty
+ * - No leading/trailing whitespace
+ * - No double slashes
+ */
 bool isValidLocationPath(const std::string& path) {
   if (path.empty()) {
     return false;
