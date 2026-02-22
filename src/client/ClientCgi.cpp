@@ -43,14 +43,13 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   if (_serverManager == 0 || cgiInfo.server == 0) return false;
 
   // No need to validate location or method here, RequestProcessor did it.
-  
+
   CgiExecutor exec;
   const HttpRequest& request = _parser.getRequest();
-  
+
   _cgiProcess = exec.executeAsync(request, cgiInfo.scriptPath,
-                                  cgiInfo.interpreterPath,
-                                  *cgiInfo.server);
-  
+                                  cgiInfo.interpreterPath, *cgiInfo.server);
+
   if (_cgiProcess == 0) {
     // If execution fails (e.g. pipe error), return false so caller can send 500
     return false;

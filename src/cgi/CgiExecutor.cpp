@@ -13,8 +13,6 @@
 
 #include "CgiExecutor.hpp"
 
-#include "client/RequestProcessorUtils.hpp"
-
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -29,6 +27,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+
+#include "client/RequestProcessorUtils.hpp"
 
 static void closeIfValid(int& fd) {
   if (fd >= 0) {
@@ -183,9 +183,8 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     std::string body(requestBody.begin(), requestBody.end());
     CgiProcess* proc =
         new CgiProcess(script_path, interpreter_path,
-               pipe_in[1],                          // Write end
-               pipe_out[0], pid, serverConfig.getCgiTimeout(),
-                       body);
+                       pipe_in[1],  // Write end
+                       pipe_out[0], pid, serverConfig.getCgiTimeout(), body);
 
     return proc;
   }

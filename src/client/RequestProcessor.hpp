@@ -14,10 +14,7 @@
 // HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
  public:
-  enum ActionType {
-    ACTION_SEND_RESPONSE,
-    ACTION_EXECUTE_CGI
-  };
+  enum ActionType { ACTION_SEND_RESPONSE, ACTION_EXECUTE_CGI };
 
   struct CgiInfo {
     CgiInfo() : server(0) {}
@@ -30,8 +27,8 @@ class RequestProcessor {
   struct ProcessingResult {
     ProcessingResult() : action(ACTION_SEND_RESPONSE) {}
     ActionType action;
-    HttpResponse response; // For static/error
-    CgiInfo cgiInfo;       // For CGI
+    HttpResponse response;  // For static/error
+    CgiInfo cgiInfo;        // For CGI
   };
 
   ProcessingResult process(const HttpRequest& request,

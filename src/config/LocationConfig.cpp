@@ -149,4 +149,3 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const {
 }
 
 void LocationConfig::print() const { std::cout << *this << std::endl; }
-

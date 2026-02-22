@@ -88,9 +88,10 @@ inline std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
      << "\n"
      << "\t" << config::colors::yellow
      << "Server name: " << config::colors::reset << config::colors::green
-     << config.getServerName() << config::colors::reset << "\n"<< config::colors::yellow
-	 << "\tMax body size: " << config::colors::reset << config::colors::green
-	 << config.getMaxBodySize() << config::colors::reset << "\n";
+     << config.getServerName() << config::colors::reset << "\n"
+     << config::colors::yellow << "\tMax body size: " << config::colors::reset
+     << config::colors::green << config.getMaxBodySize()
+     << config::colors::reset << "\n";
 
   const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
   os << "\t" << config::colors::yellow << "Error pages:\n"

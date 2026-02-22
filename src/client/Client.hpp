@@ -20,9 +20,9 @@ class CgiProcess;
 // -----------------------------------------------------------------------------
 
 enum ClientState {
-  STATE_IDLE,           // Sin petición activa
-  STATE_READING_HEADER, // Leyendo headers del cliente
-  STATE_READING_BODY,   // Leyendo body (POST, etc.)
+  STATE_IDLE,            // Sin petición activa
+  STATE_READING_HEADER,  // Leyendo headers del cliente
+  STATE_READING_BODY,    // Leyendo body (POST, etc.)
   STATE_WRITING_RESPONSE,
   STATE_CLOSED
 };
@@ -42,7 +42,6 @@ struct PendingResponse {
 //   - Encolar y enviar respuestas (send)
 // -----------------------------------------------------------------------------
 class Client {
-
   // Saved request state for CGI
   bool _savedShouldClose;
   HttpVersion _savedVersion;
@@ -100,7 +99,8 @@ class Client {
   bool _sent100Continue;  // Para Expect: 100-continue
 
   // ---- Funciones auxiliares (solo usadas dentro de la clase) ----
-  bool handleCompleteRequest();  // Request parseada → construir y encolar respuesta
+  bool
+  handleCompleteRequest();  // Request parseada → construir y encolar respuesta
   void enqueueResponse(const std::vector<char>& data, bool closeAfter);
   void handleExpect100();  // Expect: 100-continue
   bool startCgiIfNeeded(const HttpRequest& request);
@@ -111,11 +111,11 @@ class Client {
   void processRequests();
   //
   // Invocado cuando el parser marca una HttpRequest como completa.
-  void dispatchAction(const HttpRequest& request, const RequestProcessor::ProcessingResult& result);
+  void dispatchAction(const HttpRequest& request,
+                      const RequestProcessor::ProcessingResult& result);
   bool startCgi(const RequestProcessor::CgiInfo& cgiInfo);
 
   bool executeCgi(const RequestProcessor::CgiInfo& cgiInfo);
-
 };
 
 #endif  // CLIENT_HPP

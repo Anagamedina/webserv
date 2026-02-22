@@ -48,7 +48,9 @@ int main(int argc, char* argv[]) {
 
   try {
     ConfigParser parser(configPath);
-    std::cout << "Config file path: [" << config::colors::blue << parser.getConfigFilePath() << "]\n" << config::colors::reset;
+    std::cout << "Config file path: [" << config::colors::blue
+              << parser.getConfigFilePath() << "]\n"
+              << config::colors::reset;
     parser.parse();
 
     // Crear el gestor del servidor con la lista de servers

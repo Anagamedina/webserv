@@ -12,8 +12,8 @@
  * @brief Represents the configuration for a specific location within a server
  * block.
  *
- * This class handles parsing and storing settings defined in a 'location block',
- * such as:
+ * This class handles parsing and storing settings defined in a 'location
+ * block', such as:
  * - content root directory
  * - allowed HTTP methods (GET, POST, DELETE, HEAD)
  * - default index files in a vector
@@ -100,8 +100,8 @@ inline std::ostream& operator<<(std::ostream& os,
        << "Upload Store: " << config::colors::reset << config::colors::green
        << location.getUploadStore() << config::colors::reset << "\n";
   } else {
-    os << "\t" << config::colors::yellow
-       << "empty" << config::colors::reset << "\n";
+    os << "\t" << config::colors::yellow << "empty" << config::colors::reset
+       << "\n";
   }
 
   os << "\t" << config::colors::yellow

@@ -39,12 +39,13 @@ void HttpParser::handleHeader(const std::string& key,
     // COMPLETE.
     _contentLength = std::strtoul(value.c_str(), 0, 10);
 #ifdef DEBUG
-    std::cerr << "[PARSER HEADER] Content-Length: " << _contentLength 
+    std::cerr << "[PARSER HEADER] Content-Length: " << _contentLength
               << " bytes";
     if (_contentLength > 1024 * 1024) {
       std::cerr << " (" << (_contentLength / 1024 / 1024) << " MB)";
     }
-    std::cerr << ", Max allowed: " << (_maxBodySize > 0 ? _maxBodySize : 0) << std::endl;
+    std::cerr << ", Max allowed: " << (_maxBodySize > 0 ? _maxBodySize : 0)
+              << std::endl;
 #endif
     return;
   }
@@ -94,9 +95,8 @@ void HttpParser::parseHeaders() {
       return;  // No hay línea completa, esperamos al siguiente epoll()
     // Caso 1: Línea vacía -> Fin de headers
     if (line.empty() && !validateHeaders()) {
-      _errorStatusCode = (_maxBodySize > 0 && _contentLength > _maxBodySize)
-                             ? 413
-                             : 400;
+      _errorStatusCode =
+          (_maxBodySize > 0 && _contentLength > _maxBodySize) ? 413 : 400;
       _state = ERROR;
       return;
     }

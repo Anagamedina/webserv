@@ -9,7 +9,7 @@
 ServerConfig::ServerConfig()
     : listen_port_(config::section::default_port),
       max_body_size_(config::section::max_body_size),
-  cgi_timeout_(60),
+      cgi_timeout_(60),
       autoindex_(false),
       redirect_code_(-1) {}
 
