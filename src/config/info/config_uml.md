@@ -48,12 +48,27 @@ classDiagram
         +print()
     }
 
-    class ConfigUtils-Namespace {
-        +trimLine(string) string
-        +removeComments(string)
-        +tokenize(string) vector~string~
-        +stringToInt(string) int
-        +isValidPath(string) bool
+    class ConfigUtils{
+        <<namespace>>
+        +trimLine(string line) string
+        +removeComments(string& line) void
+        +removeSpacesAndTabs(string& line) string
+        +normalizeSpaces(string line) string
+        +fileExists(string path) bool
+        +split(string str, char delimiter) vector~string~
+        +tokenize(string line) vector~string~
+        +removeSemicolon(string str) string
+        +stringToInt(string str) int
+        +exportContentToLogFile(string content, string path) void
+        +isValidPath(string path) bool
+        +parseSize(string str) long
+        +isValidIPv4(string ip) bool
+        +isValidHostname(string hostname) bool
+        +isValidHost(string host) bool
+        +isValidLocationPath(string path) bool
+        +isValidHttpMethod(string method) bool
+        +checkRootPath(string path) string
+        +ensureUploadStorePath(string path) void
     }
 
     ConfigParser "1" *-- "*" ServerConfig : contains
