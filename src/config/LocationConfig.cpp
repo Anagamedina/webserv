@@ -1,6 +1,8 @@
 #include "LocationConfig.hpp"
+#include "../common/namespaces.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 LocationConfig::LocationConfig()
     : autoindex_(false),
@@ -126,8 +128,8 @@ const std::map<std::string, std::string>& LocationConfig::getCgiHandlers()
 }
 
 /**
- * this function are doing two actions is possible we need to refactor the
- * impplementation ?
+ * HEAD must be explicitly allowed in config (not implicitly via GET)
+ * Each method is independent and must be listed in allowed_methods
  * @param method
  * @return true or false
  */
@@ -135,18 +137,111 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const {
   if (method.empty()) {
     return false;
   }
-  // HEAD must be explicitly allowed in config (not implicitly via GET)
-  // Each method is independent and must be listed in limit_except
-  // This is necessary to past the HEAD test
+	// if not set method, default method is GET and HEAD
   if (allowed_methods_.empty()) {
     return (method == config::section::method_get);
+  	// return (method == config::section::method_get ||
+            // method == config::section::method_head);
   }
-
-  for (size_t i = 0; i < allowed_methods_.size(); ++i) {
-    if (allowed_methods_[i] == method) return true;
-  }
+	if (std::find(allowed_methods_.begin(), allowed_methods_.end(), method) != allowed_methods_.end())
+	{
+		return true;
+	}
   return false;
 }
 
 void LocationConfig::print() const { std::cout << *this << std::endl; }
 
+std::ostream& operator<<(std::ostream& os, const LocationConfig& location)
+{
+	os << config::colors::cyan << config::colors::bold << "Locations info:\n"
+		<< config::colors::reset << "\t" << config::colors::yellow
+		<< "Location Path: " << config::colors::reset << config::colors::green
+		<< location.getPath() << config::colors::reset << "\n"
+		<< "\t" << config::colors::yellow << "Root: " << config::colors::reset
+		<< config::colors::green << location.getRoot() << config::colors::reset
+		<< "\n"
+		<< "\t" << config::colors::yellow
+		<< "Autoindex: " << config::colors::reset;
+	if (location.getAutoIndex()) {
+		os << config::colors::green << "on";
+	} else {
+		os << config::colors::red << "off";
+	}
+	os << config::colors::reset << "\n";
+
+	if (!location.getUploadStore().empty()) {
+		os << "\t" << config::colors::yellow
+			<< "Upload Store: " << config::colors::reset << config::colors::green
+			<< location.getUploadStore() << config::colors::reset << "\n";
+	} else {
+		os << "\t" << config::colors::yellow
+			<< "empty" << config::colors::reset << "\n";
+	}
+
+	os << "\t" << config::colors::yellow
+		<< "Max Body Size: " << config::colors::reset << config::colors::green
+		<< location.getMaxBodySize() << config::colors::reset << "\n";
+
+	if (location.getRedirectCode() != -1) {
+		os << "\t" << config::colors::yellow << "Return ("
+			<< location.getRedirectParamCount() << " parameter"
+			<< (location.getRedirectParamCount() == 1 ? "" : "s")
+			<< "): " << config::colors::reset;
+		if (location.getRedirectParamCount() == 1) {
+			os << config::colors::green << location.getRedirectUrl()
+				<< config::colors::reset << "\n";
+		} else {
+			os << config::colors::green << location.getRedirectCode() << " '"
+				<< location.getRedirectUrl() << "'" << config::colors::reset << "\n";
+		}
+	}
+
+	const std::vector<std::string>& indexes = location.getIndexes();
+	os << "\t" << config::colors::yellow << "Indexes: " << config::colors::reset;
+	if (indexes.empty()) {
+		os << config::colors::red << "empty" << config::colors::reset;
+	} else {
+		for (size_t i = 0; i < indexes.size(); ++i) {
+			os << config::colors::green << indexes[i] << config::colors::reset
+				<< (i == indexes.size() - 1 ? "" : ", ");
+		}
+	}
+
+	// Print Methods
+	const std::vector<std::string>& methods = location.getMethods();
+	os << "\n\t" << config::colors::yellow
+		<< "Methods: " << config::colors::reset;
+	if (methods.empty()) {
+		os << config::colors::red << "empty" << config::colors::reset;
+	} else {
+		for (size_t i = 0; i < methods.size(); ++i) {
+			os << config::colors::green << methods[i] << config::colors::reset
+				<< (i == methods.size() - 1 ? "" : ", ");
+		}
+	}
+	os << "\n";
+	// -------------------------------------------------
+	//           BONUS: CGI Handlers
+	// -------------------------------------------------
+	os << "\n\t" << config::colors::magenta << config::colors::bold
+		<< "CGI Handlers (bonus):" << config::colors::reset << "\n";
+
+	const std::map<std::string, std::string>& cgi =
+		location.getCgiHandlers();
+
+	if (cgi.empty()) {
+		os << "\t" << config::colors::yellow << "  CGI: " << config::colors::reset
+			<< config::colors::red << "none configured" << config::colors::reset
+			<< "\n";
+	} else {
+		std::map<std::string, std::string>::const_iterator it = cgi.begin();
+		for (; it != cgi.end(); ++it) {
+			os << "\t" << config::colors::yellow << "[" << it->first
+				<< "]: " << config::colors::reset << config::colors::green
+				<< it->second << config::colors::reset << "\n";
+		}
+	}
+
+	return os;
+}
