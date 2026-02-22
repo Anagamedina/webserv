@@ -68,7 +68,7 @@ class HttpRequest {
   // getters para path y query
   std::string getPath() const;
   std::string getQuery() const;
-  std::vector<char> getBody() const;
+  const std::vector<char>& getBody() const;
 
   // clear
   void clear();

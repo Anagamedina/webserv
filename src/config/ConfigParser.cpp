@@ -1,13 +1,12 @@
 #include "ConfigParser.hpp"
-
-#include <fstream>
-#include <set>
-#include <sstream>
-
 #include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
 #include "ConfigUtils.hpp"
 #include "LocationConfig.hpp"
+
+#include <set>
+#include <sstream>
+
 
 ConfigParser::ConfigParser() : servers_count_(0U) {}
 
@@ -31,7 +30,14 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
+ * manage if config_file_path_:
+ * has valid size of length
+ * has extension '.conf'
+ * @return true or false
+ */
+/**
  * main function of parsing
+ *
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
@@ -51,6 +57,7 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
+  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
     throw ConfigException(
         config::errors::invalid_brackets_length_or_invalid_start_end +

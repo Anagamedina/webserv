@@ -22,8 +22,15 @@ WHITE			= \033[0;37m
 NAME 		= webserver
 
 CXX			= c++
-CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -pedantic -Wshadow -DDEBUG -g # -g is esential for valgrind
-LDFLAGS		=
+CXXWARNFLAGS	= -Wall -Wextra -Werror -Wshadow
+CXXSTD			= -std=c++98 -pedantic
+COMMON_FLAGS	= $(CXXWARNFLAGS) $(CXXSTD)
+OPT_FLAGS		= -O3
+DEBUG_FLAGS		= -O0 -g -DDEBUG
+LEAK_FLAGS		= -O0 -g3 -DDEBUG -fsanitize=leak
+
+CXXFLAGS		= $(COMMON_FLAGS) $(OPT_FLAGS)
+LDFLAGS			=
 
 
 SRC_DIR		= src
@@ -105,12 +112,17 @@ fclean: clean
 
 re: fclean all
 
-leaks: CXXFLAGS += -g -fsanitize=leak -DTDEBUG=1
-leaks: LDFLAGS += -fsanitize=leak
+optimized: CXXFLAGS := $(COMMON_FLAGS) $(OPT_FLAGS)
+optimized: LDFLAGS :=
+optimized: re
+
+release: optimized
+
+leaks: CXXFLAGS := $(COMMON_FLAGS) $(LEAK_FLAGS)
+leaks: LDFLAGS := -fsanitize=leak
 leaks: re
 
-debug: CXXFLAGS += -g -fsanitize=address -DTDEBUG=1
-debug: LDFLAGS += -fsanitize=address
+debug: CXXFLAGS := $(COMMON_FLAGS) $(DEBUG_FLAGS)
 debug: re
 ####################################HTTP TESTS#######################################
 # tests (manual) - HTTP (parser/request)
@@ -174,5 +186,5 @@ bear: fclean
 # extras
 -include $(DEP_FILES)
 
-.PHONY: all clean fclean re bear debug leak test_http_request test_http_parser test_request_processor test_client
+.PHONY: all clean fclean re bear debug leaks optimized release test_http_request test_http_parser test_request_processor test_client
 #.SILENT:

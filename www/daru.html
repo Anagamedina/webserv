@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,88 +15,87 @@
         <nav class="nav-hud">
             <a href="/">THE HUD</a>
             <a href="/upload.html">LOAD LASER</a>
-            <a href="/about.html">THE SQUAD</a>
-            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/squad_staff.html">ELITE SQUAD</a>
             <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
 
         <main class="panel">
             <h2>Darunny Salazar — The Operator</h2>
-            <p class="back-row"><a href="/about.html" class="btn btn-back">&larr; Volver a Command Staff</a></p>
+            <p class="back-row"><a href="/squad_staff.html" class="btn btn-back">&larr; Back to Elite Squad</a></p>
 
-            <p class="page-title">Informe de misión: Configuración y mapa de red</p>
+            <p class="page-title">Mission report: Configuration and network map</p>
             <div class="doc-block">
                 <p class="doc-p">
-                    Esta consola documenta la parte de <strong>configuración</strong> del servidor: el “mapa de red” que define puertos, hosts, rutas, permisos y páginas de error. El operador carga un fichero de configuración (estilo Nginx) y el parser lo convierte en estructuras que el resto del sistema usa para enrutar y proteger cada petición.
+                    This console documents the <strong>configuration</strong> layer of the server: the “network map” that defines ports, hosts, routes, permissions and error pages. The operator loads a configuration file (Nginx-style syntax) and the parser converts it into structures that the rest of the system uses to route and protect each request.
             </p>
             </div>
 
             <div class="doc-block">
-                <h3 class="doc-h3">1. ¿De qué va la configuración?</h3>
+                <h3 class="doc-h3">1. What is configuration about?</h3>
                 <p class="doc-p">
-                    La configuración define <strong>qué puertos escucha el servidor</strong>, <strong>qué rutas (locations) existen</strong>, qué métodos HTTP están permitidos, dónde están los archivos estáticos, si hay autoindex, uploads, CGI o redirecciones. Todo eso se lee de un fichero <code>.conf</code> con sintaxis inspirada en Nginx: bloques <code>server { }</code> y dentro de ellos bloques <code>location</code>. El parser valida directivas, extrae bloques y rellena las estructuras <code>ServerConfig</code> y <code>LocationConfig</code>.
+                    Configuration defines <strong>which ports the server listens on</strong>, <strong>which routes (locations) exist</strong>, which HTTP methods are allowed, where static files live, and whether there is autoindex, uploads, CGI or redirects. All of this is read from a <code>.conf</code> file with Nginx-inspired syntax: <code>server &#123; &#125;</code> blocks and nested <code>location</code> blocks. The parser validates directives, extracts blocks and fills <code>ServerConfig</code> and <code>LocationConfig</code> structures.
                 </p>
             </div>
 
             <div class="doc-block">
-                <h3 class="doc-h3">2. ConfigParser: lectura y bloques</h3>
+                <h3 class="doc-h3">2. ConfigParser: reading and blocks</h3>
             <p class="doc-p">
-                <strong>ConfigParser</strong> es el encargado de abrir el fichero, preprocesarlo (limpiar comentarios, normalizar), validar extensión y permisos, comprobar que los corchetes estén equilibrados y luego extraer cada bloque <code>server</code>. Para cada bloque llama a <code>parseSingleServerBlock</code>, que va leyendo líneas y reconociendo directivas como <code>listen</code>, <code>server_name</code>, <code>root</code>, <code>index</code>, <code>max_body_size</code>, <code>error_page</code>, y los bloques anidados <code>location</code>. El resultado es un vector de <code>ServerConfig</code> que el <code>ServerManager</code> y el <code>RequestProcessor</code> usan para abrir listeners y enrutar peticiones.
-                </p>
+                <strong>ConfigParser</strong> opens the file, preprocesses it (remove comments, normalise), validates extension and permissions, checks that braces match and then extracts each <code>server</code> block. For every block it calls <code>parseSingleServerBlock</code>, which walks through the lines and recognises directives such as <code>listen</code>, <code>server_name</code>, <code>root</code>, <code>index</code>, <code>max_body_size</code>, <code>error_page</code>, and nested <code>location</code> blocks. The result is a vector of <code>ServerConfig</code> objects used by <code>ServerManager</code> and <code>RequestProcessor</code> to open listeners and route requests.
+            </p>
             </div>
 
             <div class="doc-block">
-                <h3 class="doc-h3">3. ServerConfig: un bloque server</h3>
+                <h3 class="doc-h3">3. ServerConfig: a server block</h3>
             <p class="doc-p">
-                Cada <strong>ServerConfig</strong> representa un servidor virtual: un puerto/host donde escuchar y un conjunto de reglas. Contiene:
+                Each <strong>ServerConfig</strong> represents a virtual server: one port/host and a set of rules. It contains:
             </p>
             <ul class="target-list">
-                <li><code>listen</code> / <code>host</code> — Puerto e IP donde se abre el socket (ej. <code>127.0.0.1:8080</code>).</li>
-                <li><code>server_name</code> — Nombre del servidor (para virtual hosts).</li>
-                <li><code>root</code> — Raíz por defecto del sistema de archivos.</li>
-                <li><code>index</code> — Lista de archivos índice (ej. <code>index.html</code>).</li>
-                <li><code>max_body_size</code> — Límite de tamaño del body (ej. <code>client_max_body_size</code>); las peticiones que lo superen se rechazan (413).</li>
-                <li><code>error_page</code> — Mapa código de error → ruta (ej. 404 → <code>/404.html</code>).</li>
-                <li><code>locations</code> — Lista de <code>LocationConfig</code> (rutas con sus propias reglas).</li>
-                <li>Opcionales: <code>autoindex</code>, <code>redirect</code> (código + URL).</li>
+                <li><code>listen</code> / <code>host</code> — Port and IP where the socket is opened (e.g. <code>127.0.0.1:8080</code>).</li>
+                <li><code>server_name</code> — Server name (for virtual hosts).</li>
+                <li><code>root</code> — Default filesystem root.</li>
+                <li><code>index</code> — List of index files (e.g. <code>index.html</code>).</li>
+                <li><code>max_body_size</code> — Body size limit (e.g. <code>client_max_body_size</code>); requests above this are rejected with 413.</li>
+                <li><code>error_page</code> — Map from error code to path (e.g. 404 → <code>/404.html</code>).</li>
+                <li><code>locations</code> — List of <code>LocationConfig</code> (routes with their own rules).</li>
+                <li>Optional: <code>autoindex</code>, <code>redirect</code> (code + URL).</li>
             </ul>
             </div>
 
             <div class="doc-block">
-                <h3 class="doc-h3">4. LocationConfig: rutas y permisos</h3>
+                <h3 class="doc-h3">4. LocationConfig: routes and permissions</h3>
             <p class="doc-p">
-                Cada <strong>LocationConfig</strong> define una ruta (ej. <code>/</code>, <code>/uploads</code>, <code>/cgi-bin</code>) y sus reglas:
+                Each <strong>LocationConfig</strong> defines a route (e.g. <code>/</code>, <code>/uploads</code>, <code>/cgi-bin</code>) and its rules:
             </p>
             <ul class="target-list">
-                <li><code>path</code> — Prefijo de URI que hace match (ej. <code>/</code>, <code>/uploads</code>).</li>
-                <li><code>root</code> — Directorio base para resolver archivos (puede sobreescribir el del server).</li>
-                <li><code>index</code> — Índices para esa location.</li>
-                <li><code>allowed_methods</code> — Métodos permitidos (GET, POST, DELETE, etc.); el resto devuelve 405.</li>
-                <li><code>autoindex</code> — Si está activo, se lista el directorio cuando no hay índice.</li>
-                <li><code>upload_store</code> — Directorio donde guardar archivos subidos (bonus upload).</li>
-                <li><code>cgi_handlers</code> — Mapa extensión → binario (ej. <code>.py</code> → <code>/usr/bin/python3</code>); las peticiones a esos recursos se envían a CGI.</li>
-                <li><code>redirect_code</code> / <code>redirect_url</code> — Redirección (ej. 301 a otra URL).</li>
+                <li><code>path</code> — URI prefix that matches (e.g. <code>/</code>, <code>/uploads</code>).</li>
+                <li><code>root</code> — Base directory used to resolve files (can override the server root).</li>
+                <li><code>index</code> — Index files for that location.</li>
+                <li><code>allowed_methods</code> — Allowed methods (GET, POST, DELETE, etc.); any other returns 405.</li>
+                <li><code>autoindex</code> — If enabled, lists the directory when there is no index.</li>
+                <li><code>upload_store</code> — Directory to store uploaded files (upload bonus).</li>
+                <li><code>cgi_handlers</code> — Map from extension to binary (e.g. <code>.py</code> → <code>/usr/bin/python3</code>); requests for these resources go to CGI.</li>
+                <li><code>redirect_code</code> / <code>redirect_url</code> — Redirect (e.g. 301 to another URL).</li>
             </ul>
             <p class="doc-p">
-                La validación <code>isMethodAllowed</code> comprueba si el método de la petición está en la lista; <code>getCgiPath(extension)</code> devuelve el intérprete o binario para una extensión dada.
+                The <code>isMethodAllowed</code> check ensures the request method is in the allowed list; <code>getCgiPath(extension)</code> returns the interpreter or binary for a given extension.
                 </p>
             </div>
 
             <div class="doc-block">
-                <h3 class="doc-h3">5. Flujo del parser</h3>
+                <h3 class="doc-h3">5. Parser flow</h3>
             <ol class="flow-list">
-                <li>Se abre el fichero de config y se preprocesa el contenido.</li>
-                <li>Se validan extensión, permisos y corchetes.</li>
-                <li>Se extraen los bloques <code>server</code> en crudo.</li>
-                <li>Para cada bloque se parsean las directivas de nivel server (<code>listen</code>, <code>root</code>, <code>error_page</code>, etc.).</li>
-                <li>Dentro de cada server se parsean los bloques <code>location</code> (<code>parseLocationBlock</code>): <code>root</code>, <code>allow_methods</code>, <code>cgi</code>, <code>upload_store</code>, <code>return</code>, etc.</li>
-                <li>El resultado es un <code>std::vector&lt;ServerConfig&gt;</code> listo para que el servidor arranque listeners y el RequestProcessor resuelva la location y aplique permisos y límites.</li>
+                <li>Open the config file and preprocess the content.</li>
+                <li>Validate extension, permissions and braces.</li>
+                <li>Extract raw <code>server</code> blocks.</li>
+                <li>For each block, parse server-level directives (<code>listen</code>, <code>root</code>, <code>error_page</code>, etc.).</li>
+                <li>Inside each server, parse <code>location</code> blocks (<code>parseLocationBlock</code>): <code>root</code>, <code>allow_methods</code>, <code>cgi</code>, <code>upload_store</code>, <code>return</code>, etc.</li>
+                <li>The result is a <code>std::vector&lt;ServerConfig&gt;</code> that allows the server to start listeners and the RequestProcessor to resolve the location and apply limits and permissions.</li>
             </ol>
             </div>
 
             <div class="doc-block">
                 <p class="doc-p" style="margin:0; color:var(--text-dim); font-size:0.9rem;">
-                    Objetivo: que cada petición se enrute por el mapa correcto (server + location), con los límites de tamaño, métodos permitidos y rutas de error definidos en el .conf, como un operador que vigila el tablero completo del centro de mando.
+                    Goal: every request should be routed through the correct map (server + location), with size limits, allowed methods and error routes defined in the .conf, like an operator watching the full command center board.
                 </p>
             </div>
         </main>

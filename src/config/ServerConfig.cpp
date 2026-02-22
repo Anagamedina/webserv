@@ -9,6 +9,7 @@
 ServerConfig::ServerConfig()
     : listen_port_(config::section::default_port),
       max_body_size_(config::section::max_body_size),
+  cgi_timeout_(60),
       autoindex_(false),
       redirect_code_(-1) {}
 
@@ -19,6 +20,7 @@ ServerConfig::ServerConfig(const ServerConfig& other)
       root_(other.root_),
       indexes_(other.indexes_),
       max_body_size_(other.max_body_size_),
+      cgi_timeout_(other.cgi_timeout_),
       error_pages_(other.error_pages_),
       locations_(other.locations_),
       autoindex_(other.autoindex_),
@@ -33,6 +35,7 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other) {
     indexes_ = other.indexes_;
     server_name_ = other.server_name_;
     max_body_size_ = other.max_body_size_;
+    cgi_timeout_ = other.cgi_timeout_;
     error_pages_ = other.error_pages_;
     locations_ = other.locations_;
     autoindex_ = other.autoindex_;
@@ -65,6 +68,13 @@ void ServerConfig::addIndex(const std::string& index) {
 }
 
 void ServerConfig::setMaxBodySize(size_t size) { max_body_size_ = size; }
+
+void ServerConfig::setCgiTimeout(int seconds) {
+  if (seconds < 1) {
+    throw ConfigException("Invalid CGI timeout: must be >= 1 second");
+  }
+  cgi_timeout_ = seconds;
+}
 
 void ServerConfig::addErrorPage(int code, const std::string& path) {
   if (code < 100 || code > 599) {
@@ -106,6 +116,8 @@ const std::vector<std::string>& ServerConfig::getIndexVector() const {
 }
 
 size_t ServerConfig::getMaxBodySize() const { return max_body_size_; }
+
+int ServerConfig::getCgiTimeout() const { return cgi_timeout_; }
 
 const std::map<int, std::string>& ServerConfig::getErrorPages() const {
   return error_pages_;

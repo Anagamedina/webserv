@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,26 +15,26 @@
         <nav class="nav-hud">
             <a href="/">THE HUD</a>
             <a href="/upload.html">LOAD LASER</a>
-            <a href="/about.html">THE SQUAD</a>
-            <a href="/target-list.html">TARGET LIST</a>
+            <a href="/squad_staff.html">ELITE SQUAD</a>
+            <a href="/cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
             <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
 
         <main class="panel">
             <h2>Target List</h2>
-            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+            <p class="back-row"><a href="/" class="btn btn-back">&larr; Back to HUD</a></p>
             <p style="margin-bottom:1rem; color:#808090; font-size:0.9rem;">
-                Lista de objetivos (archivos en el directorio de carga). Para ver los archivos reales del servidor usa el <a href="/cgi-bin/list_images.py">Tactical Scanner</a>. La lista de abajo es solo de ejemplo para probar el enlace [ELIMINAR] hacia el CGI.
+                List of targets (files in the upload directory). To see real server files use the <a href="/cgi-bin/list_images.py">Tactical Scanner</a>. The list below is only an example to test the [DELETE] link to a CGI.
             </p>
 
-            <p style="font-size:0.8rem; color:#808090; margin-bottom:0.6rem;"><strong>Ejemplo (objetivos de prueba):</strong></p>
+            <p style="font-size:0.8rem; color:#808090; margin-bottom:0.6rem;"><strong>Example (test targets):</strong></p>
             <ul class="target-list">
-                <li><span class="target-icon">&#8859;</span> objetivo_alfa.txt — <a href="/cgi-bin/delete.py?file=objetivo_alfa.txt">[ELIMINAR]</a></li>
-                <li><span class="target-icon">&#8859;</span> objetivo_beta.dat — <a href="/cgi-bin/delete.py?file=objetivo_beta.dat">[ELIMINAR]</a></li>
-                <li><span class="target-icon">&#8859;</span> informe_mission.html — <a href="/cgi-bin/delete.py?file=informe_mission.html">[ELIMINAR]</a></li>
+                <li><span class="target-icon">&#8859;</span> target_alpha.txt — <a href="/cgi-bin/delete.py?file=target_alpha.txt">[DELETE]</a></li>
+                <li><span class="target-icon">&#8859;</span> target_beta.dat — <a href="/cgi-bin/delete.py?file=target_beta.dat">[DELETE]</a></li>
+                <li><span class="target-icon">&#8859;</span> mission_report.html — <a href="/cgi-bin/delete.py?file=mission_report.html">[DELETE]</a></li>
             </ul>
 
-            <p style="margin-top:1.5rem; font-size:0.85rem; color:#808090;">El borrado real requiere un CGI (p. ej. <code>/cgi-bin/delete.py?file=nombre</code>) que procese el parámetro y borre el archivo en el servidor.</p>
+            <p style="margin-top:1.5rem; font-size:0.85rem; color:#808090;">Real deletion requires a CGI (e.g. <code>/cgi-bin/delete.py?file=name</code>) that reads the parameter and removes the file on the server.</p>
         </main>
     </div>
 </body>
