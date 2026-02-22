@@ -101,3 +101,4 @@ tests/manual_http_request
 compile_commands.json
 valgrind.log
 nginx/
+/docs/html/

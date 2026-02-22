@@ -1,6 +1,7 @@
 #include "ConfigParser.hpp"
 
 #include <fstream>
+#include <set>
 #include <sstream>
 
 #include "../common/namespaces.hpp"
@@ -512,6 +513,7 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
 
   LocationConfig loc;
   loc.setPath(locationPath);
+  std::set<std::string> parsedDirectives;
 
   while (std::getline(ss, line)) {
     line = config::utils::trimLine(line);
@@ -521,9 +523,25 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     std::vector<std::string> locTokens = config::utils::tokenize(line);
     if (locTokens.empty()) continue;
     const std::string& directive = locTokens[0];
+
     if (directive == "}") {
       break;  // End of location block
     }
+
+    // Unique directives check
+    if (directive == config::section::root ||
+        directive == config::section::autoindex ||
+        directive == config::section::uploads_bonus ||
+        directive == config::section::upload_bonus ||
+        directive == config::section::return_str ||
+        directive == config::section::client_max_body_size) {
+      if (parsedDirectives.count(directive)) {
+        throw ConfigException("Duplicate directive '" + directive +
+                              "' in location block: " + line);
+      }
+      parsedDirectives.insert(directive);
+    }
+
     if (directive == "{") {
       continue;
     }
@@ -590,6 +608,7 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   ServerConfig server;
   std::stringstream ss(blockContent);
   std::string line;
+  std::set<std::string> parsedDirectives;
 
   while (getline(ss, line)) {
     int indexTokens = 0;
@@ -602,6 +621,19 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     const std::string& directive = tokens[indexTokens];
     if (directive == "server" || directive == "{" || directive == "}") {
       continue;
+    }
+
+    // Unique directives check
+    if (directive == config::section::listen ||
+        directive == config::section::host ||
+        directive == config::section::server_name ||
+        directive == config::section::root ||
+        directive == config::section::client_max_body_size) {
+      if (parsedDirectives.count(directive)) {
+        throw ConfigException("Duplicate directive '" + directive +
+                              "' in server block: " + line);
+      }
+      parsedDirectives.insert(directive);
     }
 
     if (directive == config::section::listen) {
