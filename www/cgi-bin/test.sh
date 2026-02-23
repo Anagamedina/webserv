@@ -1,12 +1,7 @@
 #!/bin/bash
-printf "Status: 200 OK\r\n"
-printf "Content-Type: text/plain\r\n\r\n"
-echo "Hello from Bash CGI!"
-echo "Environment Variables:"
-env
 
-if [ "$REQUEST_METHOD" = "POST" ]; then
-    echo ""
-    echo "Request Body:"
-    cat
-fi
+echo -e "Content-Type: text/html\r\n\r"
+echo "<html><body>"
+echo "<h1>Bash CGI Executed</h1>"
+echo "<p>Method: ${REQUEST_METHOD}</p>"
+echo "</body></html>"
