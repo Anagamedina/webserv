@@ -1,137 +1,76 @@
-# 🚀 Webserv: Nuestro Propio Servidor HTTP
+*This project has been created as part of the 42 curriculum by anamedin, dasalaza, cpujades.*
 
-> **"This is when you finally understand why URLs start with HTTP"**
+# Webserv
 
----
+## Description
+Webserv is a custom-built HTTP server written in C++98 entirely from scratch, designed to emulate the core behavior of industry-standard servers like NGINX. 
 
-## 🎯 Resumen del Proyecto
+The primary goal of this project is to understand the underlying mechanics of the HTTP protocol by implementing a fully functional, non-blocking multiplexed server capable of handling multiple concurrent clients. It parses custom configuration files, serves static content, handles file uploads, executes Common Gateway Interface (CGI) scripts (such as Python, PHP, or Bash), and responds with precise HTTP status codes and custom error pages.
 
-Este proyecto tiene como objetivo escribir nuestro propio **servidor HTTP desde cero en C++98**.
-El servidor debe ser **compatible con navegadores web estándar** y debe implementar la **lógica subyacente del protocolo HTTP**.
+This project reinforces modern network programming paradigms, including strict adherence to I/O multiplexing (`epoll`, `select`, `poll`, or `kqueue`), resilient socket management, and robust request/response parsing according to the RFC semantical definitions.
 
-La función principal de un servidor web es **almacenar, procesar y entregar páginas web** a los clientes a través del protocolo **HTTP**.
+### Tools & Environment
+The development and testing of Webserv were supported by the following tools and environments:
+- **Operating Systems:** Linux, macOS
+- **IDEs/Editors:** CLion, Vim, Neovim
+- **Code Quality:** SonarQube
+- **AI Tools:** Gemini, Grok
 
----
+## Instructions
 
-## ⚙️ Requisitos Mandatorios
+### Prerequisites
+- A UNIX-like operating system (Linux, macOS).
+- `c++` compiler (or `clang++`/`g++`) supporting the C++98 standard.
+- `make`.
 
-El proyecto debe implementarse bajo el estándar **C++98** y **sin ninguna biblioteca externa**.
-
-### 1. Requisitos de Código y Compilación
-
-* **Lenguaje:** C++98
-* **Compilador:** `c++` con los flags `-Wall -Wextra -Werror`
-* **Makefile:** Debe contener las reglas `$(NAME)`, `all`, `clean`, `fclean` y `re`
-* **Robustez:** El programa **no debe fallar ni terminar inesperadamente**
-* **Funciones Externas Permitidas:** Solo se puede usar el conjunto de funciones C/Unix especificadas (`socket`, `select`, `poll`, `execve`, `read`, `write`, etc.)
-
----
-
-### 2. Arquitectura de Red (I/O No Bloqueante)
-
-La gestión eficiente y no bloqueante de múltiples clientes es crucial.
-
-* **Non-Blocking I/O:** El servidor debe permanecer no bloqueante en todo momento.
-* **I/O Multiplexing Único:** Solo se permite **una única llamada** (`poll()`, `select()`, `kqueue()` o `epoll()`) para todas las operaciones de I/O.
-* **Doble Monitoreo:** El multiplexor debe monitorear lectura y escritura simultáneamente.
-* **Control Estricto:** Nunca realizar `read` o `write` sin una notificación previa de disponibilidad.
-
----
-
-### 3. Funcionalidad HTTP y Protocolo
-
-El servidor debe ser compatible con navegadores estándar y simular el comportamiento de un servidor como **NGINX**.
-
-* **Métodos Obligatorios:** `GET`, `POST` y `DELETE`
-* **Contenido:** Capaz de servir un sitio web totalmente estático
-* **Respuestas:** Códigos de estado HTTP precisos y páginas de error personalizadas
-* **Archivos:** Los clientes deben poder **subir archivos**
-* **CGI (Common Gateway Interface):** Soporte para ejecución de scripts (`.php`, Python, etc.) según la extensión del archivo
-
-  > *Nota: `fork()` solo se puede usar para CGI.*
-
----
-
-### 4. Archivo de Configuración
-
-El programa debe aceptar un archivo de configuración como argumento al ejecutarse.
-El formato debe estar **inspirado en la sección `server` de NGINX**.
-
-Debe permitir configurar:
-
-* **Puertos:** Múltiples pares `interface:port` en los que escuchar
-* **Páginas de Error:** Personalizadas por código HTTP
-* **Límite de Cuerpo:** Tamaño máximo permitido para los cuerpos de las peticiones (`client_max_body_size`)
-* **Reglas por Ruta (location):**
-
-  * Lista de **métodos HTTP aceptados**
-  * **Redirecciones HTTP**
-  * **Ruta raíz** del directorio solicitado
-  * **Listado de directorios** activado/desactivado
-  * **Archivo por defecto** al acceder a un directorio
-  * **Ruta de almacenamiento** para los archivos subidos
-
----
-
-## 🧠 Recomendaciones y Buenas Prácticas
-
-* **Lectura Previa:** Releer los **RFCs** del protocolo HTTP (RFC 2616 y 7230)
-* **Pruebas:** Usar herramientas como `telnet`, `curl`, `Postman` y `NGINX` como referencia
-* **Resiliencia:** El servidor debe mantenerse operativo ante múltiples clientes y peticiones simultáneas
-* **Tests Automatizados:** Escribir tests en Python o Go para verificar el comportamiento del servidor
-* **Uso de IA:** Permitido para automatizar o documentar, pero **debes comprender todo el código generado**
-
----
-
-## 📁 Estructura Recomendada del Proyecto
-
-```bash
-webserv/
-├── src/
-│   ├── main.cpp
-│   ├── Server.cpp
-│   ├── Request.cpp
-│   ├── Response.cpp
-│   ├── ConfigParser.cpp
-│   └── ...
-├── include/
-│   ├── Server.hpp
-│   ├── Request.hpp
-│   ├── Response.hpp
-│   ├── ConfigParser.hpp
-│   └── ...
-├── config/
-│   └── default.conf
-├── Makefile
-└── README.md
-```
-
----
-
-## 🧩 Ejecución
-
+### Compilation
+To compile the project and generate the `webserver` executable, run the following command at the root of the repository:
 ```bash
 make
-./webserv config/default.conf
+```
+Other available `make` rules:
+- `make all`: Default rule, compiles the executable.
+- `make clean`: Removes all compiled object files and dependencies (`build` directory).
+- `make fclean`: Executes `clean` and removes the `webserver` executable.
+- `make re`: Executes `fclean` followed by `all` to completely recompile the project.
+- `make debug`: Compiles the project with debugging symbols enabled.
+- `make leaks`: Compiles the project with memory leak instrumentation (`-fsanitize=leak`).
+- `make optimized`: Compiles the project with maximum optimization flags (`-O3`).
+
+### Execution
+The server requires a configuration file to run. A default configuration is provided in the `config` directory. 
+Execute the server by passing the path to a configuration file as an argument:
+```bash
+./webserver config/default.conf
+```
+If no file is provided, it will fallback to `.config/default.conf` if configured as default in the source.
+
+Once running, you can access the configured servers via your web browser or command-line tools like `curl`:
+```bash
+curl -v http://localhost:8080
 ```
 
-Luego abre en tu navegador:
-👉 `http://localhost:8080`
+## Resources
 
----
+During the development of Webserv, the following resources were instrumental in understanding network programming and the HTTP protocol:
 
-## 👥 Créditos
+- **[RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html):** The primary reference for HTTP/1.1 syntax, status codes, and methodology.
+- **[RFC 3875: The Common Gateway Interface (CGI) Version 1.1](https://tools.ietf.org/html/rfc3875):** Essential for understanding how to pass environment variables and execute scripts dynamically.
+- **[Beej's Guide to Network Programming](https://beej.us/guide/bgnet/):** The classic, indispensable tutorial for understanding sockets, `bind`, `listen`, `accept`, and multiplexing functions.
 
-Proyecto realizado en la **Academia 42** como parte del cursus de C++:
+### Additional Reading
+- **[NGINX Core Configuration Source](https://github.com/nginx/nginx/blob/master/conf/nginx.conf):** Reference material used to understand the structure and parameters of a real-world server configuration file.
+- **[How To Install Nginx on Ubuntu 20.04](https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-ubuntu-20-04):** A practical guide that helped conceptualize server environments and standard installation practices.
+- **[Understanding Nginx Server and Location Block Selection Algorithms](https://www.digitalocean.com/community/tutorials/understanding-nginx-server-and-location-block-selection-algorithms):** Essential reading for implementing the logic that matches incoming requests to the correct server and location blocks.
+- **[Understanding the Nginx Location Directive](https://www.digitalocean.com/community/tutorials/nginx-location-directive):** Specific insights into how the `location` directive behaves and how modifiers affect routing.
 
-* Ana Medina Burgos
-* Darunny Salazar
-* Carles Pujades
+### Recommended Books
+- **[The Linux Programming Interface](https://amzn.eu/d/03wBhaY5):** A comprehensive guide to Linux system programming, essential for understanding `epoll`, sockets, and process management.
+- **[NGINX Cookbook](https://amzn.eu/d/09z4Czpt):** Advanced recipes for high-performance load balancing and web serving, useful for understanding edge-case configurations.
+- **[UNIX Network Programming](https://amzn.eu/d/0j1AM1rb):** The definitive text by W. Richard Stevens on network communications and socket-level programming in C.
+- **[HTTP: The Definitive Guide](https://amzn.eu/d/06xE70wG):** An in-depth exploration of the HTTP protocol, its history, and its mechanics, by David Gourley.
 
----
-
-## 📚 Referencias
-
-*  [RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)
-* [NGINX Configuration Guide](https://nginx.org/en/docs/)
-* [Beej’s Guide to Network Programming](https://beej.us/guide/bgnet/)
+### AI Usage
+Artificial Intelligence tools (such as conversational LLMs like Gemini and Grok) were utilized during this project as a supplemental aid, specifically for:
+- **Documentation & Comments:** Helping to formalize and understand concepts of diverse parts of the project.
+- **RFC Clarification:** Summarizing complex concepts from the RFC documentation into more digestible explanations.
