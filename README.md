@@ -7,7 +7,7 @@ Webserv is a custom-built HTTP server written in C++98 entirely from scratch, de
 
 The primary goal of this project is to understand the underlying mechanics of the HTTP protocol by implementing a fully functional, non-blocking multiplexed server capable of handling multiple concurrent clients. It parses custom configuration files, serves static content, handles file uploads, executes Common Gateway Interface (CGI) scripts (such as Python, PHP, or Bash), and responds with precise HTTP status codes and custom error pages.
 
-This project reinforces modern network programming paradigms, including strict adherence to I/O multiplexing (`epoll`, `select`, `poll`, or `kqueue`), resilient socket management, and robust request/response parsing according to the RFC semantical definitions.
+This project reinforces modern network programming paradigms, including strict adherence to I/O multiplexing (`epoll`), resilient socket management, and robust request/response parsing according to the RFC semantical definitions.
 
 ### Tools & Environment
 The development and testing of Webserv were supported by the following tools and environments:
@@ -19,9 +19,9 @@ The development and testing of Webserv were supported by the following tools and
 ## Instructions
 
 ### Prerequisites
-- A UNIX-like operating system (Linux, macOS).
+- A UNIX-like operating system (Linux).
 - `c++` compiler (or `clang++`/`g++`) supporting the C++98 standard.
-- `make`.
+- Have installed `make`.
 
 ### Compilation
 To compile the project and generate the `webserver` executable, run the following command at the root of the repository:
@@ -38,7 +38,7 @@ Other available `make` rules:
 - `make optimized`: Compiles the project with maximum optimization flags (`-O3`).
 
 ### Execution
-The server requires a configuration file to run. A default configuration is provided in the `config` directory. 
+The server requires a configuration file to run. A default configuration is provided in the `config/` directory. 
 Execute the server by passing the path to a configuration file as an argument:
 ```bash
 ./webserver config/default.conf
