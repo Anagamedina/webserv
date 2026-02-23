@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "../common/namespaces.hpp"
+#include "common/namespaces.hpp"
 #include "LocationConfig.hpp"
 
 /**

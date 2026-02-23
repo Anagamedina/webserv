@@ -3,8 +3,8 @@
 #include <map>
 #include <vector>
 
-#include "../client/Client.hpp"
-#include "../config/ServerConfig.hpp"
+#include "client/Client.hpp"
+#include "config/ServerConfig.hpp"
 #include "EpollWrapper.hpp"
 #include "TcpListener.hpp"
 

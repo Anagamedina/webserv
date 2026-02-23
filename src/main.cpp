@@ -1,14 +1,10 @@
 #include <signal.h>
 
 #include <exception>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <vector>
 
-#include "config/ConfigException.hpp"
 #include "config/ConfigParser.hpp"
-#include "config/ServerConfig.hpp"
 #include "network/ServerManager.hpp"
 
 /**
@@ -83,16 +79,7 @@ int main(int argc, char* argv[]) {
      * - Ocurre un error fatal
      */
     server.run();
-  } /*catch (std::exception& e) {
-          // Si algo sale mal durante la inicialización, mostrar el error
-          std::cerr << "Error: " << e.what() << std::endl;
-          return 1;
-  }*/
-  /*catch (const ConfigException& e)
-  {
-          std::cerr << "Configuration msg_errors: " << e.what() << std::endl;
-          return 1;
-  }*/
+  } 
   catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
