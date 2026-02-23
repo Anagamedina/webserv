@@ -115,9 +115,11 @@ void ServerManager::run() {
 
 void ServerManager::reapChildren() {
   while (true) {
-    pid_t pid = waitpid(-1, NULL, WNOHANG);
+    int status = 0;
+    pid_t pid = waitpid(-1, &status, WNOHANG);
 
     if (pid > 0) {
+      cgi_exit_statuses_[pid] = status;
 #ifdef DEBUG
       std::cout << "[CDI] Reaped child PID: " << pid << std::endl;
 #endif  // DEBUG
@@ -129,6 +131,25 @@ void ServerManager::reapChildren() {
       std::cerr << "waitpid failed: " << std::strerror(errno) << std::endl;
     }
   }
+}
+
+bool ServerManager::consumeCgiExitStatus(pid_t pid, int& status) {
+  std::map<pid_t, int>::iterator it = cgi_exit_statuses_.find(pid);
+  if (it != cgi_exit_statuses_.end()) {
+    status = it->second;
+    cgi_exit_statuses_.erase(it);
+    return true;
+  }
+
+  // Not in map yet? Maybe child already exited but waitpid wasn't called.
+  int wait_status = 0;
+  pid_t ret = waitpid(pid, &wait_status, WNOHANG);
+  if (ret == pid) {
+    status = wait_status;
+    return true;
+  }
+
+  return false;
 }
 
 void ServerManager::checkTimeouts() {
