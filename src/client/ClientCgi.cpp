@@ -74,6 +74,33 @@ void Client::finalizeCgiResponse(const CgiProcess* finishedProcess) {
     return;
   }
 
+  int child_status = 0;
+  bool has_child_status = false;
+  if (_serverManager != 0) {
+    has_child_status =
+        _serverManager->consumeCgiExitStatus(finishedProcess->getPid(),
+                                             child_status);
+  }
+
+  if (has_child_status) {
+    if ((WIFEXITED(child_status) && WEXITSTATUS(child_status) != 0) ||
+        WIFSIGNALED(child_status)) {
+      _response.clear();
+      _response.setStatusCode(500);
+      if (_savedVersion == HTTP_VERSION_1_0)
+        _response.setVersion("HTTP/1.0");
+      else
+        _response.setVersion("HTTP/1.1");
+      _response.setHeader("Connection", "close");
+      _response.setHeader("Content-Type", "text/plain");
+      _response.setBody("Internal Server Error: CGI script failed\n");
+
+      enqueueResponse(_response.serialize(), true);
+      processRequests();
+      return;
+    }
+  }
+
   _response.setStatusCode(finishedProcess->getStatusCode());
   if (_savedVersion == HTTP_VERSION_1_0)
     _response.setVersion("HTTP/1.0");
@@ -130,27 +157,12 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
           return;
         }
 
+        // Si el CGI cerró su extremo de lectura (EPIPE), o hay otro error,
+        // simplemente dejamos de intentar escribirle. No cortamos la respuesta,
+        // porque el CGI puede ya haber producido salida antes de salir, o
+        // simplemente no quería leer el body entero.
         _serverManager->unregisterCgiPipe(pipe_fd);
-        int pipeOut = _cgiProcess->getPipeOut();
-        if (pipeOut >= 0) {
-          _serverManager->unregisterCgiPipe(pipeOut);
-          _cgiProcess->closePipeOut();
-        }
         _cgiProcess->closePipeIn();
-        _cgiProcess->terminateProcess();
-        delete _cgiProcess;
-        _cgiProcess = 0;
-
-        _response.clear();
-        _response.setStatusCode(502);
-        if (_savedVersion == HTTP_VERSION_1_0)
-          _response.setVersion("HTTP/1.0");
-        else
-          _response.setVersion("HTTP/1.1");
-        _response.setHeader("Connection", "close");
-        _response.setHeader("Content-Type", "text/plain");
-        _response.setBody("Bad Gateway: CGI process write error\n");
-        enqueueResponse(_response.serialize(), true);
         return;
       }
     }
