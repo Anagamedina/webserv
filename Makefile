@@ -85,6 +85,8 @@ DEP_FILES = $(OBJ_FILES:.o=.d)
 #all: $(BIN_DIR)/$(NAME)
 all: $(NAME)
 
+bonus: all
+
 #$(BIN_DIR)/$(NAME): $(OBJ_FILES)
 #@mkdir -p $(BIN_DIR)
 $(NAME): $(OBJ_FILES)

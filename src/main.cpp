@@ -1,10 +1,8 @@
 #include <signal.h>
 
 #include <exception>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "common/namespaces.hpp"
 #include "config/ConfigException.hpp"

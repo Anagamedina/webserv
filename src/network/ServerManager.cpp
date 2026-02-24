@@ -80,9 +80,8 @@ void ServerManager::run() {
 
   while (true) {
     try {
-      int num_events = epoll_.wait(events, MAX_EVENTS,
-                                   3000);  // TODO: 3s timeout for maintenance
-                                           // tasks. make it configurable.
+      // INFO: 3s timeout for maintenance tasks
+      int num_events = epoll_.wait(events, MAX_EVENTS, 3000);
 
       for (int i = 0; i < num_events; ++i) {
         int fd = events[i].data.fd;
@@ -98,14 +97,14 @@ void ServerManager::run() {
       }
 
       if (num_events == 0) {
-        // Idle cycle or timeout, good time to check timeouts
-        // TODO: remove log
+// Idle cycle or timeout, good time to check timeouts
+#if DEBUG
         std::cout << " Server idle..." << std::endl;
+#endif  // DEBUG
       }
 
       // Reap any terminated child CGI processes to prevent zombies
       // Non-blocking call - returns immediately if no children have exited
-
       reapChildren();
       checkTimeouts();
     } catch (const std::exception& e) {
@@ -116,9 +115,11 @@ void ServerManager::run() {
 
 void ServerManager::reapChildren() {
   while (true) {
-    pid_t pid = waitpid(-1, NULL, WNOHANG);
+    int status = 0;
+    pid_t pid = waitpid(-1, &status, WNOHANG);
 
     if (pid > 0) {
+      cgi_exit_statuses_[pid] = status;
 #ifdef DEBUG
       std::cout << "[CDI] Reaped child PID: " << pid << std::endl;
 #endif  // DEBUG
@@ -132,12 +133,29 @@ void ServerManager::reapChildren() {
   }
 }
 
+bool ServerManager::consumeCgiExitStatus(pid_t pid, int& status) {
+  std::map<pid_t, int>::iterator it = cgi_exit_statuses_.find(pid);
+  if (it != cgi_exit_statuses_.end()) {
+    status = it->second;
+    cgi_exit_statuses_.erase(it);
+    return true;
+  }
+
+  int wait_status = 0;
+  pid_t ret = waitpid(pid, &wait_status, WNOHANG);
+  if (ret == pid) {
+    status = wait_status;
+    return true;
+  }
+
+  return false;
+}
+
 void ServerManager::checkTimeouts() {
   time_t now = time(NULL);
   std::vector<int> timeout_fds;
 
-  // Iterate over all clients and identify those who timed out
-  // TODO: Make timeout configurable via ServerBlock
+  // INFO: Iterate over all clients and identify those who timed out
   double timeout_seconds = CLIENT_TIMEOUT_SECONDS;
 
   for (std::map<int, Client*>::iterator it = clients_.begin();

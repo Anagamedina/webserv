@@ -110,7 +110,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // Change to script directory
     if (chdir(script_dir.c_str()) == -1) {
       std::cerr << "chdir failed: " << std::strerror(errno) << std::endl;
-      kill(getpid(), SIGKILL);
+      std::exit(EXIT_FAILURE);
     }
 
     // Prepare environment variables
@@ -165,7 +165,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // If execve fails
     std::cerr << "execve failed: " << std::strerror(errno) << std::endl;
-    kill(getpid(), SIGKILL);
+    std::exit(EXIT_FAILURE);
 
   } else {
     // PARENT PROCESS

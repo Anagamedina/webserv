@@ -83,22 +83,22 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
         interpreterPath = location->getCgiPath(ext);
       }
 
+      struct stat st;
+      if (stat(resolvedPath.c_str(), &st) != 0) {
+        int code = (errno == ENOENT || errno == ENOTDIR)
+                       ? HTTP_STATUS_NOT_FOUND
+                       : HTTP_STATUS_FORBIDDEN;
+        buildErrorResponse(result.response, request, code, true, server);
+        return result;
+      }
+
+      if (!S_ISREG(st.st_mode)) {
+        buildErrorResponse(result.response, request, HTTP_STATUS_FORBIDDEN,
+                           true, server);
+        return result;
+      }
+
       if (interpreterPath.empty()) {
-        struct stat st;
-        if (stat(resolvedPath.c_str(), &st) != 0) {
-          int code = (errno == ENOENT || errno == ENOTDIR)
-                         ? HTTP_STATUS_NOT_FOUND
-                         : HTTP_STATUS_FORBIDDEN;
-          buildErrorResponse(result.response, request, code, true, server);
-          return result;
-        }
-
-        if (!S_ISREG(st.st_mode)) {
-          buildErrorResponse(result.response, request, HTTP_STATUS_FORBIDDEN,
-                             true, server);
-          return result;
-        }
-
         if (access(resolvedPath.c_str(), X_OK) != 0) {
           int code = (errno == ENOENT || errno == ENOTDIR)
                          ? HTTP_STATUS_NOT_FOUND
@@ -107,6 +107,14 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
           return result;
         }
       } else {
+        if (access(resolvedPath.c_str(), R_OK) != 0) {
+          int code = (errno == ENOENT || errno == ENOTDIR)
+                         ? HTTP_STATUS_NOT_FOUND
+                         : HTTP_STATUS_FORBIDDEN;
+          buildErrorResponse(result.response, request, code, true, server);
+          return result;
+        }
+
         if (access(interpreterPath.c_str(), X_OK) != 0) {
           buildErrorResponse(result.response, request,
                              HTTP_STATUS_INTERNAL_SERVER_ERROR, true, server);

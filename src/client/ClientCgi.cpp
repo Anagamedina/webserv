@@ -69,9 +69,60 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   return true;
 }
 
+/**
+ * Finalizes the HTTP response from CGI script output.
+ * 
+ * This function parses the CGI output buffer to extract HTTP headers and body,
+ * validates the response structure, and constructs a complete HttpResponse object.
+ * 
+ * Process:
+ * 1. Parse CGI headers (Status, Content-Type, Location, etc.)
+ * 2. Determine HTTP status code (default 200 if not specified)
+ * 3. Validate response coherence (e.g., redirects must include Location header)
+ * 4. Set default Content-Type if missing
+ * 5. Populate HttpResponse with parsed headers and body
+ * 
+ * @param request The original HTTP request
+ * @param cgi_output Raw output buffer from the CGI process
+ * @param response HttpResponse object to populate
+ * @param server Server configuration for error page handling
+ * 
+ * @return true if response was successfully finalized
+ *         false if CGI output was invalid (triggers 500 error response)
+ * 
+ * @note Handles both document responses (200 OK) and local redirects (3xx)
+ *       as per CGI/1.1 specification (RFC 3875)
+ */
 void Client::finalizeCgiResponse(const CgiProcess* finishedProcess) {
   if (finishedProcess == 0) {
     return;
+  }
+
+  int child_status = 0;
+  bool has_child_status = false;
+  if (_serverManager != 0) {
+    has_child_status =
+        _serverManager->consumeCgiExitStatus(finishedProcess->getPid(),
+                                             child_status);
+  }
+
+  if (has_child_status) {
+    if ((WIFEXITED(child_status) && WEXITSTATUS(child_status) != 0) ||
+        WIFSIGNALED(child_status)) {
+      _response.clear();
+      _response.setStatusCode(500);
+      if (_savedVersion == HTTP_VERSION_1_0)
+        _response.setVersion("HTTP/1.0");
+      else
+        _response.setVersion("HTTP/1.1");
+      _response.setHeader("Connection", "close");
+      _response.setHeader("Content-Type", "text/plain");
+      _response.setBody("Internal Server Error: CGI script failed\n");
+
+      enqueueResponse(_response.serialize(), true);
+      processRequests();
+      return;
+    }
   }
 
   _response.setStatusCode(finishedProcess->getStatusCode());
@@ -130,27 +181,12 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
           return;
         }
 
+        // Si el CGI cerró su extremo de lectura (EPIPE), o hay otro error,
+        // simplemente dejamos de intentar escribirle. No cortamos la respuesta,
+        // porque el CGI puede ya haber producido salida antes de salir, o
+        // simplemente no quería leer el body entero.
         _serverManager->unregisterCgiPipe(pipe_fd);
-        int pipeOut = _cgiProcess->getPipeOut();
-        if (pipeOut >= 0) {
-          _serverManager->unregisterCgiPipe(pipeOut);
-          _cgiProcess->closePipeOut();
-        }
         _cgiProcess->closePipeIn();
-        _cgiProcess->terminateProcess();
-        delete _cgiProcess;
-        _cgiProcess = 0;
-
-        _response.clear();
-        _response.setStatusCode(502);
-        if (_savedVersion == HTTP_VERSION_1_0)
-          _response.setVersion("HTTP/1.0");
-        else
-          _response.setVersion("HTTP/1.1");
-        _response.setHeader("Connection", "close");
-        _response.setHeader("Content-Type", "text/plain");
-        _response.setBody("Bad Gateway: CGI process write error\n");
-        enqueueResponse(_response.serialize(), true);
         return;
       }
     }
