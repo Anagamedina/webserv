@@ -44,9 +44,6 @@ void buildErrorResponse(HttpResponse& response, const HttpRequest& request,
   response.setHeader("Content-Type", "text/html");
 }
 
-
-
-
 /*
 #include "ErrorUtils.hpp"
 
@@ -68,8 +65,8 @@ static bool readFileToBody(const std::string& path, std::vector<char>& out) {
   return true;
 }
 
-// Intenta leer la página de error; si la ruta es relativa y falla, prueba desde cwd y desde ..
-static bool readErrorPageBody(const std::string& errorPath,
+// Intenta leer la página de error; si la ruta es relativa y falla, prueba desde
+cwd y desde .. static bool readErrorPageBody(const std::string& errorPath,
                               std::vector<char>& body) {
   if (readFileToBody(errorPath, body) && !body.empty()) return true;
   if (errorPath.empty() || errorPath[0] == '/') return false;

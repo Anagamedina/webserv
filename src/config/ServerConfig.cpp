@@ -3,14 +3,14 @@
 #include <sstream>
 #include <string>
 
+#include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
 #include "LocationConfig.hpp"
-#include "../common/namespaces.hpp"
 
 ServerConfig::ServerConfig()
     : listen_port_(config::section::default_port),
       max_body_size_(config::section::max_body_size),
-	  cgi_timeout_(60),
+      cgi_timeout_(60),
       autoindex_(false),
       redirect_code_(-1) {}
 
@@ -158,51 +158,51 @@ void ServerConfig::print() const { std::cout << *this; }
  * @param config
  * @return
  */
-std::ostream& operator<<(std::ostream& os, const ServerConfig& config)
-{
-	os << config::colors::blue << config::colors::bold << "Server Config:\n"
-		<< config::colors::reset << "\t" << config::colors::yellow
-		<< "Port: " << config::colors::reset << config::colors::green
-		<< config.getPort() << config::colors::reset << "\n"
-		<< "\t" << config::colors::yellow << "Host: " << config::colors::reset
-		<< config::colors::green << config.getHost() << config::colors::reset
-		<< "\n"
-		<< "\t" << config::colors::yellow
-		<< "Server name: " << config::colors::reset << config::colors::green
-		<< config.getServerName() << config::colors::reset << "\n"<< config::colors::yellow
-		<< "\tMax body size: " << config::colors::reset << config::colors::green
-		<< config.getMaxBodySize() << config::colors::reset << "\n";
+std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
+  os << config::colors::blue << config::colors::bold << "Server Config:\n"
+     << config::colors::reset << "\t" << config::colors::yellow
+     << "Port: " << config::colors::reset << config::colors::green
+     << config.getPort() << config::colors::reset << "\n"
+     << "\t" << config::colors::yellow << "Host: " << config::colors::reset
+     << config::colors::green << config.getHost() << config::colors::reset
+     << "\n"
+     << "\t" << config::colors::yellow
+     << "Server name: " << config::colors::reset << config::colors::green
+     << config.getServerName() << config::colors::reset << "\n"
+     << config::colors::yellow << "\tMax body size: " << config::colors::reset
+     << config::colors::green << config.getMaxBodySize()
+     << config::colors::reset << "\n";
 
-	const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
-	os << "\t" << config::colors::yellow << "Error pages:\n"
-		<< config::colors::reset;
-	if (!errorPages.empty()) {
-		std::map<std::string, std::vector<int> > groupedErrors;
-		for (ServerConfig::ErrorIterator it = errorPages.begin();
-			it != errorPages.end(); ++it) {
-			groupedErrors[it->second].push_back(it->first);
-		}
-		for (std::map<std::string, std::vector<int> >::const_iterator groupIt =
-				groupedErrors.begin();
-			groupIt != groupedErrors.end(); ++groupIt) {
-			os << "\t";
-			const std::vector<int>& codes = groupIt->second;
-			for (std::vector<int>::const_iterator codeIt = codes.begin();
-				codeIt != codes.end(); ++codeIt) {
-				os << config::colors::magenta << " " << *codeIt
-					<< config::colors::reset;
-			}
-			os << config::colors::green << " " << groupIt->first
-				<< config::colors::reset << "\n";
-		}
-	} else {
-		os << config::colors::red << "\t\tNot configured"
-			<< config::colors::reset << "\n";
-	}
+  const ServerConfig::ErrorMap& errorPages = config.getErrorPages();
+  os << "\t" << config::colors::yellow << "Error pages:\n"
+     << config::colors::reset;
+  if (!errorPages.empty()) {
+    std::map<std::string, std::vector<int> > groupedErrors;
+    for (ServerConfig::ErrorIterator it = errorPages.begin();
+         it != errorPages.end(); ++it) {
+      groupedErrors[it->second].push_back(it->first);
+    }
+    for (std::map<std::string, std::vector<int> >::const_iterator groupIt =
+             groupedErrors.begin();
+         groupIt != groupedErrors.end(); ++groupIt) {
+      os << "\t";
+      const std::vector<int>& codes = groupIt->second;
+      for (std::vector<int>::const_iterator codeIt = codes.begin();
+           codeIt != codes.end(); ++codeIt) {
+        os << config::colors::magenta << " " << *codeIt
+           << config::colors::reset;
+      }
+      os << config::colors::green << " " << groupIt->first
+         << config::colors::reset << "\n";
+    }
+  } else {
+    os << config::colors::red << "\t\tNot configured" << config::colors::reset
+       << "\n";
+  }
 
-	const std::vector<LocationConfig>& locations = config.getLocations();
-	for (size_t i = 0; i < locations.size(); ++i) {
-		os << locations[i];
-	}
-	return os;
+  const std::vector<LocationConfig>& locations = config.getLocations();
+  for (size_t i = 0; i < locations.size(); ++i) {
+    os << locations[i];
+  }
+  return os;
 }

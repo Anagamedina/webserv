@@ -75,7 +75,6 @@ class LocationConfig {
   std::map<std::string, std::string> cgi_handlers_;
 };
 
-std::ostream& operator<<(std::ostream& os,
-						const LocationConfig& location);
+std::ostream& operator<<(std::ostream& os, const LocationConfig& location);
 
 #endif  // WEBSERV_LOCATIONCONFIG_HPP

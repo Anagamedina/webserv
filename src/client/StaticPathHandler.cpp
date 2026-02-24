@@ -73,10 +73,14 @@ static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
       if (isImagesDir && isImg) {
         std::string safeName;
         for (size_t i = 0; i < name.size(); ++i) {
-          if (name[i] == '"') safeName += "&quot;";
-          else if (name[i] == '&') safeName += "&amp;";
-          else if (name[i] == '<') safeName += "&lt;";
-          else safeName += name[i];
+          if (name[i] == '"')
+            safeName += "&quot;";
+          else if (name[i] == '&')
+            safeName += "&amp;";
+          else if (name[i] == '<')
+            safeName += "&lt;";
+          else
+            safeName += name[i];
         }
         items << "          <li class=\"ray-img\"><a href=\"" << href
               << "\"><img src=\"" << href << "\" alt=\"" << safeName
@@ -161,9 +165,9 @@ static bool handleDirectory(const HttpRequest& request,
     return false;
   }
 
-  // If no index found and autoindex is off, return 404 (Not Found) instead of 403
-  // to prevent directory enumeration / hide existence of directory.
-  // This is often required by 42 Subject/Tester.
+  // If no index found and autoindex is off, return 404 (Not Found) instead of
+  // 403 to prevent directory enumeration / hide existence of directory. This is
+  // often required by 42 Subject/Tester.
   buildErrorResponse(response, request, HTTP_STATUS_NOT_FOUND, false, server);
   return true;
 }

@@ -19,7 +19,8 @@
 // =============================================================================
 
 void Client::handleExpect100() {
-  // Expect: 100-continue: el cliente espera confirmación antes de mandar body grande
+  // Expect: 100-continue: el cliente espera confirmación antes de mandar body
+  // grande
   if (_parser.getState() == PARSING_BODY &&
       _parser.getRequest().hasExpect100Continue() && !_sent100Continue) {
     std::string continueMsg("HTTP/1.1 100 Continue\r\n\r\n");
@@ -30,7 +31,8 @@ void Client::handleExpect100() {
 }
 
 void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
-  // Añade una respuesta a la cola. Si no hay nada enviando, la pone en _outBuffer.
+  // Añade una respuesta a la cola. Si no hay nada enviando, la pone en
+  // _outBuffer.
   std::string payload(data.begin(), data.end());
   if (_outBuffer.empty()) {
     _outBuffer = payload;
@@ -124,11 +126,9 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
       _parser(),
       _response(),
       _serverManager(0),
-      _cgiProcess(0){
-        const ServerConfig* server = selectServerByPort(listenPort, configs);
-        if (server)
-          _parser.setMaxBodySize(server->getGlobalMaxBodySize());
-
+      _cgiProcess(0) {
+  const ServerConfig* server = selectServerByPort(listenPort, configs);
+  if (server) _parser.setMaxBodySize(server->getGlobalMaxBodySize());
 }
 
 Client::~Client() {
@@ -208,11 +208,11 @@ void Client::processRequests() {
 
     bool shouldClose = handleCompleteRequest();
 
-    // If CGI started, handleCompleteRequest returned true (and set _cgiProcess).
-    // The parser holds the request that started the CGI. We must reset it
-    // so we can parse the *next* request (if any) later.
-    // BUT we must have saved the necessary info from the request first
-    // (done in startCgiIfNeeded).
+    // If CGI started, handleCompleteRequest returned true (and set
+    // _cgiProcess). The parser holds the request that started the CGI. We must
+    // reset it so we can parse the *next* request (if any) later. BUT we must
+    // have saved the necessary info from the request first (done in
+    // startCgiIfNeeded).
     if (_cgiProcess) {
       _response.clear();
       _parser.reset();

@@ -1,12 +1,12 @@
 #include "ConfigParser.hpp"
-#include "../common/namespaces.hpp"
-#include "ConfigException.hpp"
-#include "ConfigUtils.hpp"
-#include "LocationConfig.hpp"
 
 #include <set>
 #include <sstream>
 
+#include "../common/namespaces.hpp"
+#include "ConfigException.hpp"
+#include "ConfigUtils.hpp"
+#include "LocationConfig.hpp"
 
 ConfigParser::ConfigParser() : servers_count_(0U) {}
 

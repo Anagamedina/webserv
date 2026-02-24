@@ -57,11 +57,13 @@ bool HttpParser::splitStartLine(const std::string& line, std::string& method,
 
 /**
  * Comprueba si el path tiene ".." como segmento (directorio padre).
- * Esto es peligroso: alguien podría pedir /../../etc/passwd para salirse del root.
+ * Esto es peligroso: alguien podría pedir /../../etc/passwd para salirse del
+ * root.
  *
  * Solo rechazamos cuando ".." va entre barras (o al inicio/final).
  * Ejemplos que SÍ rechazamos: /../, /foo/../bar, ../x
- * Ejemplos que NO rechazamos: file..txt, /foto..jpg (son nombres de archivo normales)
+ * Ejemplos que NO rechazamos: file..txt, /foto..jpg (son nombres de archivo
+ * normales)
  */
 static bool containsParentPathSegment(const std::string& path) {
   std::string::size_type search_pos = 0;
@@ -79,11 +81,12 @@ static bool containsParentPathSegment(const std::string& path) {
     bool is_valid_start = (found_at == 0) || (path[found_at - 1] == '/');
 
     // ¿Termina el ".." al final del path o va seguido de una barra?
-    bool is_valid_end = (found_at + 2 >= path.length()) ||
-                        (path[found_at + 2] == '/');
+    bool is_valid_end =
+        (found_at + 2 >= path.length()) || (path[found_at + 2] == '/');
 
     if (is_valid_start && is_valid_end) {
-      // Encontramos ".." como segmento de path -> intento de directory traversal
+      // Encontramos ".." como segmento de path -> intento de directory
+      // traversal
       return true;
     }
 

@@ -1,14 +1,20 @@
 #include "AutoindexRenderer.hpp"
+
 #include <sstream>
 
 static std::string escapeHtml(const std::string& s) {
   std::string out;
   for (size_t i = 0; i < s.size(); ++i) {
-    if (s[i] == '&') out += "&amp;";
-    else if (s[i] == '<') out += "&lt;";
-    else if (s[i] == '>') out += "&gt;";
-    else if (s[i] == '"') out += "&quot;";
-    else out += s[i];
+    if (s[i] == '&')
+      out += "&amp;";
+    else if (s[i] == '<')
+      out += "&lt;";
+    else if (s[i] == '>')
+      out += "&gt;";
+    else if (s[i] == '"')
+      out += "&quot;";
+    else
+      out += s[i];
   }
   return out;
 }
@@ -30,8 +36,7 @@ std::vector<char> renderAutoindexHtml(const std::string& base,
        << "<body>\n"
        << "  <h1>" << escapeHtml(title) << "</h1>\n"
        << "  <ul>\n"
-       << itemsHtml
-       << "  </ul>\n"
+       << itemsHtml << "  </ul>\n"
        << "</body>\n"
        << "</html>\n";
 

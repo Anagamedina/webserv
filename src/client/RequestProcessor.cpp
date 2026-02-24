@@ -1,8 +1,9 @@
 #include "RequestProcessor.hpp"
 
-#include <cerrno>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <cerrno>
 
 #include "ErrorUtils.hpp"
 #include "RequestProcessorUtils.hpp"
@@ -40,8 +41,8 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
         (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
     body = toBody(getErrorDescription(statusCode));
     shouldClose = true;
-    //fillBaseResponse(response, request, statusCode, shouldClose, body);
-    //return true;
+    // fillBaseResponse(response, request, statusCode, shouldClose, body);
+    // return true;
     fillBaseResponse(result.response, request, statusCode, shouldClose, body);
     return result;
   }
@@ -121,7 +122,7 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
     }
 
     // Servir archivo estático
-                         //response))
+    // response))
     if (handleStaticPath(request, server, location, resolvedPath, body,
                          result.response)) {
       return result;

@@ -84,7 +84,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 
   if (delimiter == ' ') {
     while (tokenStream >> token) {
-    	tokens.push_back(token);
+      tokens.push_back(token);
     }
   } else {
     while (std::getline(tokenStream, token, delimiter)) {
@@ -406,14 +406,17 @@ bool isValidLocationPath(const std::string& path) {
 }
 
 bool isValidHttpMethod(const std::string& method) {
-  return (method == config::section::method_get || method == config::section::method_post || method == config::section::method_delete || method == config::section::method_head);
+  return (method == config::section::method_get ||
+          method == config::section::method_post ||
+          method == config::section::method_delete ||
+          method == config::section::method_head);
 }
 
 /**
  * Checks if a root path exists and is accessible.
  * Returns empty string if OK, warning message if not.
  * Following NGINX behavior: warns but does not fail at startup.
-*/
+ */
 std::string checkRootPath(const std::string& path) {
   if (path.empty()) {
     return config::errors::root_path_warning + ": path is empty";
@@ -437,7 +440,7 @@ std::string checkRootPath(const std::string& path) {
  * Ensures upload store path exists, creating it if necessary.
  * Throws ConfigException if creation fails.
  * Following NGINX behavior: creates directory or fails at startup.
-*/
+ */
 void ensureUploadStorePath(const std::string& path) {
   if (path.empty()) {
     throw ConfigException(config::errors::upload_store_creation_failed +
