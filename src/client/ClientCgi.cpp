@@ -69,6 +69,30 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   return true;
 }
 
+/**
+ * Finalizes the HTTP response from CGI script output.
+ * 
+ * This function parses the CGI output buffer to extract HTTP headers and body,
+ * validates the response structure, and constructs a complete HttpResponse object.
+ * 
+ * Process:
+ * 1. Parse CGI headers (Status, Content-Type, Location, etc.)
+ * 2. Determine HTTP status code (default 200 if not specified)
+ * 3. Validate response coherence (e.g., redirects must include Location header)
+ * 4. Set default Content-Type if missing
+ * 5. Populate HttpResponse with parsed headers and body
+ * 
+ * @param request The original HTTP request
+ * @param cgi_output Raw output buffer from the CGI process
+ * @param response HttpResponse object to populate
+ * @param server Server configuration for error page handling
+ * 
+ * @return true if response was successfully finalized
+ *         false if CGI output was invalid (triggers 500 error response)
+ * 
+ * @note Handles both document responses (200 OK) and local redirects (3xx)
+ *       as per CGI/1.1 specification (RFC 3875)
+ */
 void Client::finalizeCgiResponse(const CgiProcess* finishedProcess) {
   if (finishedProcess == 0) {
     return;
