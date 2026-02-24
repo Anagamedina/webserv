@@ -125,10 +125,6 @@ void TcpListener::setSocketOptions() {
     close(socket_fd_);
     throw std::runtime_error("Failed to set socket to non-blocking");
   }
-  // if (fcntl(socket_fd_, F_SETFL, O_NONBLOCK) == -1) {
-  //	close(socket_fd_);
-  //	throw std::runtime_error("Failed to set socket to non-blocking");
-  // }
 }
 
 /// Binds the socket to a specific port on all network interfaces.
