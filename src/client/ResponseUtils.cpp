@@ -11,7 +11,6 @@ std::vector<char> toBody(const std::string& text) {
   return std::vector<char>(text.begin(), text.end());
 }
 
-// Devuelve el mensaje de error según el código HTTP (para errores de parseo)
 std::string getErrorDescription(int statusCode) {
   if (statusCode == HTTP_STATUS_FORBIDDEN) return "Forbidden\n";
   if (statusCode == HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE)
@@ -28,9 +27,6 @@ void fillBaseResponse(HttpResponse& response, const HttpRequest& request,
     response.setHeader("Connection", "close");
   else
     response.setHeader("Connection", "keep-alive");
-  // Si el caller ya ha fijado un Content-Type concreto (por ejemplo,
-  // StaticPathHandler usando la extension real del fichero o un CGI
-  // que ha enviado sus propios headers), no lo sobreescribimos.
   if (!response.hasHeader("content-type"))
     response.setContentType(request.getPath());
   response.setBody(body);

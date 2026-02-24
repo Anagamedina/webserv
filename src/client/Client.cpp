@@ -11,12 +11,6 @@
 #include "cgi/CgiProcess.hpp"
 #include "network/ServerManager.hpp"
 
-// ============================
-// FUNCIONES AUXILIARES
-// ============================
-// =============================================================================
-// FUNCIONES AUXILIARES (solo usadas dentro de la clase)
-// =============================================================================
 
 void Client::handleExpect100() {
   // Expect: 100-continue: el cliente espera confirmación antes de mandar body
@@ -31,8 +25,6 @@ void Client::handleExpect100() {
 }
 
 void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
-  // Añade una respuesta a la cola. Si no hay nada enviando, la pone en
-  // _outBuffer.
   std::string payload(data.begin(), data.end());
   if (_outBuffer.empty()) {
     _outBuffer = payload;
@@ -73,7 +65,6 @@ void Client::buildResponse() {
 }
 
 bool Client::handleCompleteRequest() {
-  // Se llama cuando el parser tiene una request completa (o con error)
   const HttpRequest& request = _parser.getRequest();
   bool shouldClose =
       (_parser.getState() == ERROR) || request.shouldCloseConnection();
@@ -174,11 +165,6 @@ void Client::handleRead() {
   char buffer[4096];  // buffer temporal
   ssize_t bytesRead = 0;
 
-  // Pasos:
-  // 1) Recibir datos crudos.
-  // 2) Actualizar tiempo para evitar timeout.
-  // 3) Pasar los datos al parser HTTP.
-  // 4) Ver si el parser ha completado una o mas requests.
   bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
   if (bytesRead > 0) {
     _lastActivity = std::time(0);
@@ -186,7 +172,6 @@ void Client::handleRead() {
 
     _parser.consume(std::string(buffer, bytesRead));
     handleExpect100();
-
     processRequests();
 
     if (_parser.getState() == ERROR) {
@@ -202,17 +187,8 @@ void Client::handleRead() {
 
 void Client::processRequests() {
   while (_parser.getState() == COMPLETE) {
-    // If a CGI process is running, we cannot start another one or process
-    // responses yet. We just wait (parser buffer holds next request).
     if (_cgiProcess) return;
-
     bool shouldClose = handleCompleteRequest();
-
-    // If CGI started, handleCompleteRequest returned true (and set
-    // _cgiProcess). The parser holds the request that started the CGI. We must
-    // reset it so we can parse the *next* request (if any) later. BUT we must
-    // have saved the necessary info from the request first (done in
-    // startCgiIfNeeded).
     if (_cgiProcess) {
       _response.clear();
       _parser.reset();
@@ -230,10 +206,6 @@ void Client::processRequests() {
 // ============================
 // ESCRITURA AL SOCKET (EPOLLOUT)
 // ============================
-// - Intenta enviar parte de _outBuffer con send().
-// - Borra del buffer lo que se haya enviado.
-// - Si termina y hay mas respuestas en cola, las saca una a una.
-// - Si no hay nada mas y no hay que cerrar, vuelve a STATE_IDLE.
 
 void Client::handleWrite() {
   if (_outBuffer.empty()) return;

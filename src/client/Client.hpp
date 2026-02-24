@@ -15,9 +15,6 @@
 class ServerManager;
 class CgiProcess;
 
-// -----------------------------------------------------------------------------
-// TIPOS (fuera de la clase, visibles y reutilizables)
-// -----------------------------------------------------------------------------
 
 enum ClientState {
   STATE_IDLE,            // Sin petición activa
@@ -36,13 +33,7 @@ struct PendingResponse {
 // -----------------------------------------------------------------------------
 // CLIENT - Representa una conexión TCP con un cliente
 // -----------------------------------------------------------------------------
-// Responsabilidades:
-//   - Recibir datos (recv) y pasarlos al HttpParser
-//   - Cuando hay request completa → RequestProcessor → HttpResponse
-//   - Encolar y enviar respuestas (send)
-// -----------------------------------------------------------------------------
 class Client {
-  // Saved request state for CGI
   bool _savedShouldClose;
   HttpVersion _savedVersion;
 
@@ -69,7 +60,6 @@ class Client {
   void buildResponse();
 
  private:
-  // ---- Copia prohibida ----
   Client(const Client&);
   Client& operator=(const Client&);
 

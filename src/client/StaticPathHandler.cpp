@@ -134,7 +134,6 @@ static bool handleDirectory(const HttpRequest& request,
   }
 
   if (foundIndex) {
-    // Double check: si el index es CGI segun config, no servir como estatico.
     if (isCgiRequestByConfig(location, indexPath)) {
       std::string redirectPath = request.getPath();
       if (redirectPath.empty()) redirectPath = "/";
@@ -148,13 +147,10 @@ static bool handleDirectory(const HttpRequest& request,
       return true;
     }
     if (!readFileToBody(indexPath, body)) {
-      // No se puede abrir el archivo (no existe o sin permisos) -> 403.
       buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false,
                          server);
       return true;
     }
-    // El index es un archivo estatico normal: fijamos el Content-Type
-    // usando la extension real del fichero (index.html, index.css, ...).
     response.setContentType(indexPath);
     return false;
   }
@@ -182,8 +178,6 @@ static bool handleRegularFile(const HttpRequest& request,
     return true;
   }
   if (request.getMethod() == HTTP_METHOD_DELETE) {
-    // in case unlink is not allowed use std::remove
-    // if (std::remove(path.c_str()) == 0) {
     if (unlink(path.c_str()) == 0) {
       body.clear();
       return false;
@@ -197,8 +191,6 @@ static bool handleRegularFile(const HttpRequest& request,
     buildErrorResponse(response, request, HTTP_STATUS_FORBIDDEN, false, server);
     return true;
   }
-  // Archivo estatico leido correctamente: asignamos Content-Type segun su
-  // extension.
   response.setContentType(path);
   return false;
 }
@@ -215,14 +207,12 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
     return true;
   }
 
-  // Intentamos usar el ultimo segmento de la ruta como nombre de archivo.
   // Ej: POST /uploads/mi_foto.png -> filename = "mi_foto.png"
   std::string filename;
   size_t lastSlash = path.find_last_of('/');
   if (lastSlash != std::string::npos && lastSlash < path.length() - 1) {
     filename = path.substr(lastSlash + 1);
   } else {
-    // Si no viene nombre en la URL, generamos uno simple con timestamp.
     std::ostringstream oss;
     oss << "uploaded_file_" << std::time(NULL);
     filename = oss.str();
@@ -248,15 +238,12 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
   outFile.close();
 
   response.setStatusCode(HTTP_STATUS_CREATED);
-  // Podemos opcionalmente devolver un pequeño mensaje en el body:
-  // body = toBody("File uploaded\n");
   return true;
 }
 
 bool handleStaticPath(const HttpRequest& request, const ServerConfig* server,
                       const LocationConfig* location, const std::string& path,
                       std::vector<char>& body, HttpResponse& response) {
-  // POST con upload_store: subida de archivo.
   if (request.getMethod() == HTTP_METHOD_POST && location &&
       !location->getUploadStore().empty()) {
     return handleUpload(request, server, location, path, body, response);

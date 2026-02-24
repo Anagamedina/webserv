@@ -10,17 +10,6 @@
 #include "ResponseUtils.hpp"
 #include "StaticPathHandler.hpp"
 
-// Función principal del procesador de peticiones.
-// Flujo general:
-// 1) Inicializar status, body, shouldClose
-// 2) Matching virtual host (ServerConfig por puerto)
-// 3) Matching location (LocationConfig por URI)
-// 4) Validaciones (método, tamaño body, redirect)
-// 5) Resolver path real (root/alias + uri)
-// 6) Si es CGI → retorna false para que Client ejecute CgiExecutor
-// 7) Si no, servir estático o errores, retorna true
-// 6) Decidir respuesta (estático o CGI) + errores
-// 7) Rellenar HttpResponse
 
 RequestProcessor::ProcessingResult RequestProcessor::process(
     const HttpRequest& request, const std::vector<ServerConfig>* configs,
@@ -35,24 +24,19 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
   const ServerConfig* server = 0;
   const LocationConfig* location = 0;
 
-  // 1) Errores primero
   if (parseErrorCode != 0 || request.getMethod() == HTTP_METHOD_UNKNOWN) {
     statusCode =
         (parseErrorCode != 0) ? parseErrorCode : HTTP_STATUS_BAD_REQUEST;
     body = toBody(getErrorDescription(statusCode));
     shouldClose = true;
-    // fillBaseResponse(response, request, statusCode, shouldClose, body);
-    // return true;
     fillBaseResponse(result.response, request, statusCode, shouldClose, body);
     return result;
   }
 
-  // 2) Seleccionar servidor y location
   server = selectServerByPort(listenPort, configs);
   if (server) location = matchLocation(*server, request.getPath());
 
   if (location) {
-    // Validar y resolver
     int validationCode = validateLocation(request, server, location);
     if (validationCode != 0) {
       if (validationCode == 301 || validationCode == 302) {
@@ -129,14 +113,11 @@ RequestProcessor::ProcessingResult RequestProcessor::process(
       return result;
     }
 
-    // Servir archivo estático
-    // response))
     if (handleStaticPath(request, server, location, resolvedPath, body,
                          result.response)) {
       return result;
     }
   } else {
-    // 404 Not Found
     buildErrorResponse(result.response, request, 404, false, server);
     return result;
   }

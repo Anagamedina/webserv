@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 
-// creates a unique id for the cookie (timestamp + counter + random)
 std::string createSessionId() {
   static int counter = 0;
   std::ostringstream ss;
@@ -69,4 +68,4 @@ void addSessionCookieIfNeeded(HttpResponse& response,
     std::string cookieValue = "id=" + newId + "; Path=/";
     response.setHeader("Set-Cookie", cookieValue);
   }
-}
+

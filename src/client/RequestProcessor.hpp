@@ -8,10 +8,6 @@
 #include "http/HttpRequest.hpp"
 #include "http/HttpResponse.hpp"
 
-// El cerebro del servidor: es quien decide que hacer con la peticion dado un
-// HttpRequest y la configuración, construye un HttpResponse (estático, CGI,
-// error, etc.) y lo devuelve al cliente. solo transforma un HttpRequest en
-// HttpResponse sin enviarlo al cliente.
 class RequestProcessor {
  public:
   enum ActionType { ACTION_SEND_RESPONSE, ACTION_EXECUTE_CGI };
@@ -21,7 +17,6 @@ class RequestProcessor {
     std::string scriptPath;
     std::string interpreterPath;
     const ServerConfig* server;
-    // We can add more info here if needed by CgiExecutor
   };
 
   struct ProcessingResult {
