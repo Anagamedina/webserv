@@ -465,6 +465,45 @@ void ensureUploadStorePath(const std::string& path) {
                           path + " (" + std::string(strerror(errno)) + ")");
   }
 }
+
+/**
+ * Converts a possibly relative path to an absolute path.
+ *
+ *  1. If path is already absolute (starts with '/'), return it without changes.
+ *  2. Otherwise,we join confFileDir + "/" + path.
+ *     - confFileDir is the directory of the '.conf' file, extracted
+ *       by ConfigParser before calling this function.
+ *     - Trailing slashes on either side are handled cleanly.
+ *
+ * Example:
+ *   path       = "YoupiBanane/"
+ *   confFileDir= "/home/user/webserv"
+ *   result     = "/home/user/webserv/YoupiBanane"
+ */
+std::string toAbsolutePath(const std::string& path,
+                           const std::string& confFileDir) {
+  if (path.empty())
+    return path;
+
+  if (path[0] == '/')
+    return path;
+
+  std::string base = confFileDir;
+  while (base.size() > 1 && base[base.size() - 1] == '/')
+    base.erase(base.size() - 1, 1);
+
+  // Build suffix: path without leading "./"
+  std::string suffix = path;
+  if (suffix.size() >= 2 && suffix[0] == '.' && suffix[1] == '/')
+    suffix = suffix.substr(2);
+
+  // Remove trailing slash from suffix (cosmetic — keeps paths clean)
+  while (suffix.size() > 1 && suffix[suffix.size() - 1] == '/')
+    suffix.erase(suffix.size() - 1, 1);
+
+  return base + "/" + suffix;
+}
+
 }  // namespace utils
 
 namespace debug {

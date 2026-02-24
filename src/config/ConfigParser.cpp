@@ -2,6 +2,7 @@
 
 #include <set>
 #include <sstream>
+#include <unistd.h>
 
 #include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
@@ -89,9 +90,14 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other) {
 
 //	VALIDATIONS
 bool ConfigParser::validateFileExtension() const {
-  if (config_file_path_.size() < 5 ||
+  if (config_file_path_.size() < 6 ||
       config_file_path_.substr(config_file_path_.size() - 5) !=
           config::paths::extension_file) {
+    return false;
+  }
+  // protect edge case: the character is like ".conf" cant be '/' (evita ficheros como "/.conf")
+  char charBeforeDot = config_file_path_[config_file_path_.size() - 5];
+  if (charBeforeDot == '/') {
     return false;
   }
   return true;
@@ -419,7 +425,9 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
      uploadPath);
        }
  */
-  loc.setUploadStore(uploadPathClean);
+  // Resolve relative upload_store path to absolute using the conf file directory.
+  loc.setUploadStore(
+      config::utils::toAbsolutePath(uploadPathClean, getConfFileDir()));
 }
 
 void ConfigParser::parseReturn(LocationConfig& loc,
@@ -459,7 +467,9 @@ void ConfigParser::parseReturn(LocationConfig& loc,
 
 void ConfigParser::parseRoot(ServerConfig& server,
                              const std::vector<std::string>& tokens) {
-  server.setRoot(config::utils::removeSemicolon(tokens[1]));
+  std::string raw = config::utils::removeSemicolon(tokens[1]);
+  // Resolve relative paths to absolute using the conf file's directory.
+  server.setRoot(config::utils::toAbsolutePath(raw, getConfFileDir()));
 }
 
 void ConfigParser::parseIndex(ServerConfig& server,
@@ -481,7 +491,9 @@ void ConfigParser::parseCgi(LocationConfig& loc,
     throw ConfigException("CGI extension must start with '.' " + extension);
   }
 
-  loc.addCgiHandler(extension, binaryPath);
+  // Resolve the CGI binary path relative to the conf file directory.
+  loc.addCgiHandler(extension,
+                    config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
 }
 
 void ConfigParser::parseServerName(ServerConfig& server,
@@ -553,7 +565,9 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
       throw ConfigException(config::errors::invalid_new_location_block + line);
     }
     if (directive == config::section::root) {
-      loc.setRoot(config::utils::removeSemicolon(locTokens[1]));
+      std::string rawRoot = config::utils::removeSemicolon(locTokens[1]);
+      // Resolve relative root path to absolute using the conf file directory.
+      loc.setRoot(config::utils::toAbsolutePath(rawRoot, getConfFileDir()));
     } else if (directive == config::section::index) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         loc.addIndex(config::utils::removeSemicolon(locTokens[i]));
@@ -710,4 +724,41 @@ void ConfigParser::checkDuplicateServerConfig() const {
       }
     }
   }
+}
+
+/**
+ * Returns the ABSOLUTE directory component of the config file path.
+ * Used to resolve relative paths inside the .conf file.
+ *
+ * The idea like Algorithm:
+ *  - If config_file_path_ starts with '/'  → it's already absolute.
+ *    Strip the filename: "/etc/web/server.conf" → "/etc/web"
+ *  - Otherwise (e.g. "tester.conf" or "config/default.conf"):
+ *    Prepend the process CWD obtained via getcwd(), then strip filename.
+ *    "tester.conf"         + CWD "/home/user/webserv" → "/home/user/webserv"
+ *    "config/default.conf" + CWD "/home/user/webserv" → "/home/user/webserv/config"
+ *
+ */
+std::string ConfigParser::getConfFileDir() const {
+  std::string fullPath = config_file_path_;
+
+  // If not absolute, prepend the current working directory
+  if (fullPath.empty() || fullPath[0] != '/') {
+    char cwdBuf[4096];
+    if (getcwd(cwdBuf, sizeof(cwdBuf)) != NULL) {
+      std::string cwd(cwdBuf);
+      // Remove trailing slash from CWD (shouldn't happen but be safe)
+      while (cwd.size() > 1 && cwd[cwd.size() - 1] == '/')
+        cwd.erase(cwd.size() - 1, 1);
+      fullPath = cwd + "/" + fullPath;
+    }
+  }
+
+  // Extract directory: everything up to (not including) the last '/'
+  size_t pos = fullPath.find_last_of('/');
+  if (pos == std::string::npos)
+    return ".";  // Fallback: should never happen after prepending CWD
+  if (pos == 0)
+    return "/";  // File is directly under filesystem root
+  return fullPath.substr(0, pos);
 }

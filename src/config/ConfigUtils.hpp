@@ -68,6 +68,16 @@ std::string checkRootPath(const std::string& path);
 /** @brief Ensures the upload store path exists and is a directory.*/
 void ensureUploadStorePath(const std::string& path);
 
+/**
+ * @brief Converts a possibly relative path to absolute.
+ *
+ * @param path        Raw path value from the directive (may be relative).
+ * @param confFileDir Directory portion of the .conf file path.
+ * @return            Absolute path string.
+ */
+std::string toAbsolutePath(const std::string& path,
+                           const std::string& confFileDir);
+
 }  // namespace utils
 
 }  // namespace config

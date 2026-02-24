@@ -78,6 +78,9 @@ class ConfigParser {
   void validateDirectiveLine(const std::string& line) const;
   void checkDuplicateServerConfig() const;
 
+  /** @brief Returns the directory part of the config file path. */
+  std::string getConfFileDir() const;
+
  private:
   std::string config_file_path_;
   std::string clean_file_str_;
