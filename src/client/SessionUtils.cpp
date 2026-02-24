@@ -68,4 +68,4 @@ void addSessionCookieIfNeeded(HttpResponse& response,
     std::string cookieValue = "id=" + newId + "; Path=/";
     response.setHeader("Set-Cookie", cookieValue);
   }
-
+}
