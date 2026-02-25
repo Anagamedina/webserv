@@ -8,7 +8,21 @@
 #include "config/ConfigException.hpp"
 #include "config/ConfigParser.hpp"
 #include "config/ConfigUtils.hpp"
+#include "config/ConfigUtils.hpp"
 #include "network/ServerManager.hpp"
+
+// Global flag to control the main server loop
+bool g_running = true;
+
+/**
+ * Signal handler for SIGINT (Ctrl+C) and SIGTERM.
+ * Sets the global running flag to false, allowing the main loop to exit.
+ */
+void handle_signal(int sig) {
+  (void)sig; // Suppress unused parameter warning
+  std::cout << "\n[Signal " << sig << "] Stopping server gracefully..." << std::endl;
+  g_running = false;
+}
 
 /**
  * Main function for the web server.
@@ -47,6 +61,11 @@ int main(int argc, char* argv[]) {
    * - Especially important for CGI (when the child process terminates).
    */
   signal(SIGPIPE, SIG_IGN);
+
+  // Register graceful shutdown handlers
+  signal(SIGINT, handle_signal);
+  signal(SIGQUIT, handle_signal);
+  signal(SIGTERM, handle_signal);
 
   try {
     ConfigParser parser(configPath);

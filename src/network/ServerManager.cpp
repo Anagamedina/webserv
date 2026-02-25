@@ -12,6 +12,9 @@
 #include <stdexcept>
 
 #include "client/Client.hpp"
+#include "client/Client.hpp"
+
+extern bool g_running;
 
 #define CLIENT_TIMEOUT_SECONDS 60
 
@@ -78,7 +81,7 @@ void ServerManager::run() {
 
   std::cout << "Server started. Waiting for events..." << std::endl;
 
-  while (true) {
+  while (g_running) {
     try {
       // INFO: 3s timeout for maintenance tasks
       int num_events = epoll_.wait(events, MAX_EVENTS, 3000);
