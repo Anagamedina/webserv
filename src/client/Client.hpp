@@ -38,7 +38,7 @@ class Client {
 
  public:
   // ---- Constructor y destructor ----
-  Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
+  Client(int fd, const std::vector<ServerConfig>* configs, int listenPort, const std::string& clientIp = "127.0.0.1");
   ~Client();
 
   // ---- Getters (para que el bucle principal sepa el estado) ----
@@ -65,6 +65,7 @@ class Client {
   // ---- Datos del socket y conexión ----
   int _fd;
   int _listenPort;
+  std::string _clientIp;
   const std::vector<ServerConfig>* _configs;
   ClientState _state;
   time_t _lastActivity;

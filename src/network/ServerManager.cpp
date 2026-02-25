@@ -181,13 +181,14 @@ void ServerManager::handleNewConnection(int listener_fd) {
   int port = listener_ports_[listener_fd];
 
   while (true) {
-    int client_fd = listener->acceptConnection();
+    std::string clientIp;
+    int client_fd = listener->acceptConnection(clientIp);
     if (client_fd == -1) break;
 
     // INFO: Add to Epoll - Level Triggered (no EPOLLET) for safety
     epoll_.addFd(client_fd, EPOLLIN | EPOLLRDHUP);
 
-    Client* new_client = new Client(client_fd, configs_, port);
+    Client* new_client = new Client(client_fd, configs_, port, clientIp);
     new_client->setServerManager(this);
     clients_[client_fd] = new_client;
 

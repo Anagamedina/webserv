@@ -48,7 +48,7 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   const HttpRequest& request = _parser.getRequest();
 
   _cgiProcess = exec.executeAsync(request, cgiInfo.scriptPath,
-                                  cgiInfo.interpreterPath, *cgiInfo.server);
+                                  cgiInfo.interpreterPath, *cgiInfo.server, _clientIp);
 
   if (_cgiProcess == 0) {
     // If execution fails (e.g. pipe error), return false so caller can send 500

@@ -401,9 +401,8 @@ void TcpListener::listen() {
 /// - New socket: fd = client_fd, state = ESTABLISHED, peer = client_addr
 /// - TCP connection: fully established, ready for send/recv
 ///
-/// @return New socket file descriptor (≥ 0) on success
 ///         -1 on failure (check errno: EAGAIN, EMFILE, ENOMEM, etc.)
-int TcpListener::acceptConnection() {
+int TcpListener::acceptConnection(std::string& clientIp) {
   struct sockaddr_in client_addr;
   socklen_t addr_len = sizeof(client_addr);
 
@@ -427,8 +426,8 @@ int TcpListener::acceptConnection() {
   std::ostringstream oss;
   oss << (int)ip_bytes[0] << "." << (int)ip_bytes[1] << "." << (int)ip_bytes[2]
       << "." << (int)ip_bytes[3];
-  std::string client_ip = oss.str();
-  std::cout << "New connection from " << client_ip << ":"
+  clientIp = oss.str();
+  std::cout << "New connection from " << clientIp << ":"
             << ntohs(client_addr.sin_port) << " (fd: " << client_fd << ")"
             << std::endl;
 

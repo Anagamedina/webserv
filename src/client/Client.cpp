@@ -102,11 +102,12 @@ bool Client::handleCompleteRequest() {
 // CONSTRUCTOR, DESTRUCTOR, GETTERS
 // =============================================================================
 
-Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort)
+Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort, const std::string& clientIp)
     : _savedShouldClose(false),
       _savedVersion(HTTP_VERSION_1_1),
       _fd(fd),
       _listenPort(listenPort),
+      _clientIp(clientIp),
       _configs(configs),
       _state(STATE_IDLE),
       _lastActivity(std::time(0)),

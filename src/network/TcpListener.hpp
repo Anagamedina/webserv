@@ -9,7 +9,7 @@ class TcpListener {
 
   void listen();
 
-  int acceptConnection();
+  int acceptConnection(std::string& clientIp);
 
   int getFd() const;
 
