@@ -186,6 +186,10 @@ void Client::handleRead() {
   char buffer[4096];  // buffer temporal
   ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
 
+  std::cerr << "[DIAG-READ] fd=" << _fd << " recv=" << bytesRead
+            << " errno=" << errno << " parserState=" << _parser.getState()
+            << std::endl;
+
   if (bytesRead > 0) {
     time_t now = std::time(0);
     _lastActivity = now;
@@ -197,6 +201,10 @@ void Client::handleRead() {
     _parser.consume(std::string(buffer, bytesRead));
     handleExpect100();
     processRequests();
+
+    std::cerr << "[DIAG-READ] fd=" << _fd
+              << " afterConsume parserState=" << _parser.getState()
+              << " cgiProc=" << (_cgiProcess != 0) << std::endl;
 
     if (_parser.getState() == ERROR) {
       handleCompleteRequest();
