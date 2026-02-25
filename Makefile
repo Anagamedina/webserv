@@ -35,7 +35,7 @@ LDFLAGS			=
 
 SRC_DIR		= src
 BIN_DIR		= bin
-BUILD_DIR	= build
+BUILD_DIR	= build-make
 INCLUDE 	= -I$(SRC_DIR) -Iinclude
 
 SRC_FILES = $(SRC_DIR)/main.cpp \
