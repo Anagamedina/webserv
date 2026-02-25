@@ -82,6 +82,7 @@ class Client {
   // ---- CGI (si hay script en ejecución) ----
   ServerManager* _serverManager;
   CgiProcess* _cgiProcess;
+  const ServerConfig* _cgiServerConfig;
 
   // ---- Flags ----
   bool _closeAfterWrite;

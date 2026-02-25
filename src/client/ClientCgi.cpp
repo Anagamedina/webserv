@@ -65,6 +65,7 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   // Save request state needed for finalization
   _savedShouldClose = request.shouldCloseConnection();
   _savedVersion = request.getVersion();
+  _cgiServerConfig = cgiInfo.server;
 
   return true;
 }
@@ -110,14 +111,7 @@ void Client::finalizeCgiResponse(const CgiProcess* finishedProcess) {
     if ((WIFEXITED(child_status) && WEXITSTATUS(child_status) != 0) ||
         WIFSIGNALED(child_status)) {
       _response.clear();
-      _response.setStatusCode(500);
-      if (_savedVersion == HTTP_VERSION_1_0)
-        _response.setVersion("HTTP/1.0");
-      else
-        _response.setVersion("HTTP/1.1");
-      _response.setHeader("Connection", "close");
-      _response.setHeader("Content-Type", "text/plain");
-      _response.setBody("Internal Server Error: CGI script failed\n");
+      buildErrorResponse(_response, _parser.getRequest(), 500, true, _cgiServerConfig);
 
       enqueueResponse(_response.serialize(), true);
       processRequests();
@@ -241,14 +235,7 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       _cgiProcess = 0;
 
       _response.clear();
-      _response.setStatusCode(502);
-      if (_savedVersion == HTTP_VERSION_1_0)
-        _response.setVersion("HTTP/1.0");
-      else
-        _response.setVersion("HTTP/1.1");
-      _response.setHeader("Connection", "close");
-      _response.setHeader("Content-Type", "text/plain");
-      _response.setBody("Bad Gateway: CGI process error\n");
+      buildErrorResponse(_response, _parser.getRequest(), 502, true, _cgiServerConfig);
       enqueueResponse(_response.serialize(), true);
       return;
     }
@@ -283,14 +270,7 @@ bool Client::checkCgiTimeout() {
   _cgiProcess = 0;
 
   _response.clear();
-  _response.setStatusCode(504);
-  if (_savedVersion == HTTP_VERSION_1_0)
-    _response.setVersion("HTTP/1.0");
-  else
-    _response.setVersion("HTTP/1.1");
-  _response.setHeader("Connection", "close");
-  _response.setHeader("Content-Type", "text/plain");
-  _response.setBody("Gateway Timeout: CGI execution timeout\n");
+  buildErrorResponse(_response, _parser.getRequest(), 504, true, _cgiServerConfig);
 
   enqueueResponse(_response.serialize(), true);
   _lastActivity = std::time(0);
