@@ -192,7 +192,7 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
   }
 
   if (pipe_fd == _cgiProcess->getPipeOut() &&
-      (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
+      (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))) {
     char buffer[4096];
     ssize_t bytes = read(pipe_fd, buffer, sizeof(buffer));
     if (bytes > 0) {
@@ -239,6 +239,11 @@ void Client::handleCgiPipe(int pipe_fd, size_t events) {
       enqueueResponse(_response.serialize(), true);
       return;
     }
+  }
+
+  // Fallthrough: unrecognized pipe fd — defensive cleanup
+  if (_serverManager) {
+    _serverManager->unregisterCgiPipe(pipe_fd);
   }
 }
 

@@ -266,13 +266,21 @@ void ServerManager::handleClientDisconnect(int client_fd) {
 
 void ServerManager::handleCgiPipeEvent(int pipe_fd, uint32_t events) {
   if (!cgi_pipes_.count(pipe_fd)) {
+    // fd is in epoll but not in our map — remove it to prevent busy-loop
+    epoll_.removeFd(pipe_fd);
     return;
   }
 
   Client* client = cgi_pipes_[pipe_fd];
   if (client) {
     client->handleCgiPipe(pipe_fd, events);
-    updateClientEvents(client->getFd());
+    if (clients_.count(client->getFd())) {
+      updateClientEvents(client->getFd());
+    }
+  } else {
+    // NULL client pointer — clean up orphaned pipe
+    epoll_.removeFd(pipe_fd);
+    cgi_pipes_.erase(pipe_fd);
   }
 }
 
