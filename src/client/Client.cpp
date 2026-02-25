@@ -183,45 +183,35 @@ double Client::getRequestElapsedSeconds() const {
 // =============================================================================
 
 void Client::handleRead() {
-  char buffer[65536];
+  // Use a large buffer to handle big uploads efficiently in fewer epoll events
+  // without needing a loop (which would require checking errno for EAGAIN).
+  char buffer[131072]; // 128 KB
+  
+  ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
 
-  while (true) {
-    ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
-
-    if (bytesRead > 0) {
-      time_t now = std::time(0);
-      _lastActivity = now;
-      if (_requestStartTime == 0) {
-        _requestStartTime = now;
-      }
-      if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
-
-      _parser.consume(std::string(buffer, bytesRead));
-      handleExpect100();
-      processRequests();
-
-      if (_parser.getState() == ERROR) {
-        handleCompleteRequest();
-        return;
-      }
-      // If CGI started, stop reading from client — body is already buffered
-      if (_cgiProcess) return;
-      // Continue loop to drain remaining data from receive buffer
-    } else if (bytesRead == 0) {
-      _state = STATE_CLOSED;
-      return;
-    } else {
-      // recv returned -1
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        // No more data available right now — normal for non-blocking I/O
-        return;
-      }
-      // Real error
-      _state = STATE_CLOSED;
-      return;
+  if (bytesRead > 0) {
+    time_t now = std::time(0);
+    _lastActivity = now;
+    if (_requestStartTime == 0) {
+      _requestStartTime = now;
     }
+    if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
+
+    _parser.consume(std::string(buffer, bytesRead));
+    handleExpect100();
+    processRequests();
+
+    if (_parser.getState() == ERROR) {
+      handleCompleteRequest();
+    }
+  } else {
+    // bytesRead == 0 (EOF) or -1 (Error).
+    // According to 42 subject, we shouldn't check errno here to adjust behavior.
+    // So we just close the connection in both cases.
+    _state = STATE_CLOSED;
   }
 }
+
 
 
 void Client::processRequests() {
