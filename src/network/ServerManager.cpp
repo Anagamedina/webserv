@@ -93,11 +93,6 @@ void ServerManager::run() {
         if (listeners_.count(fd)) {
           handleNewConnection(fd);
         } else if (clients_.count(fd)) {
-          Client* c = clients_[fd];
-          std::cerr << "[DIAG] fd=" << fd << " in clients_ state="
-                    << c->getState() << " hasPending=" << c->hasPendingData()
-                    << " needsWrite=" << c->needsWrite()
-                    << " events=" << event_mask << std::endl;
           handleClientEvent(fd, event_mask);
         } else if (cgi_pipes_.count(fd)) {
           handleCgiPipeEvent(fd, event_mask);

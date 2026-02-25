@@ -183,39 +183,46 @@ double Client::getRequestElapsedSeconds() const {
 // =============================================================================
 
 void Client::handleRead() {
-  char buffer[4096];  // buffer temporal
-  ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
+  char buffer[65536];
 
-  std::cerr << "[DIAG-READ] fd=" << _fd << " recv=" << bytesRead
-            << " errno=" << errno << " parserState=" << _parser.getState()
-            << std::endl;
+  while (true) {
+    ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
 
-  if (bytesRead > 0) {
-    time_t now = std::time(0);
-    _lastActivity = now;
-    if (_requestStartTime == 0) {
-      _requestStartTime = now;
-    }
-    if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
+    if (bytesRead > 0) {
+      time_t now = std::time(0);
+      _lastActivity = now;
+      if (_requestStartTime == 0) {
+        _requestStartTime = now;
+      }
+      if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
 
-    _parser.consume(std::string(buffer, bytesRead));
-    handleExpect100();
-    processRequests();
+      _parser.consume(std::string(buffer, bytesRead));
+      handleExpect100();
+      processRequests();
 
-    std::cerr << "[DIAG-READ] fd=" << _fd
-              << " afterConsume parserState=" << _parser.getState()
-              << " cgiProc=" << (_cgiProcess != 0) << std::endl;
-
-    if (_parser.getState() == ERROR) {
-      handleCompleteRequest();
+      if (_parser.getState() == ERROR) {
+        handleCompleteRequest();
+        return;
+      }
+      // If CGI started, stop reading from client — body is already buffered
+      if (_cgiProcess) return;
+      // Continue loop to drain remaining data from receive buffer
+    } else if (bytesRead == 0) {
+      _state = STATE_CLOSED;
+      return;
+    } else {
+      // recv returned -1
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // No more data available right now — normal for non-blocking I/O
+        return;
+      }
+      // Real error
+      _state = STATE_CLOSED;
       return;
     }
-  } else if (bytesRead == 0) {
-    _state = STATE_CLOSED;
-  } else {
-    _state = STATE_CLOSED;
   }
 }
+
 
 void Client::processRequests() {
   while (_parser.getState() == COMPLETE) {
