@@ -727,38 +727,24 @@ void ConfigParser::checkDuplicateServerConfig() const {
 }
 
 /**
- * Returns the ABSOLUTE directory component of the config file path.
- * Used to resolve relative paths inside the .conf file.
+ * @brief Retrieves the Current Working Directory (CWD) of the process.
+ * 
+ * This path is used as the base directory for resolving relative paths 
+ * specified in the configuration file (e.g., "root ./www"). 
+ * By returning the CWD rather than the configuration file's directory, 
+ * the server correctly resolves paths relative to the project root 
+ * (where the executable is launched).
  *
- * The idea like Algorithm:
- *  - If config_file_path_ starts with '/'  → it's already absolute.
- *    Strip the filename: "/etc/web/server.conf" → "/etc/web"
- *  - Otherwise (e.g. "tester.conf" or "config/default.conf"):
- *    Prepend the process CWD obtained via getcwd(), then strip filename.
- *    "tester.conf"         + CWD "/home/user/webserv" → "/home/user/webserv"
- *    "config/default.conf" + CWD "/home/user/webserv" → "/home/user/webserv/config"
- *
+ * @return std::string The absolute path of the current working directory.
+ *         Returns "." as a fallback if getcwd fails.
  */
 std::string ConfigParser::getConfFileDir() const {
-  std::string fullPath = config_file_path_;
-
-  // If not absolute, prepend the current working directory
-  if (fullPath.empty() || fullPath[0] != '/') {
-    char cwdBuf[4096];
-    if (getcwd(cwdBuf, sizeof(cwdBuf)) != NULL) {
-      std::string cwd(cwdBuf);
-      // Remove trailing slash from CWD (shouldn't happen but be safe)
-      while (cwd.size() > 1 && cwd[cwd.size() - 1] == '/')
-        cwd.erase(cwd.size() - 1, 1);
-      fullPath = cwd + "/" + fullPath;
-    }
+  char cwdBuf[4096];
+  if (getcwd(cwdBuf, sizeof(cwdBuf)) != NULL) {
+    std::string cwd(cwdBuf);
+    while (cwd.size() > 1 && cwd[cwd.size() - 1] == '/')
+      cwd.erase(cwd.size() - 1, 1);
+    return cwd;
   }
-
-  // Extract directory: everything up to (not including) the last '/'
-  size_t pos = fullPath.find_last_of('/');
-  if (pos == std::string::npos)
-    return ".";  // Fallback: should never happen after prepending CWD
-  if (pos == 0)
-    return "/";  // File is directly under filesystem root
-  return fullPath.substr(0, pos);
+  return ".";
 }
