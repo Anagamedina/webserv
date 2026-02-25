@@ -10,6 +10,8 @@ static std::string reasonPhraseForStatus(int code) {
       return "OK";
     case HTTP_STATUS_CREATED:
       return "Created";
+    case HTTP_STATUS_REQUEST_TIMEOUT:
+      return "Request Timeout";
     case HTTP_STATUS_BAD_REQUEST:
       return "Bad Request";
     case HTTP_STATUS_NOT_FOUND:

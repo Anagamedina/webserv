@@ -54,6 +54,7 @@ class Client {
   void handleWrite();
   void handleCgiPipe(int pipe_fd, size_t events);
   bool checkCgiTimeout();
+  bool checkRequestTimeout();
 
   // ---- Construcción de respuesta (llamado internamente) ----
   void buildResponse();
@@ -69,6 +70,7 @@ class Client {
   const std::vector<ServerConfig>* _configs;
   ClientState _state;
   time_t _lastActivity;
+  time_t _requestStartTime;
   bool _forceCloseCurrentResponse;
 
   // ---- Buffers ----

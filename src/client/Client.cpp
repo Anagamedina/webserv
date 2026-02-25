@@ -11,6 +11,8 @@
 #include "cgi/CgiProcess.hpp"
 #include "network/ServerManager.hpp"
 
+static const int REQUEST_TIMEOUT_SECONDS = 300;
+
 void Client::handleExpect100() {
   // Expect: 100-continue: el cliente espera confirmación antes de mandar body
   // grande
@@ -90,6 +92,7 @@ bool Client::handleCompleteRequest() {
       shouldClose = true;
     }
     if (_cgiProcess) {
+      _requestStartTime = 0;
       return true;
     }
   }
@@ -111,6 +114,7 @@ Client::Client(int fd, const std::vector<ServerConfig>* configs, int listenPort,
       _configs(configs),
       _state(STATE_IDLE),
       _lastActivity(std::time(0)),
+      _requestStartTime(0),
       _forceCloseCurrentResponse(false),
       _outBuffer(),
       _responseQueue(),
@@ -164,25 +168,44 @@ time_t Client::getLastActivity() const { return _lastActivity; }
 
 void Client::handleRead() {
   char buffer[4096];  // buffer temporal
-  ssize_t bytesRead = 0;
 
-  bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
-  if (bytesRead > 0) {
-    _lastActivity = std::time(0);
-    if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
+  while (true) {
+    ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
 
-    _parser.consume(std::string(buffer, bytesRead));
-    handleExpect100();
-    processRequests();
+    if (bytesRead > 0) {
+      time_t now = std::time(0);
+      _lastActivity = now;
+      if (_requestStartTime == 0) {
+        _requestStartTime = now;
+      }
+      if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
 
-    if (_parser.getState() == ERROR) {
-      handleCompleteRequest();
+      _parser.consume(std::string(buffer, bytesRead));
+      handleExpect100();
+      processRequests();
+
+      if (_parser.getState() == ERROR) {
+        handleCompleteRequest();
+        return;
+      }
+      continue;
+    }
+
+    if (bytesRead == 0) {
+      _state = STATE_CLOSED;
       return;
     }
-  } else if (bytesRead == 0) {
+
+    if (errno == EINTR) {
+      continue;
+    }
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      return;
+    }
+
     _state = STATE_CLOSED;
-  } else {
-    _state = STATE_CLOSED;
+    return;
   }
 }
 
@@ -193,15 +216,48 @@ void Client::processRequests() {
     if (_cgiProcess) {
       _response.clear();
       _parser.reset();
+      _requestStartTime = 0;
       return;
     }
 
     if (shouldClose) return;
     _response.clear();
     _parser.reset();
+    _requestStartTime = std::time(0);
     _sent100Continue = false;
     _parser.consume("");
   }
+}
+
+bool Client::checkRequestTimeout() {
+  if (_cgiProcess != 0) {
+    return false;
+  }
+
+  if (_requestStartTime == 0) {
+    return false;
+  }
+
+  if (_parser.getState() == COMPLETE || _parser.getState() == ERROR) {
+    return false;
+  }
+
+  time_t now = std::time(0);
+  if (difftime(now, _requestStartTime) < REQUEST_TIMEOUT_SECONDS) {
+    return false;
+  }
+
+  const ServerConfig* server = selectServerByPort(_listenPort, _configs);
+  _response.clear();
+  buildErrorResponse(_response, _parser.getRequest(),
+                     HTTP_STATUS_REQUEST_TIMEOUT, true, server);
+  enqueueResponse(_response.serialize(), true);
+
+  _parser.reset();
+  _requestStartTime = 0;
+  _sent100Continue = false;
+  _lastActivity = now;
+  return true;
 }
 
 // ============================
