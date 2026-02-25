@@ -168,44 +168,28 @@ time_t Client::getLastActivity() const { return _lastActivity; }
 
 void Client::handleRead() {
   char buffer[4096];  // buffer temporal
+  ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
 
-  while (true) {
-    ssize_t bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
-
-    if (bytesRead > 0) {
-      time_t now = std::time(0);
-      _lastActivity = now;
-      if (_requestStartTime == 0) {
-        _requestStartTime = now;
-      }
-      if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
-
-      _parser.consume(std::string(buffer, bytesRead));
-      handleExpect100();
-      processRequests();
-
-      if (_parser.getState() == ERROR) {
-        handleCompleteRequest();
-        return;
-      }
-      continue;
+  if (bytesRead > 0) {
+    time_t now = std::time(0);
+    _lastActivity = now;
+    if (_requestStartTime == 0) {
+      _requestStartTime = now;
     }
+    if (_state == STATE_IDLE) _state = STATE_READING_HEADER;
 
-    if (bytesRead == 0) {
-      _state = STATE_CLOSED;
+    _parser.consume(std::string(buffer, bytesRead));
+    handleExpect100();
+    processRequests();
+
+    if (_parser.getState() == ERROR) {
+      handleCompleteRequest();
       return;
     }
-
-    if (errno == EINTR) {
-      continue;
-    }
-
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      return;
-    }
-
+  } else if (bytesRead == 0) {
     _state = STATE_CLOSED;
-    return;
+  } else {
+    _state = STATE_CLOSED;
   }
 }
 
