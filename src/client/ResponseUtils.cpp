@@ -18,6 +18,19 @@ std::string getErrorDescription(int statusCode) {
   return "Bad Request\n";  // Por defecto para 400 u otros errores de parseo
 }
 
+
+/*
+ * @brief Fill a base response.
+ * 
+ * Fill a base response.
+ * 
+ * @param response The response to fill.
+ * @param request The request.
+ * @param statusCode The status code.
+ * @param shouldClose Whether to close the connection.
+ * @param body The body to fill the response with.
+ * 
+ */
 void fillBaseResponse(HttpResponse& response, const HttpRequest& request,
                       int statusCode, bool shouldClose,
                       const std::vector<char>& body) {

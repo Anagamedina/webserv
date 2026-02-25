@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-static std::string escapeHtml(const std::string& s) {
+std::string escapeHtml(const std::string& s) {
   std::string out;
   for (size_t i = 0; i < s.size(); ++i) {
     if (s[i] == '&')

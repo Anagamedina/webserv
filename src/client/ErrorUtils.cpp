@@ -6,6 +6,12 @@
 #include "RequestProcessorUtils.hpp"
 #include "ResponseUtils.hpp"
 
+/*
+ * @brief Read a file to a body.
+ * 
+ * Read a file to a body.
+ * return true if the file is read successfully, false otherwise.
+ */
 static bool readFileToBody(const std::string& path, std::vector<char>& out) {
   std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
   if (!file.is_open()) return false;
@@ -15,6 +21,18 @@ static bool readFileToBody(const std::string& path, std::vector<char>& out) {
   return true;
 }
 
+/*
+ * @brief Build an error response.
+ * 
+ * Build an error response.
+ * 
+ * @param response The response to build.
+ * @param request The request.
+ * @param statusCode The status code.
+ * @param shouldClose Whether to close the connection.
+ * @param server The server config.
+ * 
+ */
 void buildErrorResponse(HttpResponse& response, const HttpRequest& request,
                         int statusCode, bool shouldClose,
                         const ServerConfig* server) {
@@ -37,7 +55,7 @@ void buildErrorResponse(HttpResponse& response, const HttpRequest& request,
   html << "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
        << "<title>Error " << statusCode << "</title></head><body>"
        << "<h1>Error " << statusCode << "</h1>"
-       << "<p>Ocurrió un error en el servidor.</p>"
+       << "<p>Ocurrió un error en el servidor LaserWeb.</p>"
        << "</body></html>";
   fillBaseResponse(response, request, statusCode, shouldClose,
                    toBody(html.str()));

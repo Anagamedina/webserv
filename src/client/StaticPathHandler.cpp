@@ -1,13 +1,14 @@
 #include "StaticPathHandler.hpp"
 
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <dirent.h>  // for opendir and readdir
+#include <sys/stat.h>  // for stat
+#include <unistd.h>  // for unlink
 
-#include <ctime>
+#include <ctime>  // for time
 #include <fstream>
 #include <sstream>
-#include <utility>
+#include <utility>  // for pair
+#include <iostream>
 
 #include "AutoindexRenderer.hpp"
 #include "ErrorUtils.hpp"
@@ -16,12 +17,18 @@
 #include "common/StringUtils.hpp"
 #include "http/HttpResponse.hpp"
 
+/* @brief read a file to a body.
+ * 
+ * read a file to a body.
+ * return true if the file is read successfully, false otherwise.
+ * 
+*/
 static bool readFileToBody(const std::string& path, std::vector<char>& out) {
   std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
   if (!file.is_open()) return false;
 
   out.clear();
-  char c;
+  char c; 
   while (file.get(c)) out.push_back(c);
   return true;
 }
@@ -71,17 +78,7 @@ static std::vector<char> generateAutoIndexBody(const std::string& dirPath,
       if (isDir) href += "/";
 
       if (isImagesDir && isImg) {
-        std::string safeName;
-        for (size_t i = 0; i < name.size(); ++i) {
-          if (name[i] == '"')
-            safeName += "&quot;";
-          else if (name[i] == '&')
-            safeName += "&amp;";
-          else if (name[i] == '<')
-            safeName += "&lt;";
-          else
-            safeName += name[i];
-        }
+        std::string safeName = escapeHtml(name);
         items << "          <li class=\"ray-img\"><a href=\"" << href
               << "\"><img src=\"" << href << "\" alt=\"" << safeName
               << "\"></a><span>" << safeName << "</span></li>\n";
@@ -161,9 +158,6 @@ static bool handleDirectory(const HttpRequest& request,
     return false;
   }
 
-  // If no index found and autoindex is off, return 404 (Not Found) instead of
-  // 403 to prevent directory enumeration / hide existence of directory. This is
-  // often required by 42 Subject/Tester.
   buildErrorResponse(response, request, HTTP_STATUS_NOT_FOUND, false, server);
   return true;
 }
@@ -204,6 +198,19 @@ static bool handleUpload(const HttpRequest& request, const ServerConfig* server,
   if (uploadStore.empty()) {
     buildErrorResponse(response, request, HTTP_STATUS_METHOD_NOT_ALLOWED, false,
                        server);
+    return true;
+  }
+
+  // Verificar que el directorio de destino existe
+  struct stat st;
+  if (stat(uploadStore.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
+#ifdef DEBUG
+    std::cerr << "[UPLOAD] upload_store directory does not exist or is not a "
+                 "directory: "
+              << uploadStore << std::endl;
+#endif
+    buildErrorResponse(response, request, HTTP_STATUS_INTERNAL_SERVER_ERROR,
+                       true, server);
     return true;
   }
 

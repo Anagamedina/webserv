@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+std::string escapeHtml(const std::string& s);
+
 std::vector<char> renderAutoindexHtml(const std::string& base,
                                       const std::string& itemsHtml);
 

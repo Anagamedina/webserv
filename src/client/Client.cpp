@@ -11,9 +11,18 @@
 #include "cgi/CgiProcess.hpp"
 #include "network/ServerManager.hpp"
 
+
+
+/**
+ * @brief Handle Expect: 100-continue
+ * 
+ * If the parser is in the PARSING_BODY state and the request has an Expect: 100-continue header,
+ * and the sent100Continue flag is not set, then enqueue a response with the continue message.
+ * The sent100Continue flag is set to true.
+ * 
+ *
+ */
 void Client::handleExpect100() {
-  // Expect: 100-continue: el cliente espera confirmación antes de mandar body
-  // grande
   if (_parser.getState() == PARSING_BODY &&
       _parser.getRequest().hasExpect100Continue() && !_sent100Continue) {
     std::string continueMsg("HTTP/1.1 100 Continue\r\n\r\n");
@@ -23,6 +32,14 @@ void Client::handleExpect100() {
   }
 }
 
+
+/*
+ * @brief Enqueue a response with the continue message.
+ * 
+ * @param data The data to enqueue.
+ * @param closeAfter Whether to close the connection after writing the response.
+ * 
+ */
 void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
   std::string payload(data.begin(), data.end());
   if (_outBuffer.empty()) {
@@ -34,11 +51,20 @@ void Client::enqueueResponse(const std::vector<char>& data, bool closeAfter) {
   _responseQueue.push(PendingResponse(payload, closeAfter));
 }
 
+
 bool Client::startCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   return executeCgi(cgiInfo);
 }
 
-void Client::dispatchAction(const HttpRequest& request,
+/*
+ * @brief Dispatch an action based on the processor result.
+ * 
+ * Dispatch an action based on the processor result.
+ * If the action is ACTION_EXECUTE_CGI, start a CGI process.
+ * If the action is ACTION_SEND_RESPONSE, send a response.
+ * 
+ */
+void Client:: dispatchAction(const HttpRequest& request,
                             const RequestProcessor::ProcessingResult& result) {
   if (result.action == RequestProcessor::ACTION_EXECUTE_CGI) {
     if (startCgi(result.cgiInfo)) {
@@ -53,6 +79,13 @@ void Client::dispatchAction(const HttpRequest& request,
   _response = result.response;
 }
 
+
+/*
+ * @brief Build a response.
+ * 
+ * Build a response based on the request and the processor result.
+ * forceCloseCurrentResponse is set to false because the response is not yet built.
+ */
 void Client::buildResponse() {
   const HttpRequest& request = _parser.getRequest();
   _forceCloseCurrentResponse = false;
@@ -63,6 +96,17 @@ void Client::buildResponse() {
   dispatchAction(request, result);
 }
 
+
+/*
+ * @brief Handle a complete request.
+ * 
+ * Handle a complete request.
+ * If the parser is in the ERROR state, handle the complete request.
+ * If the parser is in the COMPLETE state, handle the complete request.
+ * serialize the response and enqueue it.
+ * return true if the connection should be closed.
+ * forceCloseCurrentResponse is set to false because the response is not yet built.
+ */
 bool Client::handleCompleteRequest() {
   const HttpRequest& request = _parser.getRequest();
   bool shouldClose =
@@ -78,8 +122,6 @@ bool Client::handleCompleteRequest() {
   std::cerr << ")" << std::endl;
 #endif
 
-  // If parser is in ERROR state, we should generate error response immediately
-  // and NOT try to run CGI (which requires valid body/headers)
   if (_parser.getState() == ERROR) {
     RequestProcessor::ProcessingResult result = _processor.process(
         request, _configs, _listenPort, _parser.getErrorStatusCode());
@@ -162,8 +204,17 @@ time_t Client::getLastActivity() const { return _lastActivity; }
 // MANEJO DE EVENTOS (llamados desde el bucle epoll)
 // =============================================================================
 
+/*
+ * @brief Handle a read event.
+ * 
+ * Read data from the socket and update the parser.
+ * Handle Expect: 100-continue.
+ * Process requests.
+ * If the parser is in the ERROR state, handle the complete request.
+ * 
+ */
 void Client::handleRead() {
-  char buffer[4096];  // buffer temporal
+  char buffer[4096];
   ssize_t bytesRead = 0;
 
   bytesRead = recv(_fd, buffer, sizeof(buffer), 0);
@@ -186,6 +237,13 @@ void Client::handleRead() {
   }
 }
 
+/*
+ * @brief Process requests.
+ * 
+ * Process requests until the parser is not in the COMPLETE state.
+ * If the parser is in the COMPLETE state, handle the complete request.
+ * 
+ */
 void Client::processRequests() {
   while (_parser.getState() == COMPLETE) {
     if (_cgiProcess) return;
@@ -208,6 +266,14 @@ void Client::processRequests() {
 // ESCRITURA AL SOCKET (EPOLLOUT)
 // ============================
 
+/*
+ * @brief Handle a write event.
+ * 
+ * Send data to the socket.
+ * If the out buffer is empty, return.
+ * If the out buffer is not empty, send the data to the socket.
+ * 
+ */
 void Client::handleWrite() {
   if (_outBuffer.empty()) return;
 
@@ -220,7 +286,6 @@ void Client::handleWrite() {
     return;
   }
 
-  // Si hemos enviado todo el buffer actual:
   if (_outBuffer.empty()) {
     if (_closeAfterWrite == true) {
       _state = STATE_CLOSED;
