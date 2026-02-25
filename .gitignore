@@ -90,6 +90,8 @@ dkms.conf
 webserver
 /local
 /build
+/build-cmake
+/build-make
 
 #http tests
 tests/manual_http_parser
