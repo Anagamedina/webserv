@@ -36,7 +36,8 @@ class CgiExecutor {
   CgiProcess* executeAsync(const HttpRequest& request,
                            const std::string& script_path,
                            const std::string& interpreter_path,
-                           const ServerConfig& serverConfig);
+                           const ServerConfig& serverConfig,
+                           const std::string& clientIp = "127.0.0.1");
 
  private:
   /**
@@ -49,7 +50,7 @@ class CgiExecutor {
    */
   std::map<std::string, std::string> prepareEnvironment(
       const HttpRequest& request, const std::string& script_path,
-      const ServerConfig& serverConfig);
+      const ServerConfig& serverConfig, const std::string& clientIp);
 
   /**
    * Convert environment map to C-style array for execve

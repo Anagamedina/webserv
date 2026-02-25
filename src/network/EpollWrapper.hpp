@@ -4,10 +4,6 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#include <stdexcept>
-#include <string>
-#include <vector>
-
 class EpollWrapper {
  public:
   EpollWrapper();

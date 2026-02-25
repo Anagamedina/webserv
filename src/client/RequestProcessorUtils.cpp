@@ -41,10 +41,6 @@ const LocationConfig* matchLocation(const ServerConfig& server,
         }
       }
     } else {
-      // Handle case where URI does not end with / but location does,
-      // for example:
-      // is "/directory" and location is "/directory/"
-      // We want to match this so we can later redirect or handle it
       if (path.size() > 1 && path[path.size() - 1] == '/' &&
           uri == path.substr(0, path.size() - 1)) {
         if (path.size() > bestLen) {
@@ -74,8 +70,6 @@ std::string resolvePath(const ServerConfig& server,
   std::string aliasPath;
   std::string rootPath;
 
-  // TODO: revisar si añadir alias dentro de la configuracion (daru no quiere)
-  // If URI starts with the location path, replace that prefix with root.
   if (uri.find(locationPath) == 0) {
     aliasPath = root;
     if (!aliasPath.empty() && aliasPath[aliasPath.size() - 1] != '/')
@@ -90,8 +84,6 @@ std::string resolvePath(const ServerConfig& server,
              locationPath[locationPath.size() - 1] == '/' &&
              uri == locationPath.substr(0, locationPath.size() - 1)) {
     aliasPath = root;
-    // Strip trailing slash from root if we mapped exactly to directory without
-    // slash
     if (!aliasPath.empty() && aliasPath[aliasPath.size() - 1] == '/')
       aliasPath.erase(aliasPath.size() - 1);
   }
@@ -106,10 +98,6 @@ std::string resolvePath(const ServerConfig& server,
     rootPath += "/";
   rootPath += uri;
 
-  // If a location matched and we computed an alias-style mapping,
-  // always use it even when target does not exist yet.
-  // Falling back to rootPath on stat() miss incorrectly reinserts
-  // the location prefix (e.g. /directory) into filesystem paths.
   if (!aliasPath.empty()) {
     return aliasPath;
   }
@@ -152,16 +140,12 @@ std::string methodToString(HttpMethod method) {
 
 int validateLocation(const HttpRequest& request, const ServerConfig* server,
                      const LocationConfig* location) {
-  // 1) Redirect -> responder y salir (pendiente de getters de LocationConfig)
   int redirectCode = location->getRedirectCode();
   if (redirectCode == 301 || redirectCode == 302) return redirectCode;
 
-  // 2) Metodo permitido (HEAD rechazado por defecto a menos que esté
-  // explícitamente permitido)
   if (!location->isMethodAllowed(methodToString(request.getMethod())))
     return 405;
 
-  // 3) Body size
   size_t maxBodySize = server ? server->getMaxBodySize() : 0;
   if (location) maxBodySize = location->getMaxBodySize();
 

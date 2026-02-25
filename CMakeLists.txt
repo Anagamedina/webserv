@@ -27,7 +27,6 @@ add_subdirectory(src/network)
 add_subdirectory(src/utils)
 
 # --- main executable ---
-
 add_executable(webserv
         src/main.cpp
 )
@@ -63,5 +62,3 @@ if(BUILD_TESTING)
                 add_subdirectory(tests/manual_client)
         endif()
 endif()
-
-

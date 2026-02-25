@@ -16,7 +16,7 @@ set -e
 # ============================================================================
 
 # Configuration
-BUILD_DIR="build"
+BUILD_DIR="build-cmake"
 FORCE_REBUILD="${1:-OFF}"
 
 echo "▶ Generating compile_commands.json"

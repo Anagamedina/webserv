@@ -90,6 +90,8 @@ dkms.conf
 webserver
 /local
 /build
+/build-cmake
+/build-make
 
 #http tests
 tests/manual_http_parser
@@ -101,4 +103,5 @@ tests/manual_http_request
 compile_commands.json
 valgrind.log
 nginx/
+/docs/html/
 .agent/

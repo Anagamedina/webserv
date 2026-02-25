@@ -1,6 +1,8 @@
 #include "ConfigParser.hpp"
 
-#include <fstream>
+#include <unistd.h>
+
+#include <set>
 #include <sstream>
 
 #include "../common/namespaces.hpp"
@@ -30,7 +32,11 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 //	============= PRIVATE CONSTRUCTORS ===============
 
 /**
- * main function of parsing
+ * @brief Parse the configuration file
+ *
+ * Performs validation, preprocessing, block extraction
+ * and parsing of all server blocks.
+ * Call this after construction to fill the servers list.
  */
 void ConfigParser::parse() {
   if (!validateFileExtension()) {
@@ -50,6 +56,7 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
+  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
     throw ConfigException(
         config::errors::invalid_brackets_length_or_invalid_start_end +
@@ -84,9 +91,15 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other) {
 
 //	VALIDATIONS
 bool ConfigParser::validateFileExtension() const {
-  if (config_file_path_.size() < 5 ||
+  if (config_file_path_.size() < 6 ||
       config_file_path_.substr(config_file_path_.size() - 5) !=
           config::paths::extension_file) {
+    return false;
+  }
+  // protect edge case: the character is like ".conf" cant be '/' (evita
+  // ficheros como "/.conf")
+  char charBeforeDot = config_file_path_[config_file_path_.size() - 5];
+  if (charBeforeDot == '/') {
     return false;
   }
   return true;
@@ -414,7 +427,10 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
      uploadPath);
        }
  */
-  loc.setUploadStore(uploadPathClean);
+  // Resolve relative upload_store path to absolute using the conf file
+  // directory.
+  loc.setUploadStore(
+      config::utils::toAbsolutePath(uploadPathClean, getConfFileDir()));
 }
 
 void ConfigParser::parseReturn(LocationConfig& loc,
@@ -454,7 +470,9 @@ void ConfigParser::parseReturn(LocationConfig& loc,
 
 void ConfigParser::parseRoot(ServerConfig& server,
                              const std::vector<std::string>& tokens) {
-  server.setRoot(config::utils::removeSemicolon(tokens[1]));
+  std::string raw = config::utils::removeSemicolon(tokens[1]);
+  // Resolve relative paths to absolute using the conf file's directory.
+  server.setRoot(config::utils::toAbsolutePath(raw, getConfFileDir()));
 }
 
 void ConfigParser::parseIndex(ServerConfig& server,
@@ -476,7 +494,9 @@ void ConfigParser::parseCgi(LocationConfig& loc,
     throw ConfigException("CGI extension must start with '.' " + extension);
   }
 
-  loc.addCgiHandler(extension, binaryPath);
+  // Resolve the CGI binary path relative to the conf file directory.
+  loc.addCgiHandler(
+      extension, config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
 }
 
 void ConfigParser::parseServerName(ServerConfig& server,
@@ -512,6 +532,7 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
 
   LocationConfig loc;
   loc.setPath(locationPath);
+  std::set<std::string> parsedDirectives;
 
   while (std::getline(ss, line)) {
     line = config::utils::trimLine(line);
@@ -521,9 +542,25 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
     std::vector<std::string> locTokens = config::utils::tokenize(line);
     if (locTokens.empty()) continue;
     const std::string& directive = locTokens[0];
+
     if (directive == "}") {
       break;  // End of location block
     }
+
+    // Unique directives check
+    if (directive == config::section::root ||
+        directive == config::section::autoindex ||
+        directive == config::section::uploads_bonus ||
+        directive == config::section::upload_bonus ||
+        directive == config::section::return_str ||
+        directive == config::section::client_max_body_size) {
+      if (parsedDirectives.count(directive)) {
+        throw ConfigException("Duplicate directive '" + directive +
+                              "' in location block: " + line);
+      }
+      parsedDirectives.insert(directive);
+    }
+
     if (directive == "{") {
       continue;
     }
@@ -531,7 +568,9 @@ void ConfigParser::parseLocationBlock(ServerConfig& server,
       throw ConfigException(config::errors::invalid_new_location_block + line);
     }
     if (directive == config::section::root) {
-      loc.setRoot(config::utils::removeSemicolon(locTokens[1]));
+      std::string rawRoot = config::utils::removeSemicolon(locTokens[1]);
+      // Resolve relative root path to absolute using the conf file directory.
+      loc.setRoot(config::utils::toAbsolutePath(rawRoot, getConfFileDir()));
     } else if (directive == config::section::index) {
       for (size_t i = 1; i < locTokens.size(); ++i) {
         loc.addIndex(config::utils::removeSemicolon(locTokens[i]));
@@ -590,6 +629,7 @@ ServerConfig ConfigParser::parseSingleServerBlock(
   ServerConfig server;
   std::stringstream ss(blockContent);
   std::string line;
+  std::set<std::string> parsedDirectives;
 
   while (getline(ss, line)) {
     int indexTokens = 0;
@@ -602,6 +642,19 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     const std::string& directive = tokens[indexTokens];
     if (directive == "server" || directive == "{" || directive == "}") {
       continue;
+    }
+
+    // Unique directives check
+    if (directive == config::section::listen ||
+        directive == config::section::host ||
+        directive == config::section::server_name ||
+        directive == config::section::root ||
+        directive == config::section::client_max_body_size) {
+      if (parsedDirectives.count(directive)) {
+        throw ConfigException("Duplicate directive '" + directive +
+                              "' in server block: " + line);
+      }
+      parsedDirectives.insert(directive);
     }
 
     if (directive == config::section::listen) {
@@ -674,4 +727,27 @@ void ConfigParser::checkDuplicateServerConfig() const {
       }
     }
   }
+}
+
+/**
+ * @brief Retrieves the Current Working Directory (CWD) of the process.
+ *
+ * This path is used as the base directory for resolving relative paths
+ * specified in the configuration file (e.g., "root ./www").
+ * By returning the CWD rather than the configuration file's directory,
+ * the server correctly resolves paths relative to the project root
+ * (where the executable is launched).
+ *
+ * @return std::string The absolute path of the current working directory.
+ *         Returns "." as a fallback if getcwd fails.
+ */
+std::string ConfigParser::getConfFileDir() const {
+  char cwdBuf[4096];
+  if (getcwd(cwdBuf, sizeof(cwdBuf)) != NULL) {
+    std::string cwd(cwdBuf);
+    while (cwd.size() > 1 && cwd[cwd.size() - 1] == '/')
+      cwd.erase(cwd.size() - 1, 1);
+    return cwd;
+  }
+  return ".";
 }

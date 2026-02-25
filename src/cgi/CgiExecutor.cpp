@@ -13,8 +13,6 @@
 
 #include "CgiExecutor.hpp"
 
-#include "client/RequestProcessorUtils.hpp"
-
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -30,6 +28,8 @@
 #include <sstream>
 #include <vector>
 
+#include "client/RequestProcessorUtils.hpp"
+
 static void closeIfValid(int& fd) {
   if (fd >= 0) {
     close(fd);
@@ -44,7 +44,8 @@ CgiExecutor::~CgiExecutor() {}
 CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
                                       const std::string& script_path,
                                       const std::string& interpreter_path,
-                                      const ServerConfig& serverConfig) {
+                                      const ServerConfig& serverConfig,
+                                      const std::string& clientIp) {
   // Step 1: Create communication pipes
   // pipe_in: parent writes request body to child stdin
   // pipe_out: parent reads CGI output from child stdout
@@ -110,13 +111,13 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // Change to script directory
     if (chdir(script_dir.c_str()) == -1) {
       std::cerr << "chdir failed: " << std::strerror(errno) << std::endl;
-      kill(getpid(), SIGKILL);
+      std::exit(EXIT_FAILURE);
     }
 
     // Prepare environment variables
     // INFO: Use full path for SCRIPT_FILENAME env var
     std::map<std::string, std::string> env_map =
-        prepareEnvironment(request, script_path, serverConfig);
+        prepareEnvironment(request, script_path, serverConfig, clientIp);
 #ifdef DEBUG
     std::cout << "[CGI ENV] script=" << script_path << std::endl;
     for (std::map<std::string, std::string>::const_iterator it =
@@ -165,7 +166,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
     // If execve fails
     std::cerr << "execve failed: " << std::strerror(errno) << std::endl;
-    kill(getpid(), SIGKILL);
+    std::exit(EXIT_FAILURE);
 
   } else {
     // PARENT PROCESS
@@ -183,9 +184,8 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     std::string body(requestBody.begin(), requestBody.end());
     CgiProcess* proc =
         new CgiProcess(script_path, interpreter_path,
-               pipe_in[1],                          // Write end
-               pipe_out[0], pid, serverConfig.getCgiTimeout(),
-                       body);
+                       pipe_in[1],  // Write end
+                       pipe_out[0], pid, serverConfig.getCgiTimeout(), body);
 
     return proc;
   }
@@ -195,7 +195,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
 
 std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
     const HttpRequest& request, const std::string& script_path,
-    const ServerConfig& serverConfig) {
+    const ServerConfig& serverConfig, const std::string& clientIp) {
   std::map<std::string, std::string> env;
 
   // Step 1: Core CGI/HTTP Variables
@@ -238,8 +238,7 @@ std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
 
   // Step 5: Client/Server Connection Information
 
-  env["REMOTE_ADDR"] =
-      "127.0.0.1";  // TODO: Extract from socket via getpeername()
+  env["REMOTE_ADDR"] = clientIp;
   env["REQUEST_URI"] = uri;
 
   // Step 5b: Server identification (CGI/1.1 spec)

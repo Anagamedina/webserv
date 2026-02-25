@@ -3,10 +3,10 @@
 #include <map>
 #include <vector>
 
-#include "../client/Client.hpp"
-#include "../config/ServerConfig.hpp"
 #include "EpollWrapper.hpp"
 #include "TcpListener.hpp"
+#include "client/Client.hpp"
+#include "config/ServerConfig.hpp"
 
 class ServerManager {
  public:
@@ -20,6 +20,9 @@ class ServerManager {
 
   void registerCgiPipe(int pipe_fd, uint32_t events, Client* client);
   void unregisterCgiPipe(int pipe_fd);
+
+  // Gets exited child process status
+  bool consumeCgiExitStatus(pid_t pid, int& status);
 
  private:
   // Maximum number of events to process at once
@@ -51,5 +54,8 @@ class ServerManager {
 
   // Map CGI pipe FD -> Client (for CGI output handling)
   std::map<int, Client*> cgi_pipes_;
+
+  std::map<pid_t, int> cgi_exit_statuses_;
+
   void reapChildren();
 };

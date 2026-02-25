@@ -1,14 +1,14 @@
 CompileFlags:
-  Add: [-I/path/to/your/project/lib/catch2]
-  Remove: [-I.*catch.*]  # Remove any system catch includes
-  # Use the compile_commands.json from the build directory
-  CompilationDatabase: build
-  Add: 
+  Add:
+    - -I/path/to/your/project/lib/catch2
     - "-std=c++98"
     - "-xc++"
     - "-Wall"
     - "-Wextra"
     - "-Werror"
+  Remove: [-I.*catch.*]  # Remove any system catch includes
+  # Use the compile_commands.json from the build directory
+  CompilationDatabase: build-cmake
 
 # Completion configuration
 Completion:

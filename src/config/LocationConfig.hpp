@@ -6,13 +6,11 @@
 #include <string>
 #include <vector>
 
-#include "ConfigUtils.hpp"
-
 /**
  * @brief Represents the configuration for a specific location within a server
  * block.
  *
- * This class handles parsing and storing settings defined in a 'location block',
+ * Handles parsing and storing settings defined in a 'location block',
  * such as:
  * - content root directory
  * - allowed HTTP methods (GET, POST, DELETE, HEAD)
@@ -60,7 +58,7 @@ class LocationConfig {
   // Validation
   bool isMethodAllowed(const std::string& method) const;
 
-  // Debug
+  // Debug Helper
   void print() const;
 
  private:
@@ -77,98 +75,6 @@ class LocationConfig {
   std::map<std::string, std::string> cgi_handlers_;
 };
 
-inline std::ostream& operator<<(std::ostream& os,
-                                const LocationConfig& location) {
-  os << config::colors::cyan << config::colors::bold << "Locations info:\n"
-     << config::colors::reset << "\t" << config::colors::yellow
-     << "Location Path: " << config::colors::reset << config::colors::green
-     << location.getPath() << config::colors::reset << "\n"
-     << "\t" << config::colors::yellow << "Root: " << config::colors::reset
-     << config::colors::green << location.getRoot() << config::colors::reset
-     << "\n"
-     << "\t" << config::colors::yellow
-     << "Autoindex: " << config::colors::reset;
-  if (location.getAutoIndex()) {
-    os << config::colors::green << "on";
-  } else {
-    os << config::colors::red << "off";
-  }
-  os << config::colors::reset << "\n";
-
-  if (!location.getUploadStore().empty()) {
-    os << "\t" << config::colors::yellow
-       << "Upload Store: " << config::colors::reset << config::colors::green
-       << location.getUploadStore() << config::colors::reset << "\n";
-  } else {
-    os << "\t" << config::colors::yellow
-       << "empty" << config::colors::reset << "\n";
-  }
-
-  os << "\t" << config::colors::yellow
-     << "Max Body Size: " << config::colors::reset << config::colors::green
-     << location.getMaxBodySize() << config::colors::reset << "\n";
-
-  if (location.getRedirectCode() != -1) {
-    os << "\t" << config::colors::yellow << "Return ("
-       << location.getRedirectParamCount() << " parameter"
-       << (location.getRedirectParamCount() == 1 ? "" : "s")
-       << "): " << config::colors::reset;
-    if (location.getRedirectParamCount() == 1) {
-      os << config::colors::green << location.getRedirectUrl()
-         << config::colors::reset << "\n";
-    } else {
-      os << config::colors::green << location.getRedirectCode() << " '"
-         << location.getRedirectUrl() << "'" << config::colors::reset << "\n";
-    }
-  }
-
-  const std::vector<std::string>& indexes = location.getIndexes();
-  os << "\t" << config::colors::yellow << "Indexes: " << config::colors::reset;
-  if (indexes.empty()) {
-    os << config::colors::red << "empty" << config::colors::reset;
-  } else {
-    for (size_t i = 0; i < indexes.size(); ++i) {
-      os << config::colors::green << indexes[i] << config::colors::reset
-         << (i == indexes.size() - 1 ? "" : ", ");
-    }
-  }
-
-  // Imprimir Métodos
-  const std::vector<std::string>& methods = location.getMethods();
-  os << "\n\t" << config::colors::yellow
-     << "Methods: " << config::colors::reset;
-  if (methods.empty()) {
-    os << config::colors::red << "empty" << config::colors::reset;
-  } else {
-    for (size_t i = 0; i < methods.size(); ++i) {
-      os << config::colors::green << methods[i] << config::colors::reset
-         << (i == methods.size() - 1 ? "" : ", ");
-    }
-  }
-  os << "\n";
-  // ────────────────────────────────────────────────
-  //           BONUS: CGI Handlers
-  // ────────────────────────────────────────────────
-  os << "\n\t" << config::colors::magenta << config::colors::bold
-     << "CGI Handlers (bonus):" << config::colors::reset << "\n";
-
-  const std::map<std::string, std::string>& cgi =
-      location.getCgiHandlers();  // Necesitas tener este getter
-
-  if (cgi.empty()) {
-    os << "\t" << config::colors::yellow << "  CGI: " << config::colors::reset
-       << config::colors::red << "none configured" << config::colors::reset
-       << "\n";
-  } else {
-    std::map<std::string, std::string>::const_iterator it = cgi.begin();
-    for (; it != cgi.end(); ++it) {
-      os << "\t" << config::colors::yellow << "[" << it->first
-         << "]: " << config::colors::reset << config::colors::green
-         << it->second << config::colors::reset << "\n";
-    }
-  }
-
-  return os;
-}
+std::ostream& operator<<(std::ostream& os, const LocationConfig& location);
 
 #endif  // WEBSERV_LOCATIONCONFIG_HPP

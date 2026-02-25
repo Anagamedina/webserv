@@ -20,9 +20,7 @@ static const char* const white = "\033[37m";
 }  // namespace colors
 
 namespace paths {
-// static const std::string default_config_path = "config/file.conf";
 static const std::string default_config_path = "config/default.conf";
-
 static const std::string log_file_config = "../config/logs/config-clean.log";
 static const std::string log_file_server = "../config/logs/server.log";
 static const std::string log_file_block = "../config/logs/block.log";
@@ -30,11 +28,12 @@ static const std::string extension_file = ".conf";
 }  // namespace paths
 
 namespace errors {
-static const char* const invalid_extension = "Invalid file extension: ";
+static const std::string invalid_extension = "Invalid file extension: ";
 static const std::string cannot_open_file = "Cannot open config file: ";
 static const std::string invalid_brackets_length_or_invalid_start_end =
     "Invalid number of curly brackets or invalid brackets start and end ";
 static const std::string number_out_of_range = "Number out of range.";
+static const std::string empty_size_string = "Empty size string.";
 static const std::string invalid_characters =
     "Invalid Characters in stringToInt().";
 static const std::string invalid_num_args_return_directive =
@@ -67,7 +66,6 @@ static const std::string missing_args_in_index =
 static const std::string invalid_new_location_block =
     "Invalid nested new 'location' directive.";
 
-// New validation error messages (TDD)
 static const std::string invalid_ip_format =
     "Invalid IP address or hostname format";
 static const std::string invalid_location_path =
@@ -93,7 +91,8 @@ static const std::string semicolon_must_be_attached_to_the_last_word =
 static const std::string duplicate_server_config =
     "Duplicate server configuration detected (same port, host, and "
     "server_name)";
-	static const std::string invalid_parameters_in_location = "Location modifiers ('=' or '^~') are not supported by design: ";
+static const std::string invalid_parameters_in_location =
+    "Location modifiers ('=' or '^~') are not supported by design: ";
 }  // namespace errors
 
 namespace section {

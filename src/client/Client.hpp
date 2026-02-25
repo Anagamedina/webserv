@@ -15,14 +15,10 @@
 class ServerManager;
 class CgiProcess;
 
-// -----------------------------------------------------------------------------
-// TIPOS (fuera de la clase, visibles y reutilizables)
-// -----------------------------------------------------------------------------
-
 enum ClientState {
-  STATE_IDLE,           // Sin petición activa
-  STATE_READING_HEADER, // Leyendo headers del cliente
-  STATE_READING_BODY,   // Leyendo body (POST, etc.)
+  STATE_IDLE,            // Sin petición activa
+  STATE_READING_HEADER,  // Leyendo headers del cliente
+  STATE_READING_BODY,    // Leyendo body (POST, etc.)
   STATE_WRITING_RESPONSE,
   STATE_CLOSED
 };
@@ -36,20 +32,13 @@ struct PendingResponse {
 // -----------------------------------------------------------------------------
 // CLIENT - Representa una conexión TCP con un cliente
 // -----------------------------------------------------------------------------
-// Responsabilidades:
-//   - Recibir datos (recv) y pasarlos al HttpParser
-//   - Cuando hay request completa → RequestProcessor → HttpResponse
-//   - Encolar y enviar respuestas (send)
-// -----------------------------------------------------------------------------
 class Client {
-
-  // Saved request state for CGI
   bool _savedShouldClose;
   HttpVersion _savedVersion;
 
  public:
   // ---- Constructor y destructor ----
-  Client(int fd, const std::vector<ServerConfig>* configs, int listenPort);
+  Client(int fd, const std::vector<ServerConfig>* configs, int listenPort, const std::string& clientIp = "127.0.0.1");
   ~Client();
 
   // ---- Getters (para que el bucle principal sepa el estado) ----
@@ -70,13 +59,13 @@ class Client {
   void buildResponse();
 
  private:
-  // ---- Copia prohibida ----
   Client(const Client&);
   Client& operator=(const Client&);
 
   // ---- Datos del socket y conexión ----
   int _fd;
   int _listenPort;
+  std::string _clientIp;
   const std::vector<ServerConfig>* _configs;
   ClientState _state;
   time_t _lastActivity;
@@ -94,13 +83,15 @@ class Client {
   // ---- CGI (si hay script en ejecución) ----
   ServerManager* _serverManager;
   CgiProcess* _cgiProcess;
+  const ServerConfig* _cgiServerConfig;
 
   // ---- Flags ----
   bool _closeAfterWrite;
   bool _sent100Continue;  // Para Expect: 100-continue
 
   // ---- Funciones auxiliares (solo usadas dentro de la clase) ----
-  bool handleCompleteRequest();  // Request parseada → construir y encolar respuesta
+  bool
+  handleCompleteRequest();  // Request parseada → construir y encolar respuesta
   void enqueueResponse(const std::vector<char>& data, bool closeAfter);
   void handleExpect100();  // Expect: 100-continue
   bool startCgiIfNeeded(const HttpRequest& request);
@@ -111,11 +102,11 @@ class Client {
   void processRequests();
   //
   // Invocado cuando el parser marca una HttpRequest como completa.
-  void dispatchAction(const HttpRequest& request, const RequestProcessor::ProcessingResult& result);
+  void dispatchAction(const HttpRequest& request,
+                      const RequestProcessor::ProcessingResult& result);
   bool startCgi(const RequestProcessor::CgiInfo& cgiInfo);
 
   bool executeCgi(const RequestProcessor::CgiInfo& cgiInfo);
-
 };
 
 #endif  // CLIENT_HPP

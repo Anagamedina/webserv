@@ -11,7 +11,6 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
-#include <stdexcept>
 
 #include "ConfigException.hpp"
 
@@ -19,11 +18,11 @@ namespace config {
 namespace utils {
 /**
  * remove in line: space, tab, newline and carriage return
+ *
+ * "  hello  " -> "hello"
+ * "\t\ntest\r\n" -> "test"
  * @param line The string to trim
  * @return New string without leading/trailing whitespace
- *
- *   "  hello  " -> "hello"
- *   "\t\ntest\r\n" -> "test"
  */
 std::string trimLine(const std::string& line) {
   const std::string whitespace = "\t\n\r";
@@ -85,7 +84,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 
   if (delimiter == ' ') {
     while (tokenStream >> token) {
-    	tokens.push_back(token);
+      tokens.push_back(token);
     }
   } else {
     while (std::getline(tokenStream, token, delimiter)) {
@@ -197,9 +196,14 @@ bool isValidPath(const std::string& path) {
   return true;
 }
 
+/**
+ * We check validation of size.
+ * @param str
+ * @return
+ */
 long parseSize(const std::string& str) {
   if (str.empty()) {
-    throw ConfigException("Empty size string");
+    throw ConfigException(errors::empty_size_string);
   }
 
   char* end;
@@ -251,11 +255,9 @@ long parseSize(const std::string& str) {
   return value;
 }
 
-// ============================================================================
-// New validation functions for TDD
-// ============================================================================
-
-// Validates IPv4 address format (xxx.xxx.xxx.xxx where xxx is 0-255)
+/* @brief Validates IPv4 address format (xxx.xxx.xxx.xxx where xxx is 0-255)
+ * return true or false
+ */
 bool isValidIPv4(const std::string& ip) {
   if (ip.empty()) {
     return false;
@@ -296,11 +298,13 @@ bool isValidIPv4(const std::string& ip) {
   return true;
 }
 
-// Validates hostname format following RFC 952 and RFC 1123
-// - Can contain alphanumeric characters, dots, and hyphens
-// - Cannot start or end with hyphen or dot
-// - Hyphens cannot be immediately before or after dots
-// - No consecutive dots
+/**
+ * @brief Validates hostname format following RFC 952 and RFC 1123
+ * - Can contain alphanumeric characters, dots, and hyphens
+ * - Cannot start or end with hyphen or dot
+ * - Hyphens cannot be immediately before or after dots
+ * - No consecutive dots
+ */
 bool isValidHostname(const std::string& hostname) {
   if (hostname.empty()) {
     return false;
@@ -341,7 +345,10 @@ bool isValidHostname(const std::string& hostname) {
   return true;
 }
 
-// Validates a host string (either IPv4 or hostname)
+/**
+ * @brief Validates a host string (either IPv4 or hostname)
+ *
+ */
 bool isValidHost(const std::string& host) {
   if (host.empty()) {
     return false;
@@ -365,11 +372,13 @@ bool isValidHost(const std::string& host) {
   return isValidHostname(host);
 }
 
-// Validates location path format:
-// - Must start with '/'
-// - Cannot be empty
-// - No leading/trailing whitespace
-// - No double slashes
+/**
+ * Validates location path format:
+ * - Must start with '/'
+ * - Cannot be empty
+ * - No leading/trailing whitespace
+ * - No double slashes
+ */
 bool isValidLocationPath(const std::string& path) {
   if (path.empty()) {
     return false;
@@ -397,14 +406,17 @@ bool isValidLocationPath(const std::string& path) {
 }
 
 bool isValidHttpMethod(const std::string& method) {
-  return (method == config::section::method_get || method == config::section::method_post || method == config::section::method_delete || method == config::section::method_head);
+  return (method == config::section::method_get ||
+          method == config::section::method_post ||
+          method == config::section::method_delete ||
+          method == config::section::method_head);
 }
 
 /**
  * Checks if a root path exists and is accessible.
  * Returns empty string if OK, warning message if not.
  * Following NGINX behavior: warns but does not fail at startup.
-*/
+ */
 std::string checkRootPath(const std::string& path) {
   if (path.empty()) {
     return config::errors::root_path_warning + ": path is empty";
@@ -428,7 +440,7 @@ std::string checkRootPath(const std::string& path) {
  * Ensures upload store path exists, creating it if necessary.
  * Throws ConfigException if creation fails.
  * Following NGINX behavior: creates directory or fails at startup.
-*/
+ */
 void ensureUploadStorePath(const std::string& path) {
   if (path.empty()) {
     throw ConfigException(config::errors::upload_store_creation_failed +
@@ -453,6 +465,43 @@ void ensureUploadStorePath(const std::string& path) {
                           path + " (" + std::string(strerror(errno)) + ")");
   }
 }
+
+/**
+ * Converts a possibly relative path to an absolute path.
+ *
+ *  1. If path is already absolute (starts with '/'), return it without changes.
+ *  2. Otherwise,we join confFileDir + "/" + path.
+ *     - confFileDir is the directory of the '.conf' file, extracted
+ *       by ConfigParser before calling this function.
+ *     - Trailing slashes on either side are handled cleanly.
+ *
+ * Example:
+ *   path       = "YoupiBanane/"
+ *   confFileDir= "/home/user/webserv"
+ *   result     = "/home/user/webserv/YoupiBanane"
+ */
+std::string toAbsolutePath(const std::string& path,
+                           const std::string& confFileDir) {
+  if (path.empty()) return path;
+
+  if (path[0] == '/') return path;
+
+  std::string base = confFileDir;
+  while (base.size() > 1 && base[base.size() - 1] == '/')
+    base.erase(base.size() - 1, 1);
+
+  // Build suffix: path without leading "./"
+  std::string suffix = path;
+  if (suffix.size() >= 2 && suffix[0] == '.' && suffix[1] == '/')
+    suffix = suffix.substr(2);
+
+  // Remove trailing slash from suffix (cosmetic — keeps paths clean)
+  while (suffix.size() > 1 && suffix[suffix.size() - 1] == '/')
+    suffix.erase(suffix.size() - 1, 1);
+
+  return base + "/" + suffix;
+}
+
 }  // namespace utils
 
 namespace debug {

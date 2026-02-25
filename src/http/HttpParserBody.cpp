@@ -15,13 +15,14 @@ void HttpParser::parseBody() {
 
 /*
  * Maneja el caso donde conocemos el tamano exacto (content-length) del body.
- * Capa estática: comprobamos ANTES de leer si el total esperado supera el límite.
+ * Capa estática: comprobamos ANTES de leer si el total esperado supera el
+ * límite.
  */
 void HttpParser::parseBodyFixedLength() {
   // Check si el tamano total esperado supera el límite.
   if (_maxBodySize > 0 && _contentLength > _maxBodySize) {
 #ifdef DEBUG
-    std::cerr << "[PARSER BODY LIMIT] Content-Length (" << _contentLength 
+    std::cerr << "[PARSER BODY LIMIT] Content-Length (" << _contentLength
               << ") > Max (" << _maxBodySize << ") -> 413" << std::endl;
 #endif
     _errorStatusCode = 413;
@@ -31,9 +32,10 @@ void HttpParser::parseBodyFixedLength() {
 
 #ifdef DEBUG
   if (_bytesRead == 0 && _contentLength > 0) {
-    std::cerr << "[PARSER BODY START] Content-Length: " << _contentLength 
-              << " bytes, Max allowed: " << (_maxBodySize > 0 ? _maxBodySize : 0)
-              << " (0=unlimited)" << std::endl;
+    std::cerr << "[PARSER BODY START] Content-Length: " << _contentLength
+              << " bytes, Max allowed: "
+              << (_maxBodySize > 0 ? _maxBodySize : 0) << " (0=unlimited)"
+              << std::endl;
   }
 #endif
 
@@ -47,22 +49,23 @@ void HttpParser::parseBodyFixedLength() {
     // he leido todo el body.
     //  y comparar con el content-length para saber si he leido todo el body.
     _bytesRead += toRead;
-    
+
 #ifdef DEBUG
     if (_bytesRead % (10 * 1024 * 1024) == 0) {  // Log cada 10MB
-      std::cerr << "[PARSER BODY PROGRESS] Read " << (_bytesRead / 1024 / 1024) 
-                << " MB / " << (_contentLength / 1024 / 1024) << " MB" << std::endl;
+      std::cerr << "[PARSER BODY PROGRESS] Read " << (_bytesRead / 1024 / 1024)
+                << " MB / " << (_contentLength / 1024 / 1024) << " MB"
+                << std::endl;
     }
 #endif
-    
+
     // elimino los bytes leidos del buffer para no leerlos de nuevo.
     _buffer.erase(0, toRead);
   }
 
   if (_bytesRead == _contentLength) {
 #ifdef DEBUG
-    std::cerr << "[PARSER BODY COMPLETE] Received " << (_bytesRead / 1024 / 1024) 
-              << " MB successfully" << std::endl;
+    std::cerr << "[PARSER BODY COMPLETE] Received "
+              << (_bytesRead / 1024 / 1024) << " MB successfully" << std::endl;
 #endif
     _state = COMPLETE;
   }
@@ -136,8 +139,7 @@ bool HttpParser::handleChunkDataState() {
   _buffer.erase(0, needed);  // datos + CRLF
 
   // Límite de body desde config: rechazar si chunked body supera max_body_size
-  if (_maxBodySize > 0 &&
-      _request.getBody().size() > _maxBodySize) {
+  if (_maxBodySize > 0 && _request.getBody().size() > _maxBodySize) {
     _errorStatusCode = 413;
     _state = ERROR;
     return false;

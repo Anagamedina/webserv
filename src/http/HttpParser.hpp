@@ -33,7 +33,8 @@ class HttpParser {
   const HttpRequest& getRequest() const;
   int getErrorStatusCode() const;
 
-  // Set max body size from config (client_max_body_size). Call before consume().
+  // Set max body size from config (client_max_body_size). Call before
+  // consume().
   void setMaxBodySize(std::size_t maxSize) { _maxBodySize = maxSize; }
 
  private:
@@ -46,9 +47,9 @@ class HttpParser {
   std::size_t _contentLength;
   bool _isChunked;
   std::size_t _bytesRead;
-  std::size_t _chunkSize;  // tamaño del chunk actual
+  std::size_t _chunkSize;    // tamaño del chunk actual
   std::size_t _maxBodySize;  // límite desde config; 0 = sin límite
-  int _errorStatusCode;  // 400 por defecto; 403 para directory traversal
+  int _errorStatusCode;      // 400 por defecto; 403 para directory traversal
 
   // Helpers generales
   bool extractLine(std::string& line);
