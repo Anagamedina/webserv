@@ -47,6 +47,8 @@ class Client {
   bool needsWrite() const;
   bool hasPendingData() const;
   time_t getLastActivity() const;
+  bool isRequestInProgress() const;
+  double getRequestElapsedSeconds() const;
 
   // ---- Manejo de eventos (llamados desde ServerManager/epoll) ----
   void setServerManager(ServerManager* serverManager);

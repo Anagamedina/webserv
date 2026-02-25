@@ -173,6 +173,10 @@ void ServerManager::checkTimeouts() {
       continue;
     }
 
+    if (it->second->isRequestInProgress()) {
+      continue;
+    }
+
     if (difftime(now, it->second->getLastActivity()) > timeout_seconds) {
       timeout_fds.push_back(it->first);
     }

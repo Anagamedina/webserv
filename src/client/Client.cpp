@@ -162,6 +162,22 @@ bool Client::hasPendingData() const {
 
 time_t Client::getLastActivity() const { return _lastActivity; }
 
+bool Client::isRequestInProgress() const {
+  if (_requestStartTime == 0) {
+    return false;
+  }
+
+  State parserState = _parser.getState();
+  return (parserState == PARSING_HEADERS || parserState == PARSING_BODY);
+}
+
+double Client::getRequestElapsedSeconds() const {
+  if (_requestStartTime == 0) {
+    return 0.0;
+  }
+  return difftime(std::time(0), _requestStartTime);
+}
+
 // =============================================================================
 // MANEJO DE EVENTOS (llamados desde el bucle epoll)
 // =============================================================================
@@ -207,7 +223,7 @@ void Client::processRequests() {
     if (shouldClose) return;
     _response.clear();
     _parser.reset();
-    _requestStartTime = std::time(0);
+    _requestStartTime = 0;
     _sent100Continue = false;
     _parser.consume("");
   }
