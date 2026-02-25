@@ -482,11 +482,9 @@ void ensureUploadStorePath(const std::string& path) {
  */
 std::string toAbsolutePath(const std::string& path,
                            const std::string& confFileDir) {
-  if (path.empty())
-    return path;
+  if (path.empty()) return path;
 
-  if (path[0] == '/')
-    return path;
+  if (path[0] == '/') return path;
 
   std::string base = confFileDir;
   while (base.size() > 1 && base[base.size() - 1] == '/')

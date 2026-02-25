@@ -43,4 +43,3 @@ void buildErrorResponse(HttpResponse& response, const HttpRequest& request,
                    toBody(html.str()));
   response.setHeader("Content-Type", "text/html");
 }
-

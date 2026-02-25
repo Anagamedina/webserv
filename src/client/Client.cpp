@@ -11,7 +11,6 @@
 #include "cgi/CgiProcess.hpp"
 #include "network/ServerManager.hpp"
 
-
 void Client::handleExpect100() {
   // Expect: 100-continue: el cliente espera confirmación antes de mandar body
   // grande

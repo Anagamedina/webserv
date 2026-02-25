@@ -10,7 +10,6 @@
 #include "ResponseUtils.hpp"
 #include "StaticPathHandler.hpp"
 
-
 RequestProcessor::ProcessingResult RequestProcessor::process(
     const HttpRequest& request, const std::vector<ServerConfig>* configs,
     int listenPort, int parseErrorCode) {

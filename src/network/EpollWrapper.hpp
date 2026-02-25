@@ -4,7 +4,6 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-
 class EpollWrapper {
  public:
   EpollWrapper();

@@ -1,8 +1,9 @@
 #include "ConfigParser.hpp"
 
+#include <unistd.h>
+
 #include <set>
 #include <sstream>
-#include <unistd.h>
 
 #include "../common/namespaces.hpp"
 #include "ConfigException.hpp"
@@ -95,7 +96,8 @@ bool ConfigParser::validateFileExtension() const {
           config::paths::extension_file) {
     return false;
   }
-  // protect edge case: the character is like ".conf" cant be '/' (evita ficheros como "/.conf")
+  // protect edge case: the character is like ".conf" cant be '/' (evita
+  // ficheros como "/.conf")
   char charBeforeDot = config_file_path_[config_file_path_.size() - 5];
   if (charBeforeDot == '/') {
     return false;
@@ -425,7 +427,8 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
      uploadPath);
        }
  */
-  // Resolve relative upload_store path to absolute using the conf file directory.
+  // Resolve relative upload_store path to absolute using the conf file
+  // directory.
   loc.setUploadStore(
       config::utils::toAbsolutePath(uploadPathClean, getConfFileDir()));
 }
@@ -492,8 +495,8 @@ void ConfigParser::parseCgi(LocationConfig& loc,
   }
 
   // Resolve the CGI binary path relative to the conf file directory.
-  loc.addCgiHandler(extension,
-                    config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
+  loc.addCgiHandler(
+      extension, config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
 }
 
 void ConfigParser::parseServerName(ServerConfig& server,
@@ -728,11 +731,11 @@ void ConfigParser::checkDuplicateServerConfig() const {
 
 /**
  * @brief Retrieves the Current Working Directory (CWD) of the process.
- * 
- * This path is used as the base directory for resolving relative paths 
- * specified in the configuration file (e.g., "root ./www"). 
- * By returning the CWD rather than the configuration file's directory, 
- * the server correctly resolves paths relative to the project root 
+ *
+ * This path is used as the base directory for resolving relative paths
+ * specified in the configuration file (e.g., "root ./www").
+ * By returning the CWD rather than the configuration file's directory,
+ * the server correctly resolves paths relative to the project root
  * (where the executable is launched).
  *
  * @return std::string The absolute path of the current working directory.

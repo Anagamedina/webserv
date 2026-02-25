@@ -15,7 +15,6 @@
 class ServerManager;
 class CgiProcess;
 
-
 enum ClientState {
   STATE_IDLE,            // Sin petición activa
   STATE_READING_HEADER,  // Leyendo headers del cliente
