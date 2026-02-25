@@ -96,6 +96,12 @@ void ServerManager::run() {
           handleClientEvent(fd, event_mask);
         } else if (cgi_pipes_.count(fd)) {
           handleCgiPipeEvent(fd, event_mask);
+        } else {
+          // Orphaned fd: in epoll but not in any map — remove to prevent
+          // busy-loop
+          std::cerr << "Warning: orphaned fd " << fd
+                    << " in epoll, removing" << std::endl;
+          epoll_.removeFd(fd);
         }
       }
 
