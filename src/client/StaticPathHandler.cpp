@@ -119,7 +119,7 @@ static bool handleDirectory(const HttpRequest& request,
     indexPath = path;
     if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
       indexPath += "/";
-    indexPath += indexes[i];
+    indexPath += indexes[i]; 
     indexName = indexes[i];
 
     bool isDir = false;
@@ -162,6 +162,14 @@ static bool handleDirectory(const HttpRequest& request,
   return true;
 }
 
+
+/*
+ * @brief handle a regular file.
+ * 
+ * handle a regular file.
+ * return true if the file is handled successfully, false otherwise.
+ *
+ */
 static bool handleRegularFile(const HttpRequest& request,
                               const ServerConfig* server,
                               const std::string& path, std::vector<char>& body,
