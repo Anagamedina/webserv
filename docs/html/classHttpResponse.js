@@ -1,0 +1,25 @@
+var classHttpResponse =
+[
+    [ "HeaderMap", "classHttpResponse.html#a865373d6fcfd040b2f1efdbea5322315", null ],
+    [ "HttpResponse", "classHttpResponse.html#ab2e6cd363b5ea437643017766f882066", null ],
+    [ "HttpResponse", "classHttpResponse.html#ad702a7112566786e26b765184b8815ab", null ],
+    [ "~HttpResponse", "classHttpResponse.html#a7dc8102dcf63b07b9bf3c3dfed468857", null ],
+    [ "clear", "classHttpResponse.html#aec25ec31bb3c0a22af07fe82b0a35a79", null ],
+    [ "hasHeader", "classHttpResponse.html#acba4d7264c5b05e63a199c87f8526473", null ],
+    [ "operator=", "classHttpResponse.html#a358230767100d2d4a64cfb6462c6425c", null ],
+    [ "serialize", "classHttpResponse.html#a70c126b617eb978c76afaf29ea4f0cd4", null ],
+    [ "setBody", "classHttpResponse.html#a3e83ff074d5f7a6de514a4edcb02ab4d", null ],
+    [ "setBody", "classHttpResponse.html#a884d07c418ba6145385d63e43bb1b29a", null ],
+    [ "setContentType", "classHttpResponse.html#a11a67ba43096f5eb1870e65f1814d364", null ],
+    [ "setHeader", "classHttpResponse.html#a7efa3ab17ead358609d80b55db164867", null ],
+    [ "setHeadOnly", "classHttpResponse.html#ac982631ddcf451521e207ac0c2bd0108", null ],
+    [ "setReasonPhrase", "classHttpResponse.html#abd2240fb2bb858bfc4ed9aa7c3034531", null ],
+    [ "setStatusCode", "classHttpResponse.html#a610f8f887ca042f2b18ec395aaccc255", null ],
+    [ "setVersion", "classHttpResponse.html#a407dc1ea3f01365d8105fadc0418bc79", null ],
+    [ "_body", "classHttpResponse.html#a55f4dda6eb3f0939fa78ff7673c5ec3f", null ],
+    [ "_headers", "classHttpResponse.html#a4a08759b7c37f06af3b3a50670788cb8", null ],
+    [ "_headOnly", "classHttpResponse.html#aa375497a6ab9b64d97ff70ac8bdc81c9", null ],
+    [ "_reasonPhrase", "classHttpResponse.html#a43927eeb2f9b448540866cff6f83a4a5", null ],
+    [ "_status", "classHttpResponse.html#a50ab7aba3218a37ff0c944450ba9ff19", null ],
+    [ "_version", "classHttpResponse.html#afe406bd878b7cbfe65ecf614ead0db84", null ]
+];

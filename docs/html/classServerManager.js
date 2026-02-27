@@ -1,0 +1,26 @@
+var classServerManager =
+[
+    [ "ServerManager", "classServerManager.html#aaa2f3231a75c30be205a298f2fbd2833", null ],
+    [ "~ServerManager", "classServerManager.html#ad3dcb08af530cec26942c2ce0431f625", null ],
+    [ "ServerManager", "classServerManager.html#a80b8f19471d14983d71c0d7df5530bb6", null ],
+    [ "checkTimeouts", "classServerManager.html#afc55d5553173781d24690df769dc8c62", null ],
+    [ "consumeCgiExitStatus", "classServerManager.html#a0469082d1c99e36fe31eb9ee41f1d377", null ],
+    [ "handleCgiPipeEvent", "classServerManager.html#a9c75ea0bd268425c187ef25770eccbe8", null ],
+    [ "handleClientDisconnect", "classServerManager.html#afb4bca18fdb86e6e628cdbb8949c6d94", null ],
+    [ "handleClientEvent", "classServerManager.html#a9f3ca46da9df004286f90902b8daf29d", null ],
+    [ "handleNewConnection", "classServerManager.html#a1d57002b5b7a92044b9fd57396407975", null ],
+    [ "operator=", "classServerManager.html#aa94e809534e586ceb8304c26c9810890", null ],
+    [ "reapChildren", "classServerManager.html#a2d46c0b956c896a01876ae77dbcbb8c4", null ],
+    [ "registerCgiPipe", "classServerManager.html#a39ba2418a65f3fe96057e7dfbf050db0", null ],
+    [ "run", "classServerManager.html#aecc313c9b6afcab92c22269b3333c721", null ],
+    [ "unregisterCgiPipe", "classServerManager.html#aa0099c81bdb4ab1dcca775720d31c920", null ],
+    [ "updateClientEvents", "classServerManager.html#a8f841c3a98b9b1b2fd9e43320b2d924d", null ],
+    [ "cgi_exit_statuses_", "classServerManager.html#a66ccbbc9fbb607c8eb57e21c9efeab11", null ],
+    [ "cgi_pipes_", "classServerManager.html#a3f20712609e3f00a422fbbcad22882c2", null ],
+    [ "clients_", "classServerManager.html#acd0579cf2b7c6dd5d14e8ac5d80949f4", null ],
+    [ "configs_", "classServerManager.html#a505d845a2da718e558332ad2c90f6a1c", null ],
+    [ "epoll_", "classServerManager.html#ac0f8da90552158c689592a6c98a89483", null ],
+    [ "listener_ports_", "classServerManager.html#abff3027538ec8fa09a6cb1d11dddcc8e", null ],
+    [ "listeners_", "classServerManager.html#a9cb47954307a3101d1eaa9f50d14feeb", null ],
+    [ "MAX_EVENTS", "classServerManager.html#a0a022928a33380aa210980c349d1b04c", null ]
+];
