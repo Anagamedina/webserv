@@ -127,7 +127,7 @@ bool isCgiRequestByConfig(const LocationConfig* location,
   if (location == 0) return false;
   std::string ext = getFileExtension(path);
   if (ext.empty()) return false;
-  return !location->getCgiPath(ext).empty();
+  return location->hasCgiHandler(ext);
 }
 
 std::string methodToString(HttpMethod method) {

@@ -53,6 +53,7 @@ class LocationConfig {
   int getRedirectParamCount() const;
   size_t getMaxBodySize() const;
   std::string getCgiPath(const std::string& extension) const;
+  bool hasCgiHandler(const std::string& extension) const;
   const std::map<std::string, std::string>& getCgiHandlers() const;
 
   // Validation

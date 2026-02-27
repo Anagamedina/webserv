@@ -123,6 +123,10 @@ std::string LocationConfig::getCgiPath(const std::string& extension) const {
   return "";
 }
 
+bool LocationConfig::hasCgiHandler(const std::string& extension) const {
+  return cgi_handlers_.find(extension) != cgi_handlers_.end();
+}
+
 const std::map<std::string, std::string>& LocationConfig::getCgiHandlers()
     const {
   return cgi_handlers_;

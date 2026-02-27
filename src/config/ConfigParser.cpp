@@ -484,19 +484,32 @@ void ConfigParser::parseIndex(ServerConfig& server,
 
 void ConfigParser::parseCgi(LocationConfig& loc,
                             const std::vector<std::string>& tokens) {
-  if (tokens.size() < 3) {
+  if (tokens.size() < 2) {
     throw ConfigException("Missing arguments for cgi directive");
   }
-  std::string extension = tokens[1];
-  std::string binaryPath = config::utils::removeSemicolon(tokens[2]);
 
-  if (extension[0] != '.') {
+  if (tokens.size() > 3) {
+    throw ConfigException("Too many arguments for cgi directive");
+  }
+
+  std::string extension = config::utils::removeSemicolon(tokens[1]);
+  std::string binaryPath;
+  if (tokens.size() == 3) {
+    binaryPath = config::utils::removeSemicolon(tokens[2]);
+  }
+
+  if (extension.empty() || extension[0] != '.') {
     throw ConfigException("CGI extension must start with '.' " + extension);
   }
 
-  // Resolve the CGI binary path relative to the conf file directory.
-  loc.addCgiHandler(
-      extension, config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
+  // With explicit interpreter, resolve binary path relative to conf file.
+  // Without interpreter, extension is treated as self-executable CGI.
+  if (!binaryPath.empty()) {
+    loc.addCgiHandler(
+        extension, config::utils::toAbsolutePath(binaryPath, getConfFileDir()));
+  } else {
+    loc.addCgiHandler(extension, "");
+  }
 }
 
 void ConfigParser::parseServerName(ServerConfig& server,
