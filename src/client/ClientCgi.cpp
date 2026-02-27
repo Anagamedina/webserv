@@ -39,6 +39,22 @@ static void parseCgiHeaders(const std::string& headers,
   }
 }
 
+/**
+ * @brief Execute a CGI script asynchronously
+ * 
+ * Forks a child process to run the CGI script, sets up non-blocking pipes
+ * for stdin/stdout communication, and registers them with epoll.
+ * 
+ * @param cgiInfo Contains script path, interpreter, and server config
+ * 
+ * @return true if CGI process was successfully launched and pipes registered
+ * @return false if fork/pipe creation failed or invalid parameters
+ *              (caller should build 500 Internal Server Error response)
+ * 
+ * @note On success, the Client takes ownership of the CgiProcess object
+ *       and is responsible for cleanup
+ * @note CGI pipe I/O is handled asynchronously via handleCgiPipe()
+ */
 bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
   if (_serverManager == 0 || cgiInfo.server == 0) return false;
 
@@ -51,7 +67,7 @@ bool Client::executeCgi(const RequestProcessor::CgiInfo& cgiInfo) {
                                   cgiInfo.interpreterPath, *cgiInfo.server, _clientIp);
 
   if (_cgiProcess == 0) {
-    // If execution fails (e.g. pipe error), return false so caller can send 500
+    // Fork/pipe creation failed -> return false -> caller sends 500 error
     return false;
   }
 
@@ -107,6 +123,8 @@ void Client::finalizeCgiResponse(const CgiProcess* finishedProcess) {
         finishedProcess->getPid(), child_status);
   }
 
+  // WIFEXITED: child ended normally; WEXITSTATUS gives its exit code.
+  // WIFSIGNALED: child was terminated by a signal (crash/kill).
   if (has_child_status) {
     if ((WIFEXITED(child_status) && WEXITSTATUS(child_status) != 0) ||
         WIFSIGNALED(child_status)) {

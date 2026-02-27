@@ -46,7 +46,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
                                       const std::string& interpreter_path,
                                       const ServerConfig& serverConfig,
                                       const std::string& clientIp) {
-  // Step 1: Create communication pipes
+  // Create communication pipes
   // pipe_in: parent writes request body to child stdin
   // pipe_out: parent reads CGI output from child stdout
 
@@ -62,9 +62,7 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     return NULL;
   }
 
-  // Step 2: Make pipes non-blocking
-  // This prevents the main event loop from blocking on pipe I/O
-
+  // Make pipes non-blocking
   if (!setNonBlocking(pipe_in[1]) || !setNonBlocking(pipe_out[0])) {
     std::cerr << "Failed to set pipes non-blocking" << std::endl;
     closeIfValid(pipe_in[0]);
@@ -73,8 +71,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     closeIfValid(pipe_out[1]);
     return NULL;
   }
-
-  // Step 3: Fork child process
 
   pid_t pid = fork();
   if (pid == -1) {
@@ -93,7 +89,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     dup2(pipe_in[0], STDIN_FILENO);
     dup2(pipe_out[1], STDOUT_FILENO);
 
-    // Close all pipe ends in child
     close(pipe_in[0]);
     close(pipe_in[1]);
     close(pipe_out[0]);
@@ -114,8 +109,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
       std::exit(EXIT_FAILURE);
     }
 
-    // Prepare environment variables
-    // INFO: Use full path for SCRIPT_FILENAME env var
     std::map<std::string, std::string> env_map =
         prepareEnvironment(request, script_path, serverConfig, clientIp);
 #ifdef DEBUG
@@ -132,10 +125,6 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // Prefix with ./ for relative paths to work with /usr/bin/env and direct
     // execution
     std::string relative_script = "./" + script_name;
-    // We use a vector to hold the allocated pointers so we can track them if
-    // needed, though in a successful execve they are replaced, and on failure
-    // we kill the process. so we do not need to delete them manually since the
-    // process will wipe memory it self
 
     char* args[3];
     args[0] = NULL;
@@ -172,8 +161,8 @@ CgiProcess* CgiExecutor::executeAsync(const HttpRequest& request,
     // PARENT PROCESS
 
     // Close unused pipe ends
-    close(pipe_in[0]);   // Don't read from input pipe
-    close(pipe_out[1]);  // Don't write to output pipe
+    close(pipe_in[0]);
+    close(pipe_out[1]);
 
     // Write request body to child stdin
     // Handled asynchronously by Client/ServerManager via CgiProcess
@@ -198,15 +187,13 @@ std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
     const ServerConfig& serverConfig, const std::string& clientIp) {
   std::map<std::string, std::string> env;
 
-  // Step 1: Core CGI/HTTP Variables
-
+  // Core CGI/HTTP Variables
   env["GATEWAY_INTERFACE"] = "CGI/1.1";
   env["SERVER_PROTOCOL"] = "HTTP/1.1";
   env["SERVER_SOFTWARE"] = "Webserv/1.0";
   env["REQUEST_METHOD"] = methodToString(request.getMethod());
 
-  // Step 2: Path and Script Variables
-
+  // Path and Script Variables
   env["SCRIPT_FILENAME"] = script_path;
 
   std::string uri = request.getPath();
@@ -219,40 +206,35 @@ std::map<std::string, std::string> CgiExecutor::prepareEnvironment(
       (question_mark != std::string::npos) ? uri.substr(0, question_mark) : uri;
   env["SCRIPT_NAME"] = script_name;
 
-  // Step 3: Query String
-  // QUERY_STRING: Everything after the '?' in the URI
-
+  // Query String
   std::string query_string = "";
   if (question_mark != std::string::npos && question_mark + 1 < uri.length()) {
     query_string = uri.substr(question_mark + 1);
   }
   env["QUERY_STRING"] = query_string;
 
-  // Step 4: Content/Body Information
-
+  // Content/Body Information
   std::ostringstream len;
   len << request.getBody().size();
   env["CONTENT_LENGTH"] = len.str();
   std::string ct = request.getHeader("content-type");
   if (!ct.empty()) env["CONTENT_TYPE"] = ct;
 
-  // Step 5: Client/Server Connection Information
-
+  // Client/Server Connection Information
   env["REMOTE_ADDR"] = clientIp;
   env["REQUEST_URI"] = uri;
 
-  // Step 5b: Server identification (CGI/1.1 spec)
+  // Server identification (CGI/1.1 spec)
   env["SERVER_NAME"] = serverConfig.getServerName();
   std::ostringstream port_ss;
   port_ss << serverConfig.getPort();
   env["SERVER_PORT"] = port_ss.str();
   env["PATH_INFO"] =
-      request.getPath();  // We only support direct script execution for now
-  env["PATH_TRANSLATED"] = "";     // Corresponding physical path
-  env["REDIRECT_STATUS"] = "200";  // Required by php-cgi in some setups
+      request.getPath();
+  env["PATH_TRANSLATED"] = "";
+  env["REDIRECT_STATUS"] = "200";
 
-  // Step 6: HTTP Request Headers as HTTP_* variables
-
+  // HTTP Request Headers as HTTP_* variables
   const std::map<std::string, std::string>& headers = request.getHeaders();
   for (std::map<std::string, std::string>::const_iterator it = headers.begin();
        it != headers.end(); ++it) {

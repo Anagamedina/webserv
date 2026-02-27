@@ -136,6 +136,8 @@ void ServerManager::reapChildren() {
   }
 }
 
+// Returns true and fills status if the CGI exit code is available.
+// This first checks the cached reaped statuses, then does a non-blocking wait.
 bool ServerManager::consumeCgiExitStatus(pid_t pid, int& status) {
   std::map<pid_t, int>::iterator it = cgi_exit_statuses_.find(pid);
   if (it != cgi_exit_statuses_.end()) {
