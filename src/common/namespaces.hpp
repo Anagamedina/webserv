@@ -113,17 +113,14 @@ static const std::string uploads_bonus = "upload_store";
 static const std::string allow_methods = "allow_methods";
 static const std::string limit_except = "limit_except";
 static const std::string return_str = "return";
-// 1. Exact match (prioridad más alta: coincide SOLO si la URI es idéntica)
-// location = /exact/path { ... }
 static const std::string exact_match_modifier = "=";
-// 2. Preferential prefix (prefix más largo, pero detiene la búsqueda de regex
-// si coincide) location ^~ /images/ { ... } → no chequea regex después
 static const std::string preferential_prefix_modifier = "^~";
 static const char semicolon = ';';
 static const char open_bracket = '{';
 static const char close_bracket = '}';
 static const int default_return_code = 302;
 static const int default_port = 8080;
+static const int default_port_listen = 80;
 static const std::string default_host_name = "127.0.0.1";
 static const size_t max_body_size = 1048576;
 static const int max_port = 65535;

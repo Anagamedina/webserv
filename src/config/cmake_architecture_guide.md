@@ -6,7 +6,7 @@ Esta guía explica cómo estructurar tu proyecto `webserv` para que sea escalabl
 
 La estrategia clave para escalar es tratar cada carpeta dentro de `src/` (`config`, `network`, `http`) como un módulo independiente que genera una **Librería Estática (`.a`)**.
 
-El [CMakeLists.txt](file:///home/daruuu/CLionProjects/webserv-fork/CMakeLists.txt) principal actúa como un "Orquestador" que une estas piezas.
+El `CMakeLists.txt` principal actúa como un "Orquestador" que une estas piezas.
 
 ### Diagrama de Flujo (Mermaid)
 
@@ -106,7 +106,7 @@ target_include_directories(config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ### Nivel 3: Testing (Híbrido C++11)
 Aquí es donde hacemos la "magia" para cambiar de versión solo para los tests.
 
-**Archivo:** [tests/unit/CMakeLists.txt](file:///home/daruuu/CLionProjects/webserv-fork/tests/unit/CMakeLists.txt)
+**Archivo:** [tests/unit/CMakeLists.txt](../../webserv/tests/unit/CMakeLists.txt)
 ```cmake
 # Obtenemos todos los archivos .cpp de test
 file(GLOB TEST_SOURCES "*.cpp")
@@ -128,17 +128,3 @@ target_include_directories(unit_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/catch2
 )
 ```
-
-## 3. Flujo de Trabajo para ti (Parsing)
-
-1.  **Desarrollo:** Sigues trabajando en `src/config/`.
-2.  **Compilación local:** Como el `CMakeLists.txt` raíz apunta a `src/config/mainConfig.cpp` como source del ejecutable `webserv`, al compilar `webserv` estás ejecutando TU main de prueba de config.
-3.  **Integración:**
-    *   Cuando tus compañeros terminen `network` o `http`, crearán sus propios `CMakeLists.txt` definiendo librerías.
-    *   Tú solo descomentarás los `add_subdirectory` en el raíz.
-    *   El día final, cambiarán `add_executable(webserv src/config/mainConfig.cpp)` por `add_executable(webserv src/main.cpp)`.
-
-## Ventajas de este Diseño
-1.  **Aislamiento:** Si `src/network` no compila, tú puedes seguir trabajando en `src/config` y sus tests sin problemas (simplemente comentando la línea de network en el raíz).
-2.  **Compilación Rápida:** CMake sabe qué librerías no han cambiado y no las recompila.
-3.  **Flexibilidad de Testing:** Puedes usar features modernas de C++11 en los tests (como `auto`, lambdas, mejores strings) sin romper la regla de C++98 del `subject`.

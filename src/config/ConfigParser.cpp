@@ -56,7 +56,6 @@ void ConfigParser::parse() {
                                         config::paths::log_file_config);
   std::cout << "Exporting config file to config-clean.log\n";
 
-  // TODO: need to fix error order of brackets: '} {' should be error but now is
   if (!validateBalancedBrackets()) {
     throw ConfigException(
         config::errors::invalid_brackets_length_or_invalid_start_end +
@@ -186,9 +185,6 @@ std::string ConfigParser::preprocessConfigFile() const {
 }
 
 /**
- * la idea es que dependiendo de que estado se encuentre se actualize el enum,
- * asi saber cuando esta en un bloque de server o location o fuera de bloque
- *
  * extract all blocks 'server'
  * the function extractServerBlock() search all the occurrences to fill the
  * vector raw_server_block_
@@ -321,8 +317,6 @@ void ConfigParser::parseListen(ServerConfig& server,
       server.setPort(port);
     }
   } else {
-    // TODO: Case: PORT (8080) or only HOST (localhost)
-    // Simple heurística: Si tiene digitos es puerto, sino host
     if (value.find_first_not_of("0123456789") == std::string::npos) {
       int port = config::utils::stringToInt(value);
       if (port < 1 || port > 65535) {
@@ -334,7 +328,7 @@ void ConfigParser::parseListen(ServerConfig& server,
         throw ConfigException(config::errors::invalid_ip_format + ": " + value);
       }
       server.setHost(value);
-      server.setPort(80);  // DEFAULT ?
+      server.setPort(config::section::default_port_listen);  // DEFAULT
     }
   }
 }
@@ -420,8 +414,8 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
         config::errors::invalid_characters_in_upload_directive +
         uploadPathClean);
   }
-  // TODO: verificar que el directorio existe o se
   /*
+  // verificar que el directorio existe o se
        if (!config::utils::directoryExists(uploadPath)) {
          throw ConfigException("upload_store directory does not exist: " +
      uploadPath);
@@ -433,25 +427,29 @@ void ConfigParser::parseUploadBonus(LocationConfig& loc,
       config::utils::toAbsolutePath(uploadPathClean, getConfFileDir()));
 }
 
+/**
+ * return 301 http:://google.com;
+ * return code URL;
+ * 302 - Código de estado HTTP "Found" (redirección temporal)
+ * http://example.com - URL de destino
+ * @param loc
+ * @param locTokens
+ */
 void ConfigParser::parseReturn(LocationConfig& loc,
-                               std::vector<std::string>& locTokens) {
-  //	return 301 http:://google.com;
-  //	return code URL;
-  //	302 - Código de estado HTTP "Found" (redirección temporal)
-  // http://example.com - URL de destino
+								std::vector<std::string>& locTokens) {
   if (locTokens.size() == 2) {
-    // Caso: return URL; (default 302)
+    // Case: return URL; (default 302)
     std::string cleanUrl = config::utils::removeSemicolon(locTokens[1]);
 
     loc.setRedirectCode(config::section::default_return_code);
     loc.setRedirectUrl(cleanUrl);
     loc.setRedirectParamCount(1);
   } else if (locTokens.size() == 3) {
-    // Caso: return CODE URL;
+    // Case: return CODE URL;
     int code = config::utils::stringToInt(locTokens[1]);
     std::string cleanUrl = config::utils::removeSemicolon(locTokens[2]);
 
-    // Validamos que el codigo sea de redireccion (3XX) (relaxed to
+    // Validate the status code is between (3XX) (relaxed to
     // 100-599)
     if ((code < 300 || code > 399) && code != 404 && code != 200 &&
         code != 403 && code != 500 && code != 405) {
@@ -471,7 +469,7 @@ void ConfigParser::parseReturn(LocationConfig& loc,
 void ConfigParser::parseRoot(ServerConfig& server,
                              const std::vector<std::string>& tokens) {
   std::string raw = config::utils::removeSemicolon(tokens[1]);
-  // Resolve relative paths to absolute using the conf file's directory.
+  // this Resolve relative paths to absolute using the conf file's directory.
   server.setRoot(config::utils::toAbsolutePath(raw, getConfFileDir()));
 }
 
@@ -672,7 +670,6 @@ ServerConfig ConfigParser::parseSingleServerBlock(
     } else if (directive == config::section::error_page) {
       parseErrorPage(server, tokens);
     }
-    //	TODO: this case fail(the char '='): location = /50x.html {
     else if (directive == config::section::location) {
       parseLocationBlock(server, ss, line, tokens);
     } else {
@@ -684,7 +681,7 @@ ServerConfig ConfigParser::parseSingleServerBlock(
 }
 
 /**
- * Skip if it's a start or end of block (checks last char)
+ * Skip if it's a start or end of block (checks last characters)
  * Check if it ends with semicolon
  * Check if there is a space before semicolon
  * @param line
