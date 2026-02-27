@@ -56,15 +56,12 @@ void CgiProcess::terminateProcess() {
     }
   }
 
-  // If already exited/reaped (ret > 0 or ECHILD), just mark as not owned.
   pid_ = -1;
 }
 
 bool CgiProcess::appendResponseData(const char* data, size_t len) {
-  // Append to raw response
   complete_response_.append(data, len);
 
-  // If headers are already successfully parsed, just append to body
   if (headers_complete_) {
     response_body_.append(data, len);
     return true;
@@ -79,7 +76,6 @@ bool CgiProcess::tryParseHeaders() {
   if (sep_pos == std::string::npos) {
     sep_pos = complete_response_.find("\n\n");
     if (sep_pos == std::string::npos) {
-      // Separator not found yet
       return false;
     }
     // Found \n\n
@@ -94,7 +90,6 @@ bool CgiProcess::tryParseHeaders() {
   headers_complete_ = true;
 
   // Parse status code from headers
-  // Look for "Status: XXX" header
   std::istringstream iss(response_headers_);
   std::string line;
   while (std::getline(iss, line)) {
