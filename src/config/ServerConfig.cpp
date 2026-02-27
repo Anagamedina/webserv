@@ -153,10 +153,11 @@ size_t ServerConfig::getGlobalMaxBodySize() const {
 void ServerConfig::print() const { std::cout << *this; }
 
 /**
- * Print all the attributes of the ServerConfig
- * @param os
- * @param config
- * @return
+ * @brief Formats and outputs the ServerConfig information to a stream with ANSI colors.
+ *
+ * @param os The output stream.
+ * @param config The ServerConfig object to print.
+ * @return std::ostream& Reference to the modified output stream.
  */
 std::ostream& operator<<(std::ostream& os, const ServerConfig& config) {
   os << config::colors::blue << config::colors::bold << "Server Config:\n"

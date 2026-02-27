@@ -153,6 +153,13 @@ bool LocationConfig::isMethodAllowed(const std::string& method) const {
 
 void LocationConfig::print() const { std::cout << *this << std::endl; }
 
+/**
+ * @brief Formats and outputs the LocationConfig information to a stream with ANSI colors.
+ *
+ * @param os The output stream.
+ * @param location The LocationConfig object to print.
+ * @return std::ostream& Reference to the modified output stream.
+ */
 std::ostream& operator<<(std::ostream& os, const LocationConfig& location) {
   os << config::colors::cyan << config::colors::bold << "Locations info:\n"
      << config::colors::reset << "\t" << config::colors::yellow
