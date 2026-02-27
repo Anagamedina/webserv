@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['http_5fmethod_5fdelete_1160',['HTTP_METHOD_DELETE',['../HttpRequest_8hpp.html#a4353a75834bb35c4acd80b51434eef59a761371f7807255b7912afbac2f665ffe',1,'HttpRequest.hpp']]],
+  ['http_5fmethod_5fget_1161',['HTTP_METHOD_GET',['../HttpRequest_8hpp.html#a4353a75834bb35c4acd80b51434eef59a90754abc55dbb76862fa50abee5af659',1,'HttpRequest.hpp']]],
+  ['http_5fmethod_5fhead_1162',['HTTP_METHOD_HEAD',['../HttpRequest_8hpp.html#a4353a75834bb35c4acd80b51434eef59a27e993d38ff6b43284014a10798b6223',1,'HttpRequest.hpp']]],
+  ['http_5fmethod_5fpost_1163',['HTTP_METHOD_POST',['../HttpRequest_8hpp.html#a4353a75834bb35c4acd80b51434eef59a1944682922ac79b2e682312d8f3f71e2',1,'HttpRequest.hpp']]],
+  ['http_5fmethod_5funknown_1164',['HTTP_METHOD_UNKNOWN',['../HttpRequest_8hpp.html#a4353a75834bb35c4acd80b51434eef59afaba39836e3963977f2d329394f8df31',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5fbad_5frequest_1165',['HTTP_STATUS_BAD_REQUEST',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12cca49cf9c4c184f9e4d265ceae249e92477',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fclosed_1166',['HTTP_STATUS_CLOSED',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daab68bb5ebeb45f6e825ca0723f44a4a8a',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5fcreated_1167',['HTTP_STATUS_CREATED',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12ccaa9a59ef7151e4a9944519c2a7b5a4193',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5ferror_1168',['HTTP_STATUS_ERROR',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daa314d8c57fe08c65c104a1db9c2fd55e4',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5fforbidden_1169',['HTTP_STATUS_FORBIDDEN',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12cca419c919f74b88d18803358141ab9471c',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5finternal_5fserver_5ferror_1170',['HTTP_STATUS_INTERNAL_SERVER_ERROR',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12cca299a2d262210540b593420fe89e01b32',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fmethod_5fnot_5fallowed_1171',['HTTP_STATUS_METHOD_NOT_ALLOWED',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12cca63eb71a406e943d4634c357d60dd96df',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fnot_5ffound_1172',['HTTP_STATUS_NOT_FOUND',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12ccaf06c31278cb67d7eec4b2b8157b9ad25',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fok_1173',['HTTP_STATUS_OK',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12ccad34cd21de350cd4fa83b8099e3993b91',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fparsing_5fbody_1174',['HTTP_STATUS_PARSING_BODY',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daad8027ac3e9100d946db27de58960e3a0',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5fparsing_5fheaders_1175',['HTTP_STATUS_PARSING_HEADERS',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daa505a88edd44d7daec95f8e8a47fca783',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5fpending_1176',['HTTP_STATUS_PENDING',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daaa80f96d3b5e7f42bbbce05a77550c3cf',1,'HttpRequest.hpp']]],
+  ['http_5fstatus_5frequest_5fentity_5ftoo_5flarge_1177',['HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE',['../HttpResponse_8hpp.html#ab80f66127508dfced7a0fe1929fe12cca1d65f191a15373466b256217caf15c0a',1,'HttpResponse.hpp']]],
+  ['http_5fstatus_5fsending_5fresponse_1178',['HTTP_STATUS_SENDING_RESPONSE',['../HttpRequest_8hpp.html#a70d2d802a61ea92a685c471e0ccc63daa51f1ac26150fee4a3fc663e18855d877',1,'HttpRequest.hpp']]],
+  ['http_5fversion_5f1_5f0_1179',['HTTP_VERSION_1_0',['../HttpRequest_8hpp.html#ac870fd261da652aee69937751c6f7e7fa3932308db22120ce049dd60f3430b814',1,'HttpRequest.hpp']]],
+  ['http_5fversion_5f1_5f1_1180',['HTTP_VERSION_1_1',['../HttpRequest_8hpp.html#ac870fd261da652aee69937751c6f7e7faf1a34119b438038bc609a273f9bc08c6',1,'HttpRequest.hpp']]],
+  ['http_5fversion_5funknown_1181',['HTTP_VERSION_UNKNOWN',['../HttpRequest_8hpp.html#ac870fd261da652aee69937751c6f7e7fadc71bdea60fee7092552e2fbbb536aa3',1,'HttpRequest.hpp']]]
+];
