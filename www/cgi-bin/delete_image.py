@@ -48,9 +48,10 @@ print(f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <title>LaserWeb - Deletion Terminal</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
-    <link rel="stylesheet" href="/css/laserweb-ops.css">
+    <link rel="stylesheet" href="css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb-ops.css">
     <style>
         .result-box {{
             border: 2px solid {"#39ff14" if ok else "#ff073a"};
@@ -92,8 +93,8 @@ print(f"""<!DOCTYPE html>
             </div>
 
             <div class="armory-actions" style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
-                <a class="btn" href="/cgi-bin/list_images.py" style="text-decoration: none;">RETURN TO SCANNER</a>
-                <a class="btn btn-back" href="/upload.html" style="text-decoration: none;">NEW BLUEPRINT</a>
+                <a class="btn" href="cgi-bin/list_images.py" style="text-decoration: none;">RETURN TO SCANNER</a>
+                <a class="btn btn-back" href="upload.html" style="text-decoration: none;">NEW BLUEPRINT</a>
             </div>
         </main>
     </div>

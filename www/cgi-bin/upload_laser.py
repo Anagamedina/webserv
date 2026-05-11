@@ -33,10 +33,11 @@ if success:
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="3;url=/cgi-bin/list_images.py">
+    <base href="/static/">
+    <meta http-equiv="refresh" content="3;url=cgi-bin/list_images.py">
     <title>LaserWeb - Carga Exitosa</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
-    <link rel="stylesheet" href="/css/laserweb-ops.css">
+    <link rel="stylesheet" href="css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb-ops.css">
 </head>
 <body>
     <div class="page">
@@ -46,7 +47,7 @@ if success:
                 <p>El láser <strong>{filename}</strong> ha sido transferido.</p>
                 <p style="color: #808090; font-size: 0.85rem;">Redirigiendo al Tactical Scanner...</p>
             </div>
-            <a href="/cgi-bin/list_images.py" class="btn">ACCESO INMEDIATO</a>
+            <a href="cgi-bin/list_images.py" class="btn">ACCESO INMEDIATO</a>
         </main>
     </div>
 </body>

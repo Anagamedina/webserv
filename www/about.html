@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaserWeb — The Squad</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb.css">
 </head>
 <body>
     <div class="page">
@@ -13,10 +14,10 @@
         </header>
 
         <nav class="nav-hud">
-            <a href="/">THE HUD</a>
-            <a href="/upload.html">LOAD LASER</a>
-            <a href="/squad_staff.html">ELITE SQUAD</a>
-            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+            <a href="./">THE HUD</a>
+            <a href="upload.html">LOAD LASER</a>
+            <a href="squad_staff.html">ELITE SQUAD</a>
+            <a href="cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
 
         <main class="panel">
@@ -25,25 +26,25 @@
 
             <div class="squad-grid">
                 <div class="squad-card">
-                    <img src="/images/team/ana.png" alt="Ana Gabriela Burgos" class="squad-photo">
+                    <img src="images/team/ana.png" alt="Ana Gabriela Burgos" class="squad-photo">
                     <h3>Ana Gabriela Burgos — The Architect</h3>
                     <p class="role">HTTP flow logic and signal filtering</p>
                     <p>Designs and maintains the request processing flow, HTTP signal filtering and the client / RequestProcessor architecture.</p>
-                    <p><a href="/ana.html" class="btn">View mission report</a></p>
+                    <p><a href="ana.html" class="btn">View mission report</a></p>
                 </div>
                 <div class="squad-card">
-                    <img src="/images/team/carles.png" alt="Carles Pujades" class="squad-photo">
+                    <img src="images/team/carles.png" alt="Carles Pujades" class="squad-photo">
                     <h3>Carles Pujades — The Executor</h3>
                     <p class="role">Process ignition and management</p>
                     <p>Responsible for ignition and management of CGI processes (CgiExecutor, CgiProcess) and script execution on the server.</p>
-                    <p><a href="/carles.html" class="btn">View mission report</a></p>
+                    <p><a href="carles.html" class="btn">View mission report</a></p>
                 </div>
                 <div class="squad-card">
-                    <img src="/images/team/daru.png" alt="Darunny Salazar" class="squad-photo">
+                    <img src="images/team/daru.png" alt="Darunny Salazar" class="squad-photo">
                     <h3>Darunny Salazar — The Operator</h3>
                     <p class="role">Security protocols and network map</p>
                     <p>Manages server configuration, security protocols and network maps (config parsing, locations, permissions).</p>
-                    <p><a href="/daru.html" class="btn">View mission report</a></p>
+                    <p><a href="daru.html" class="btn">View mission report</a></p>
                 </div>
             </div>
 
@@ -53,7 +54,7 @@
                     Enter the name of your laser group for the game. The system uses it to identify your squad in matches.
                     Optionally add members' callsigns or roles.
                 </p>
-                <form action="/cgi-bin/register_squad.py" method="POST">
+                <form action="cgi-bin/register_squad.py" method="POST">
                     <div class="form-row">
                         <label for="team-name">Name of your group / laser squad</label>
                         <input type="text" id="team-name" name="team_name" placeholder="e.g. SQUAD NOVA, PHANTOM LASERS, STRIKE ONE" required>

@@ -54,24 +54,25 @@ print("""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaserWeb - Junior Squads</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
-    <link rel="stylesheet" href="/css/laserweb-ops.css">
+    <link rel="stylesheet" href="css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb-ops.css">
 </head>
 <body>
     <div class="page">
         <header><h1 class="logo">L<span>A</span>S<span>E</span>RW<span>E</span>B</h1></header>
         <nav class="nav-hud">
-            <a href="/">THE HUD</a>
-            <a href="/upload.html">THE ARMORY</a>
-            <a href="/squad_staff.html">ELITE SQUAD</a>
-            <a href="/cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
-            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+            <a href="./">THE HUD</a>
+            <a href="upload.html">THE ARMORY</a>
+            <a href="squad_staff.html">ELITE SQUAD</a>
+            <a href="cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
+            <a href="cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
         <main class="panel">
             <h2>Junior Squads - Generated in mission</h2>
-            <p class="back-row"><a href="/squads.html" class="btn btn-back">&larr; Register new squad</a></p>
+            <p class="back-row"><a href="squads.html" class="btn btn-back">&larr; Register new squad</a></p>
             <div class="squad-result-card">
                 <h3>Summary</h3>
                 <p><strong>Total detected:</strong> %d squad(s)</p>

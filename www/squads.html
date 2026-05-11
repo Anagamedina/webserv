@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaserWeb - Squads</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
-    <link rel="stylesheet" href="/css/laserweb-ops.css">
+    <link rel="stylesheet" href="css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb-ops.css">
 </head>
 <body>
 <div class="page">
@@ -14,16 +15,16 @@
     </header>
 
     <nav class="nav-hud">
-        <a href="/">THE HUD</a>
-        <a href="/upload.html">THE ARMORY</a>
-        <a href="/squad_staff.html">ELITE SQUAD</a>
-        <a href="/cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
-        <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+        <a href="./">THE HUD</a>
+        <a href="upload.html">THE ARMORY</a>
+        <a href="squad_staff.html">ELITE SQUAD</a>
+        <a href="cgi-bin/junior_squads.py">JUNIOR SQUADS</a>
+        <a href="cgi-bin/list_images.py">TACTICAL SCANNER</a>
     </nav>
 
     <main class="panel">
         <h2>Squads - Team registration</h2>
-        <p class="back-row"><a href="/" class="btn btn-back">&larr; Back to HUD</a></p>
+        <p class="back-row"><a href="./" class="btn btn-back">&larr; Back to HUD</a></p>
 
         <section class="squads-form-panel">
             <p class="squad-hint">
@@ -31,7 +32,7 @@
             </p>
 
             <!-- Evaluation: this POST sends application/x-www-form-urlencoded to the CGI -->
-            <form action="/cgi-bin/register_squad.py" method="POST">
+            <form action="cgi-bin/register_squad.py" method="POST">
                 <div class="form-row">
                     <label for="team-name">Squad name</label>
                     <input type="text" id="team-name" name="team_name" required placeholder="e.g. Neon Vipers">
