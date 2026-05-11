@@ -30,7 +30,7 @@ print()
 
 # Output HTML response
 print("<!DOCTYPE html>")
-print("<html><head><title>Python Form Handler</title></head>")
+print("<html><head><base href=\"/static/\"><title>Python Form Handler</title></head>")
 print("<body>")
 print("<h1>Python CGI - Form Data Handler</h1>")
 print(f"<p><strong>Request Method:</strong> {os.environ.get('REQUEST_METHOD', 'N/A')}</p>")
@@ -66,7 +66,7 @@ else:
 
 print("<hr>")
 print('<h2>Test Form</h2>')
-print('<form method="POST" action="/cgi-bin/form_handler.py">')
+print('<form method="POST" action="cgi-bin/form_handler.py">')
 print('  <label>Name: <input type="text" name="name" value="John"></label><br>')
 print('  <label>Email: <input type="email" name="email" value="john@example.com"></label><br>')
 print('  <label>Message: <textarea name="message">Hello from CGI!</textarea></label><br>')

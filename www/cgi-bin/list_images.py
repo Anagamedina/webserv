@@ -24,12 +24,12 @@ def gallery_items(names):
     items = []
     for filename in names:
         safe_name = html.escape(filename)
-        src = f"/images/{safe_name}"
-        items.append(f"""
+        src = f"images/{{safe_name}}"
+        items.append(f\"\"\"
             <li class="ray-img">
-                <a href="{src}" target="_blank"><img src="{src}" alt="{safe_name}"></a>
-                <p style="font-size:0.7rem; margin:10px 0;">{safe_name}</p>
-                <form action="/cgi-bin/delete_image.py" method="GET">
+                <a href="{{src}}" target="_blank"><img src="{{src}}" alt="{{safe_name}}"></a>
+                <p style="font-size:0.7rem; margin:10px 0;">{{safe_name}}</p>
+                <form action="cgi-bin/delete_image.py" method="GET">
                     <input type="hidden" name="file" value="{safe_name}">
                     <button type="submit" class="btn-destroy">DESTROY RAY</button>
                 </form>
@@ -45,9 +45,10 @@ print(f"""<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <title>LaserWeb - Tactical Scanner</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
-    <link rel="stylesheet" href="/css/laserweb-ops.css">
+    <link rel="stylesheet" href="css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb-ops.css">
 </head>
 <body>
     <div class="laser-beam" style="left: 20%; background: var(--neon-cyan); animation-delay: 0s;"></div>
@@ -57,9 +58,9 @@ print(f"""<!DOCTYPE html>
     <div class="page">
         <header><h1 class="logo">T<span>A</span>CTICAL SC<span>A</span>NNER</h1></header>
         <nav class="nav-hud">
-            <a href="/">THE HUD</a>
-            <a href="/upload.html">THE ARMORY</a>
-            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+            <a href="./">THE HUD</a>
+            <a href="upload.html">THE ARMORY</a>
+            <a href="cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
         <main class="panel">
             <section class="system-card">
@@ -67,7 +68,7 @@ print(f"""<!DOCTYPE html>
                 <p>STATUS: <span style="animation: blink 1s infinite;">OPERATIONAL</span></p>
                 <p>RAYS LOADED: {len(image_names)}</p>
                 <p style="margin-top:0.6rem;">
-                    <a href="/upload.html" class="btn">LOAD MORE LASERS</a>
+                    <a href="upload.html" class="btn">LOAD MORE LASERS</a>
                 </p>
             </section>
             <ul class="rays-gallery">{items_html}</ul>

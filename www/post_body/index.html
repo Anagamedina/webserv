@@ -2,9 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaserWeb — Escuadrón registrado</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb.css">
     <style>
         .success-badge { color: #39ff14; font-size: 2rem; margin-bottom: 1rem; }
         .squad-confirm { margin: 1.5rem 0; padding: 1rem; border: 1px solid #39ff14; border-radius: 4px; background: rgba(57,255,20,0.05); }
@@ -19,15 +20,15 @@
         </header>
 
         <nav class="nav-hud">
-            <a href="/">THE HUD</a>
-            <a href="/upload.html">LOAD LASER</a>
-            <a href="/squad_staff.html">ELITE SQUAD</a>
-            <a href="/cgi-bin/list_images.py">TACTICAL SCANNER</a>
+            <a href="./">THE HUD</a>
+            <a href="upload.html">LOAD LASER</a>
+            <a href="squad_staff.html">ELITE SQUAD</a>
+            <a href="cgi-bin/list_images.py">TACTICAL SCANNER</a>
         </nav>
 
         <main class="panel">
             <h2>Escuadrón registrado — Sistema actualizado</h2>
-            <p class="back-row"><a href="/" class="btn btn-back">&larr; Volver al HUD</a></p>
+            <p class="back-row"><a href="./" class="btn btn-back">&larr; Volver al HUD</a></p>
 
             <div class="success-badge">&#9670; CONFIRMADO</div>
             <p style="color: #e0e0e0; margin-bottom: 1rem;">
@@ -48,7 +49,7 @@
             </div>
 
             <p style="margin-top: 1.5rem;">
-                <a href="/squads.html" class="btn">Registrar otro escuadron</a>
+                <a href="squads.html" class="btn">Registrar otro escuadron</a>
             </p>
         </main>
     </div>

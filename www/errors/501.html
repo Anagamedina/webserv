@@ -2,9 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <base href="/static/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaserWeb - Error 501</title>
-    <link rel="stylesheet" href="/css/laserweb.css">
+    <link rel="stylesheet" href="css/laserweb.css">
     <style>
         /* Fallback por si el CSS externo no carga (ej. respuesta 501 en POST) */
         body { background-color: #050505; color: #e0e0e0; font-family: "Courier New", Consolas, monospace; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -28,7 +29,7 @@
             <p>Método no soportado por esta versión del sistema.</p>
         </div>
         <div class="back-row">
-            <a href="/" class="btn btn-back">Volver al inicio</a>
+            <a href="./" class="btn btn-back">Volver al inicio</a>
         </div>
     </div>
 </div>
