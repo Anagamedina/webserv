@@ -225,6 +225,12 @@ void ServerManager::handleClientEvent(int client_fd, uint32_t events) {
 
   if (events & EPOLLOUT) {
     client->handleWrite();
+    // Close right after a "Connection: close" response instead of waiting for
+    // the peer to hang up or the idle timeout.
+    if (client->getState() == STATE_CLOSED) {
+      handleClientDisconnect(client_fd);
+      return;
+    }
   }
 
   if (pendingClose && !client->hasPendingData()) {
