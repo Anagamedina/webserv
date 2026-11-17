@@ -10,8 +10,16 @@ static std::string reasonPhraseForStatus(int code) {
       return "OK";
     case HTTP_STATUS_CREATED:
       return "Created";
+    case HTTP_STATUS_NO_CONTENT:
+      return "No Content";
+    case HTTP_STATUS_MOVED_PERMANENTLY:
+      return "Moved Permanently";
+    case HTTP_STATUS_FOUND:
+      return "Found";
     case HTTP_STATUS_BAD_REQUEST:
       return "Bad Request";
+    case HTTP_STATUS_FORBIDDEN:
+      return "Forbidden";
     case HTTP_STATUS_NOT_FOUND:
       return "Not Found";
     case HTTP_STATUS_METHOD_NOT_ALLOWED:
@@ -20,6 +28,12 @@ static std::string reasonPhraseForStatus(int code) {
       return "Request Entity Too Large";
     case HTTP_STATUS_INTERNAL_SERVER_ERROR:
       return "Internal Server Error";
+    case HTTP_STATUS_BAD_GATEWAY:
+      return "Bad Gateway";
+    case HTTP_STATUS_SERVICE_UNAVAILABLE:
+      return "Service Unavailable";
+    case HTTP_STATUS_GATEWAY_TIMEOUT:
+      return "Gateway Timeout";
     default:
       return "Unknown";
   }

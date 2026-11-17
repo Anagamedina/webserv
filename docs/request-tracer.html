@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Webserv Request Tracer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a debugger. Step narrative on top, then three live panes (wire, epoll, state machines), then the syscall trace. */
+:root {
+  --bg: #EDF0F3; --surface: #FFFFFF; --sunk: #E3E7EC; --ink: #14171C; --muted: #59626F; --line: #D2D7DE;
+  --accent: #2545D3; --accent-soft: #E2E7FF;
+  --in: #0A7B70; --out: #A35C00; --hup: #BA372D; --ok: #2C7A31;
+  --f-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --f-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E1116; --surface: #161A21; --sunk: #1D222A; --ink: #E5E8ED; --muted: #8E97A5; --line: #2A3039;
+  --accent: #8FA3FF; --accent-soft: #232A4A; --in: #3CC4B2; --out: #EFA54B; --hup: #F27569; --ok: #6DCB77; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E1116; --surface: #161A21; --sunk: #1D222A; --ink: #E5E8ED; --muted: #8E97A5; --line: #2A3039;
+  --accent: #8FA3FF; --accent-soft: #232A4A; --in: #3CC4B2; --out: #EFA54B; --hup: #F27569; --ok: #6DCB77; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+
+header.hero { display: grid; gap: 10px; max-width: 70ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 em { font-style: normal; color: var(--accent); }
+.lede { margin: 0; color: var(--muted); font-size: 16px; }
+.credits { font-size: 13px; color: var(--muted); }
+.credits b { color: var(--ink); font-weight: 600; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab { font: 500 14px var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.tab:hover { border-color: var(--accent); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab .code { font-family: var(--f-mono); font-size: 12px; opacity: 0.7; margin-left: 6px; }
+
+/* Step narrative */
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: grid; gap: 14px; }
+.stage-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+.counter { font-family: var(--f-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+.stage h2 { font-family: var(--f-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); margin: 0; line-height: 1.15; text-wrap: balance; }
+.fn { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.fn .name { font-family: var(--f-mono); font-weight: 600; font-size: 14px; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 6px; }
+.fn .loc { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); }
+.stage p { margin: 0; max-width: 78ch; }
+.note { font-size: 13.5px; color: var(--muted); border-left: 2px solid var(--out); padding-left: 10px; max-width: 78ch; }
+.note b { color: var(--ink); }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { font: 600 14px var(--f-body); border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-height: 38px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.ticks { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.tick { width: 22px; height: 6px; border-radius: 3px; background: var(--sunk); border: 0; cursor: pointer; padding: 0; }
+.tick.done { background: color-mix(in srgb, var(--accent) 45%, var(--sunk)); }
+.tick.now { background: var(--accent); }
+.kbd { font-size: 12px; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Panes */
+.panes { display: grid; grid-template-columns: 1.25fr 1fr 0.9fr; gap: 16px; align-items: start; }
+.pane { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.pane h3 { margin: 0; font: 600 12px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pane h3 span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+.bytes { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7; background: var(--sunk); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; min-height: 3em; }
+.b-pending { color: var(--muted); opacity: 0.45; }
+.b-buffer { color: var(--ink); }
+.b-parsed { color: var(--ink); background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+.crlf { color: var(--muted); font-size: 0.85em; }
+.b-parsed .crlf { color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.resp-state { font-family: var(--f-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); }
+.resp-state.queued { color: var(--out); border-color: var(--out); }
+.resp-state.sent { color: var(--ok); border-color: var(--ok); }
+.empty { color: var(--muted); font-style: italic; font-family: var(--f-body); }
+
+table.fds { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fds th { text-align: left; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
+.fds td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.fds td.fdn { font-family: var(--f-mono); font-weight: 600; font-size: 15px; width: 2.2em; font-variant-numeric: tabular-nums; }
+.fds tr.ready td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.fds tr.ready td.fdn { color: var(--accent); }
+.fds tr.enter td { animation: enter 0.6s ease-out; }
+@keyframes enter { from { background: color-mix(in srgb, var(--ok) 22%, transparent); } }
+.who { font-size: 13px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.chip { font: 600 10.5px var(--f-mono); padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.chip.IN { color: var(--in); } .chip.OUT { color: var(--out); } .chip.RDHUP, .chip.HUP { color: var(--hup); }
+.fire { font: 600 11px var(--f-mono); color: var(--accent); white-space: nowrap; }
+.fire::before { content: "● "; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.2; } }
+.epinfo { font-size: 12.5px; color: var(--muted); }
+.proc { font-size: 13px; border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.proc .st { font-family: var(--f-mono); font-size: 12px; }
+.proc .st.running { color: var(--out); } .proc .st.exited { color: var(--ok); } .proc .st.killed { color: var(--hup); }
+
+.machine { display: grid; gap: 6px; }
+.machine .label { font: 500 12px var(--f-mono); color: var(--muted); }
+.states { display: flex; flex-wrap: wrap; gap: 4px; }
+.st-pill { font: 500 11px var(--f-mono); padding: 3px 7px; border-radius: 5px; background: var(--sunk); color: var(--muted); }
+.st-pill.on { background: var(--accent); color: var(--surface); font-weight: 600; }
+.st-pill.on.bad { background: var(--hup); }
+.machine.off .states { opacity: 0.35; }
+.cgiout { font-family: var(--f-mono); font-size: 12px; background: var(--sunk); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; }
+
+/* Trace */
+.trace { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; }
+.trace h3 { margin: 0; font: 600 12px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.log { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.65; max-height: 260px; overflow: auto; background: var(--sunk); border-radius: 8px; padding: 10px 12px; }
+.log div { white-space: pre-wrap; word-break: break-all; color: var(--muted); }
+.log div.new { color: var(--ink); }
+.log div.new::before { content: "› "; color: var(--accent); }
+.log div.sep { border-top: 1px dashed var(--line); margin: 4px 0; height: 0; }
+
+footer { font-size: 12.5px; color: var(--muted); max-width: 90ch; }
+
+@media (max-width: 1000px) { .panes { grid-template-columns: 1fr 1fr; } .pane.wire { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .panes { grid-template-columns: 1fr; } .stage { padding: 16px; } .kbd { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">42 · webserv · C++98 · epoll</div>
+    <h1>One HTTP request, <em>one epoll_wait at a time</em></h1>
+    <p class="lede">Webserv is an HTTP server we wrote from scratch in C++98: non-blocking sockets, a single event loop, static files, uploads and CGI. Pick a request and step through what happens inside it. Every step names the real function and line in our source.</p>
+    <div class="credits">Built by <b>anamedin</b>, <b>dasalaza</b> and <b>cpujades</b> at 42.</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Scenarios" id="tabs"></nav>
+
+  <section class="stage" aria-live="polite">
+    <div class="stage-top">
+      <span class="counter" id="counter"></span>
+      <div class="controls">
+        <button class="btn" id="prev" type="button">← Back</button>
+        <button class="btn primary" id="next" type="button">Next step →</button>
+        <button class="btn" id="play" type="button">Play</button>
+      </div>
+    </div>
+    <h2 id="title"></h2>
+    <div class="fn"><span class="name" id="fn"></span><span class="loc" id="loc"></span></div>
+    <p id="text"></p>
+    <div class="note" id="note" hidden></div>
+    <div class="controls"><div class="ticks" id="ticks"></div><span class="kbd">← → to step, space to play</span></div>
+  </section>
+
+  <div class="panes">
+    <section class="pane wire">
+      <h3>Request on the wire <span id="reqinfo"></span></h3>
+      <div class="bytes" id="req"></div>
+      <div class="legend"><span><i style="background:var(--sunk);outline:1px solid var(--line)"></i>not received yet</span><span><i style="background:var(--ink)"></i>in the read buffer</span><span><i style="background:var(--accent)"></i>parsed</span></div>
+      <h3>Response <span class="resp-state" id="respst"></span></h3>
+      <div class="bytes" id="resp"></div>
+    </section>
+
+    <section class="pane">
+      <h3>epoll interest list <span>fd 3 · level-triggered</span></h3>
+      <table class="fds"><thead><tr><th>fd</th><th>what it is</th><th></th></tr></thead><tbody id="fds"></tbody></table>
+      <div id="proc"></div>
+      <div class="epinfo">Every socket and every CGI pipe is just another fd in the same epoll. Nothing blocks: the loop only touches an fd when epoll says it is ready.</div>
+    </section>
+
+    <section class="pane">
+      <h3>State machines</h3>
+      <div class="machine" id="m-client"></div>
+      <div class="machine" id="m-parser"></div>
+      <div class="machine" id="m-chunk"></div>
+      <div id="cgiwrap" hidden><div class="machine"><span class="label">CGI stdout buffer</span><div class="cgiout" id="cgiout"></div></div></div>
+    </section>
+  </div>
+
+  <section class="trace">
+    <h3>System calls</h3>
+    <div class="log" id="log"></div>
+  </section>
+
+  <footer>The system-call view is a simplified strace of what the code does; fd numbers, PIDs and the client port are illustrative. Source files are under <code>src/</code> in the webserv repository.</footer>
+</div>
+
+<script>
+const CR = '\r\n';
+const L = { fd: 4, who: 'listening socket, port 8080', ev: ['IN'] };
+const C = (ev) => ({ fd: 5, who: 'client socket 127.0.0.1:52814', ev });
+const PIN = { fd: 7, who: 'pipe → CGI stdin', ev: ['OUT', 'RDHUP'] };
+const POUT = { fd: 8, who: 'pipe ← CGI stdout', ev: ['IN', 'RDHUP'] };
+const at = (s, m) => s.indexOf(m) + m.length;
+
+const CLIENT_STATES = ['IDLE', 'READING_HEADER', 'READING_BODY', 'WRITING_RESPONSE', 'CLOSED'];
+const PARSER_STATES = ['START_LINE', 'HEADERS', 'BODY', 'COMPLETE', 'ERROR'];
+const CHUNK_STATES = ['CHUNK_SIZE', 'CHUNK_DATA', 'CHUNK_END', 'CHUNK_COMPLETE'];
+
+/* ---------- Scenario A: static GET ---------- */
+const reqA = 'GET /index.html HTTP/1.1' + CR + 'Host: localhost:8080' + CR + 'Connection: keep-alive' + CR + CR;
+const respA = { head: 'HTTP/1.1 200 OK' + CR + 'Connection: keep-alive' + CR + 'Content-Type: text/html' + CR + 'Content-Length: 5051' + CR + CR, body: '<!DOCTYPE html> … 5,051 bytes of www/index.html', len: 5051 };
+const lenHead = (r) => r.head.length + r.len;
+
+const scenA = {
+  id: 'static', name: 'GET a page', code: '200', req: reqA, resp: respA,
+  steps: [
+    { title: 'The server is waiting', fn: 'ServerManager::run', loc: 'src/network/ServerManager.cpp:79',
+      text: 'The listening socket is the only fd in epoll. The loop sleeps in epoll_wait() for up to 3 seconds. When it wakes with nothing to do, it still reaps finished CGI children and checks timeouts.',
+      fds: [L], client: null, parser: null, chunk: null, recv: 0, parsed: 0, resp: 'none', proc: null, cgiout: null,
+      sys: ['epoll_wait(3, [], 64, 3000) = 0', 'wait4(-1, WNOHANG) = -1 ECHILD'] },
+    { title: 'A browser connects', fn: 'ServerManager::handleNewConnection', loc: 'src/network/ServerManager.cpp:184', ready: { 4: 'EPOLLIN' },
+      text: 'The listener is readable, which means a connection is waiting. accept() runs in a loop until it returns EAGAIN. Each new socket goes into epoll with EPOLLIN | EPOLLRDHUP, and a Client object is created in IDLE.',
+      fds: [L, C(['IN', 'RDHUP'])], client: 'IDLE', parser: 'START_LINE',
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=4}], 64, 3000) = 1', 'accept(4, {127.0.0.1:52814}) = 5', 'epoll_ctl(3, EPOLL_CTL_ADD, 5, EPOLLIN|EPOLLRDHUP) = 0', 'accept(4) = -1 EAGAIN'] },
+    { title: 'The request arrives', fn: 'Client::handleRead', loc: 'src/client/Client.cpp:216', ready: { 5: 'EPOLLIN' },
+      text: 'recv() reads at most 4096 bytes, and this request fits in one read. The client moves from IDLE to READING_HEADER and passes the bytes to the parser.',
+      client: 'READING_HEADER', recv: reqA.length,
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=5}], 64, 3000) = 1', 'recv(5, "GET /index.html HTTP/1.1\\r\\n"..., 4096, 0) = ' + reqA.length] },
+    { title: 'Parse the start line', fn: 'HttpParser::parseStartLine', loc: 'src/http/HttpParserStartLine.cpp:137',
+      text: 'extractLine() looks for the first CRLF. The line is split into method, URI and HTTP version, and parseUri() separates the path from the query string.',
+      parsed: at(reqA, CR), parser: 'HEADERS', sys: [] },
+    { title: 'Parse the headers', fn: 'HttpParser::parseHeaders', loc: 'src/http/HttpParserHeaders.cpp:91',
+      text: 'One header per line, until the empty line. validateHeaders() finds neither Content-Length nor Transfer-Encoding, so there is no body and the request is COMPLETE.',
+      parsed: reqA.length, parser: 'COMPLETE', sys: [] },
+    { title: 'Pick the location block', fn: 'RequestProcessor::process', loc: 'src/client/RequestProcessor.cpp:105',
+      text: 'selectServerByPort(8080) picks the server block. matchLocation() keeps the longest matching prefix, here "location /". validateLocation() checks that GET is in allow_methods, and resolvePath() maps the URI to ./www/index.html. There is no .py or .sh extension, so it is not CGI.',
+      sys: [] },
+    { title: 'Read the file', fn: 'handleStaticPath', loc: 'src/client/StaticPathHandler.cpp:259',
+      text: 'stat() says it is a regular file. handleRegularFile() reads it into the response body and sets Content-Type from the extension. Status: 200 OK.',
+      sys: ['stat("./www/index.html") = 0', 'open("./www/index.html", O_RDONLY) = 6', 'read(6, "<!DOCTYPE html>"..., 5051) = 5051', 'close(6) = 0'] },
+    { title: 'Queue the response', fn: 'Client::enqueueResponse', loc: 'src/client/Client.cpp:43',
+      text: 'serialize() writes the status line, the headers, Content-Length and the body into _outBuffer, and the client switches to WRITING_RESPONSE. The parser is reset right away, ready for the next request on this connection. Then updateClientEvents() adds EPOLLOUT: the server only asks to write when it has something to write.',
+      client: 'WRITING_RESPONSE', parser: 'START_LINE', resp: 'queued', fds: [L, C(['IN', 'OUT', 'RDHUP'])],
+      sys: ['epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'Write it out', fn: 'Client::handleWrite', loc: 'src/client/Client.cpp:277', ready: { 5: 'EPOLLOUT' },
+      text: 'The socket is writable. send() may take only part of the buffer: what it took is erased and the rest waits for the next EPOLLOUT. Here everything fits. The queue is empty and the connection is keep-alive, so the client goes back to IDLE.',
+      client: 'IDLE', resp: 'sent',
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=5}], 64, 3000) = 1', 'send(5, "HTTP/1.1 200 OK\\r\\n"..., ' + lenHead(respA) + ', 0) = ' + lenHead(respA)] },
+    { title: 'Stop asking to write', fn: 'ServerManager::updateClientEvents', loc: 'src/network/ServerManager.cpp:244',
+      text: 'needsWrite() is now false, so EPOLLOUT is removed. Otherwise level-triggered epoll would wake the loop on every turn for a socket with nothing to send. The connection stays open for the next request; after 60 seconds of silence, checkTimeouts() closes it.',
+      fds: [L, C(['IN', 'RDHUP'])],
+      sys: ['epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLRDHUP) = 0', 'epoll_wait(3, [], 64, 3000) = 0'] },
+  ]
+};
+
+/* ---------- Scenario B: chunked POST to CGI ---------- */
+const reqB = 'POST /cgi-bin/echo_body.py HTTP/1.1' + CR + 'Host: localhost:8080' + CR + 'Transfer-Encoding: chunked' + CR + 'Content-Type: text/plain' + CR + CR
+  + '5' + CR + 'hello' + CR + '6' + CR + ' world' + CR + '0' + CR + CR;
+const recvB1 = at(reqB, '5' + CR + 'hel');
+const cgiOutB = 'Content-Type: text/plain\n\nOK: echo_body\nBODY_LEN=11\nBODY=hello world\n';
+const cgiBodyB = 'OK: echo_body\nBODY_LEN=11\nBODY=hello world\n';
+const respB = { head: 'HTTP/1.1 200 OK' + CR + 'Connection: keep-alive' + CR + 'Content-Type: text/plain' + CR + 'Content-Length: ' + cgiBodyB.length + CR + CR, body: cgiBodyB, len: cgiBodyB.length };
+
+const scenB = {
+  id: 'cgi', name: 'Chunked POST to a CGI script', code: '200', req: reqB, resp: respB,
+  steps: [
+    { title: 'A connection is already open', fn: 'ServerManager::run', loc: 'src/network/ServerManager.cpp:79',
+      text: 'The client connected the same way as in "GET a page". This time it sends a POST with a chunked body: each piece is preceded by its size in hex, and a chunk of size 0 ends the body.',
+      fds: [L, C(['IN', 'RDHUP'])], client: 'IDLE', parser: 'START_LINE', chunk: null, recv: 0, parsed: 0, resp: 'none', proc: null, cgiout: null,
+      sys: ['epoll_wait(3, [], 64, 3000) = 0'] },
+    { title: 'First read: only part of the body', fn: 'Client::handleRead', loc: 'src/client/Client.cpp:216', ready: { 5: 'EPOLLIN' },
+      text: 'The first recv() brings the headers and just "5\\r\\nhel". The parser reads the start line and the headers, sees Transfer-Encoding: chunked, and moves to BODY.',
+      client: 'READING_HEADER', recv: recvB1, parsed: at(reqB, CR + CR), parser: 'BODY', chunk: 'CHUNK_SIZE',
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=5}], 64, 3000) = 1', 'recv(5, "POST /cgi-bin/echo_body.py HTTP/1.1\\r\\n"..., 4096, 0) = ' + recvB1] },
+    { title: 'Wait without blocking', fn: 'HttpParser::parseBodyChunked', loc: 'src/http/HttpParserBody.cpp:189',
+      text: 'In CHUNK_SIZE it reads "5", so the next 5 bytes are data. Only 3 have arrived. The parser keeps them buffered and returns, and so does handleRead(). The loop goes back to epoll_wait() and can serve other clients in the meantime.',
+      parsed: at(reqB, '5' + CR), chunk: 'CHUNK_DATA', sys: ['epoll_wait(3, [], 64, 3000) = 0'] },
+    { title: 'Second read: the rest of the body', fn: 'HttpParser::handleChunkDataState', loc: 'src/http/HttpParserBody.cpp:125', ready: { 5: 'EPOLLIN' },
+      text: 'The rest arrives. The chunk machine finishes "hello", consumes the CRLF in CHUNK_END, reads size 6, takes " world", and the size-0 chunk ends the body. The decoded body is "hello world", 11 bytes, checked against client_max_body_size as it grows.',
+      recv: reqB.length, parsed: reqB.length, chunk: 'CHUNK_COMPLETE', parser: 'COMPLETE',
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=5}], 64, 3000) = 1', 'recv(5, "lo\\r\\n6\\r\\n world\\r\\n0\\r\\n\\r\\n", 4096, 0) = ' + (reqB.length - recvB1)] },
+    { title: 'Route to the CGI', fn: 'RequestProcessor::handleCgi', loc: 'src/client/RequestProcessor.cpp:51',
+      text: 'matchLocation() picks "location /cgi-bin/" over "location /" because it is the longer prefix. The config maps .py to /usr/bin/python3. handleCgi() checks that the script exists and is readable and that the interpreter is executable, then returns ACTION_EXECUTE_CGI instead of a response.',
+      sys: ['stat("./www/cgi-bin/echo_body.py") = 0', 'access("./www/cgi-bin/echo_body.py", R_OK) = 0', 'access("/usr/bin/python3", X_OK) = 0'] },
+    { title: 'Fork the script', fn: 'CgiExecutor::executeAsync', loc: 'src/cgi/CgiExecutor.cpp:44',
+      text: 'Two pipes: one carries the request body to the script, the other brings its output back. The parent\'s ends are made non-blocking. After fork(), the child points stdin and stdout at the pipes with dup2(), moves into the script\'s folder and runs python3 with the CGI variables (REQUEST_METHOD=POST, CONTENT_LENGTH=11, …). The parent closes the ends it does not use.',
+      proc: { pid: 4242, cmd: 'python3 echo_body.py', st: 'running' },
+      sys: ['pipe([6, 7]) = 0', 'pipe([8, 9]) = 0', 'fcntl(7, F_SETFL, O_NONBLOCK) = 0', 'fcntl(8, F_SETFL, O_NONBLOCK) = 0', 'fork() = 4242',
+        '[pid 4242] dup2(6, 0) = 0', '[pid 4242] dup2(9, 1) = 0', '[pid 4242] chdir("./www/cgi-bin") = 0', '[pid 4242] execve("/usr/bin/python3", ["python3", "echo_body.py"], [REQUEST_METHOD=POST, CONTENT_LENGTH=11, …])', 'close(6) = 0', 'close(9) = 0'] },
+    { title: 'Watch the pipes with epoll', fn: 'Client::executeCgi', loc: 'src/client/ClientCgi.cpp:58',
+      text: 'Both pipes go into the same epoll as the sockets. The server never waits for the script; the script is just two more fds. The parser is reset for the next request.',
+      note: '<b>A detail from the code:</b> the client is set to READING_BODY here, a state name reused to mean "waiting for the CGI". While the body was actually being read, the state that moved was the parser\'s.',
+      client: 'READING_BODY', parser: 'START_LINE', chunk: null, fds: [L, C(['IN', 'RDHUP']), PIN, POUT],
+      sys: ['epoll_ctl(3, EPOLL_CTL_ADD, 8, EPOLLIN|EPOLLRDHUP) = 0', 'epoll_ctl(3, EPOLL_CTL_ADD, 7, EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'Send the body to the script', fn: 'Client::handleCgiPipe', loc: 'src/client/ClientCgi.cpp:164', ready: { 7: 'EPOLLOUT' },
+      text: 'The stdin pipe is writable. write() sends "hello world"; a partial write would continue on the next EPOLLOUT. Once the whole body is sent, the pipe leaves epoll and is closed, so the script sees end of file on stdin.',
+      fds: [L, C(['IN', 'RDHUP']), POUT],
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=7}], 64, 3000) = 1', 'write(7, "hello world", 11) = 11', 'epoll_ctl(3, EPOLL_CTL_DEL, 7) = 0', 'close(7) = 0'] },
+    { title: 'Read the script\'s output', fn: 'Client::handleCgiPipe', loc: 'src/client/ClientCgi.cpp:164', ready: { 8: 'EPOLLIN' },
+      text: 'The script printed a header block and a body. read() takes up to 4096 bytes and appendResponseData() keeps them on the CgiProcess until the script is done.',
+      cgiout: cgiOutB,
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=8}], 64, 3000) = 1', 'read(8, "Content-Type: text/plain\\n\\nOK: echo"..., 4096) = ' + cgiOutB.length] },
+    { title: 'The script exits', fn: 'Client::finalizeCgiResponse', loc: 'src/client/ClientCgi.cpp:114', ready: { 8: 'EPOLLIN|EPOLLHUP' },
+      text: 'read() returns 0: the script closed stdout. The pipe leaves epoll and is closed. consumeCgiExitStatus() checks the exit code; a non-zero exit or a signal would become a 500. The CGI headers are merged into the response (Status, Connection and Transfer-Encoding are filtered out) and the response is queued, with EPOLLOUT on the client socket.',
+      client: 'WRITING_RESPONSE', resp: 'queued', fds: [L, C(['IN', 'OUT', 'RDHUP'])], proc: { pid: 4242, cmd: 'python3 echo_body.py', st: 'exited', code: 'exit 0, reaped' },
+      sys: ['epoll_wait(3, [{EPOLLIN|EPOLLHUP, fd=8}], 64, 3000) = 1', 'read(8, "", 4096) = 0', 'epoll_ctl(3, EPOLL_CTL_DEL, 8) = 0', 'close(8) = 0', 'wait4(4242, WNOHANG) = 4242 (exited, status 0)', 'epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'Write the response', fn: 'Client::handleWrite', loc: 'src/client/Client.cpp:277', ready: { 5: 'EPOLLOUT' },
+      text: 'Same as for a static file: send(), erase what was sent, and go back to IDLE because the connection is keep-alive. EPOLLOUT is removed again.',
+      client: 'IDLE', resp: 'sent', fds: [L, C(['IN', 'RDHUP'])],
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=5}], 64, 3000) = 1', 'send(5, "HTTP/1.1 200 OK\\r\\n"..., ' + lenHead(respB) + ', 0) = ' + lenHead(respB), 'epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLRDHUP) = 0'] },
+  ]
+};
+
+/* ---------- Scenario C: 404 ---------- */
+const reqC = 'GET /secret-plans.html HTTP/1.1' + CR + 'Host: localhost:8080' + CR + CR;
+const respC = { head: 'HTTP/1.1 404 Not Found' + CR + 'Connection: keep-alive' + CR + 'Content-Type: text/html' + CR + 'Content-Length: 686' + CR + CR, body: '<!DOCTYPE html> … 686 bytes of www/errors/404.html', len: 686 };
+const scenC = {
+  id: 'notfound', name: 'A page that does not exist', code: '404', req: reqC, resp: respC,
+  steps: [
+    { title: 'A connection is already open', fn: 'ServerManager::run', loc: 'src/network/ServerManager.cpp:79',
+      text: 'An open keep-alive connection, waiting for its next request.',
+      fds: [L, C(['IN', 'RDHUP'])], client: 'IDLE', parser: 'START_LINE', chunk: null, recv: 0, parsed: 0, resp: 'none', proc: null, cgiout: null,
+      sys: ['epoll_wait(3, [], 64, 3000) = 0'] },
+    { title: 'Read and parse', fn: 'Client::handleRead', loc: 'src/client/Client.cpp:216', ready: { 5: 'EPOLLIN' },
+      text: 'Same path as a normal GET: one recv(), the start line, the headers, no body, COMPLETE.',
+      client: 'READING_HEADER', recv: reqC.length, parsed: reqC.length, parser: 'COMPLETE',
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=5}], 64, 3000) = 1', 'recv(5, "GET /secret-plans.html HTTP/1.1\\r\\n"..., 4096, 0) = ' + reqC.length] },
+    { title: 'Pick the location block', fn: 'RequestProcessor::process', loc: 'src/client/RequestProcessor.cpp:105',
+      text: '"location /" matches and allows GET, so routing succeeds. resolvePath() gives ./www/secret-plans.html. Whether the file exists is not checked until the next step.',
+      sys: [] },
+    { title: 'The file is not there', fn: 'handleStaticPath', loc: 'src/client/StaticPathHandler.cpp:270',
+      text: 'stat() fails, so handleStaticPath() calls buildErrorResponse() with 404. The server block maps 404 to /errors/404.html, so that page becomes the body instead of a generic message.',
+      sys: ['stat("./www/secret-plans.html") = -1 ENOENT', 'open("./www/errors/404.html", O_RDONLY) = 6', 'read(6, "<!DOCTYPE html>"..., 686) = 686', 'close(6) = 0'] },
+    { title: 'Queue the error page', fn: 'Client::enqueueResponse', loc: 'src/client/Client.cpp:43',
+      text: 'An error is still a normal response. It goes into _outBuffer and EPOLLOUT is added. A 404 does not close the connection.',
+      client: 'WRITING_RESPONSE', parser: 'START_LINE', resp: 'queued', fds: [L, C(['IN', 'OUT', 'RDHUP'])],
+      sys: ['epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'Write it out', fn: 'Client::handleWrite', loc: 'src/client/Client.cpp:277', ready: { 5: 'EPOLLOUT' },
+      text: 'send(), back to IDLE, EPOLLOUT removed. The browser can reuse the connection.',
+      client: 'IDLE', resp: 'sent', fds: [L, C(['IN', 'RDHUP'])],
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=5}], 64, 3000) = 1', 'send(5, "HTTP/1.1 404 Not Found\\r\\n"..., ' + lenHead(respC) + ', 0) = ' + lenHead(respC), 'epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLRDHUP) = 0'] },
+  ]
+};
+
+/* ---------- Scenario D: CGI timeout ---------- */
+const reqD = 'GET /cgi-bin/slow.py HTTP/1.1' + CR + 'Host: localhost:8080' + CR + 'Connection: close' + CR + CR;
+const respD = { head: 'HTTP/1.1 504 Gateway Timeout' + CR + 'Connection: close' + CR + 'Content-Type: text/html' + CR + 'Content-Length: 719' + CR + CR, body: '<!DOCTYPE html> … 719 bytes of www/errors/500.html', len: 719 };
+const scenD = {
+  id: 'timeout', name: 'A CGI script that never ends', code: '504', req: reqD, resp: respD,
+  steps: [
+    { title: 'A connection is already open', fn: 'ServerManager::run', loc: 'src/network/ServerManager.cpp:79',
+      text: 'The request asks for slow.py, an example script stuck in an infinite loop. It also says Connection: close.',
+      fds: [L, C(['IN', 'RDHUP'])], client: 'IDLE', parser: 'START_LINE', chunk: null, recv: 0, parsed: 0, resp: 'none', proc: null, cgiout: null,
+      sys: ['epoll_wait(3, [], 64, 3000) = 0'] },
+    { title: 'Read and parse', fn: 'Client::handleRead', loc: 'src/client/Client.cpp:216', ready: { 5: 'EPOLLIN' },
+      text: 'One recv(), start line, headers, no body, COMPLETE.',
+      client: 'READING_HEADER', recv: reqD.length, parsed: reqD.length, parser: 'COMPLETE',
+      sys: ['epoll_wait(3, [{EPOLLIN, fd=5}], 64, 3000) = 1', 'recv(5, "GET /cgi-bin/slow.py HTTP/1.1\\r\\n"..., 4096, 0) = ' + reqD.length] },
+    { title: 'Route and fork', fn: 'CgiExecutor::executeAsync', loc: 'src/cgi/CgiExecutor.cpp:44',
+      text: '"location /cgi-bin/" matches, .py maps to python3, the checks pass, and the script is forked exactly as in the POST example.',
+      proc: { pid: 4243, cmd: 'python3 slow.py', st: 'running' },
+      sys: ['pipe([6, 7]) = 0', 'pipe([8, 9]) = 0', 'fork() = 4243', '[pid 4243] execve("/usr/bin/python3", ["python3", "slow.py"], […])', 'close(6) = 0', 'close(9) = 0'] },
+    { title: 'Watch the pipes', fn: 'Client::executeCgi', loc: 'src/client/ClientCgi.cpp:58',
+      text: 'Both pipe ends go into epoll and the client waits on the CGI.',
+      client: 'READING_BODY', parser: 'START_LINE', fds: [L, C(['IN', 'RDHUP']), PIN, POUT],
+      sys: ['epoll_ctl(3, EPOLL_CTL_ADD, 8, EPOLLIN|EPOLLRDHUP) = 0', 'epoll_ctl(3, EPOLL_CTL_ADD, 7, EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'No body to send', fn: 'Client::handleCgiPipe', loc: 'src/client/ClientCgi.cpp:164', ready: { 7: 'EPOLLOUT' },
+      text: 'A GET has no body, so isRequestBodySent() is true at once. The stdin pipe leaves epoll and is closed.',
+      fds: [L, C(['IN', 'RDHUP']), POUT],
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=7}], 64, 3000) = 1', 'epoll_ctl(3, EPOLL_CTL_DEL, 7) = 0', 'close(7) = 0'] },
+    { title: 'Nothing happens for 60 seconds', fn: 'ServerManager::checkTimeouts', loc: 'src/network/ServerManager.cpp:159',
+      text: 'The script never writes. epoll_wait() times out every 3 seconds, and each time checkTimeouts() asks the client whether its CGI has run longer than cgi_timeout (60 seconds by default). Other clients are served normally the whole time.',
+      sys: ['epoll_wait(3, [], 64, 3000) = 0', '… 19 more empty epoll_wait() calls …', 'epoll_wait(3, [], 64, 3000) = 0'] },
+    { title: 'Kill the script', fn: 'Client::checkCgiTimeout', loc: 'src/client/ClientCgi.cpp:263',
+      text: 'Time is up. The stdout pipe leaves epoll and is closed. terminateProcess() sends SIGKILL and waits for the child, so it does not stay as a zombie. The client gets a 504, marked to close the connection.',
+      client: 'WRITING_RESPONSE', resp: 'queued', fds: [L, C(['IN', 'OUT', 'RDHUP'])], proc: { pid: 4243, cmd: 'python3 slow.py', st: 'killed', code: 'SIGKILL, reaped' },
+      sys: ['epoll_ctl(3, EPOLL_CTL_DEL, 8) = 0', 'close(8) = 0', 'kill(4243, SIGKILL) = 0', 'wait4(4243, …, 0) = 4243 (killed by SIGKILL)', 'epoll_ctl(3, EPOLL_CTL_MOD, 5, EPOLLIN|EPOLLOUT|EPOLLRDHUP) = 0'] },
+    { title: 'Send the 504', fn: 'Client::handleWrite', loc: 'src/client/Client.cpp:277', ready: { 5: 'EPOLLOUT' },
+      text: 'The error page goes out. Because _closeAfterWrite is set, the client switches to CLOSED as soon as the last byte is sent.',
+      client: 'CLOSED', resp: 'sent',
+      sys: ['epoll_wait(3, [{EPOLLOUT, fd=5}], 64, 3000) = 1', 'send(5, "HTTP/1.1 504 Gateway Timeout\\r\\n"..., ' + lenHead(respD) + ', 0) = ' + lenHead(respD)] },
+    { title: 'Close the connection', fn: 'ServerManager::handleClientDisconnect', loc: 'src/network/ServerManager.cpp:255',
+      text: 'handleClientEvent() sees CLOSED right after the write and disconnects: the fd leaves epoll, the Client is deleted and its destructor closes the socket. Only the listener is left.',
+      fds: [L], client: null, parser: null,
+      sys: ['epoll_ctl(3, EPOLL_CTL_DEL, 5) = 0', 'close(5) = 0'] },
+  ]
+};
+
+const SCENARIOS = [scenA, scenB, scenC, scenD];
+
+/* Each step lists only what changes; carry the rest forward. ready/note/sys apply to one step. */
+SCENARIOS.forEach((sc) => {
+  let acc = {};
+  sc.frames = sc.steps.map((st, i) => {
+    const { ready, note, sys, ...rest } = st;
+    acc = { ...acc, ...rest };
+    return { ...acc, ready: ready || {}, note: note || null, sys: sys || [], i };
+  });
+});
+// self-check: every frame has the fields the renderer reads
+SCENARIOS.forEach((sc) => sc.frames.forEach((f) => console.assert(f.fds && 'recv' in f && f.title, 'bad frame', sc.id, f.i)));
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function bytesHtml(s) { return esc(s).replace(/\r\n/g, '<span class="crlf">\\r\\n</span>\n'); }
+
+let cur = 0, step = 0, timer = null;
+let prevFds = [];
+
+function renderTabs() {
+  $('tabs').innerHTML = SCENARIOS.map((sc, i) =>
+    `<button class="tab" role="tab" type="button" id="tab-${sc.id}" aria-selected="${i === cur}">${sc.name}<span class="code">${sc.code}</span></button>`).join('');
+  SCENARIOS.forEach((sc, i) => $('tab-' + sc.id).onclick = () => { stop(); cur = i; step = 0; prevFds = []; renderTabs(); render(); });
+}
+
+function machine(el, label, states, value, show) {
+  el.classList.toggle('off', !value);
+  el.hidden = !show;
+  el.innerHTML = `<span class="label">${label}${value ? '' : ' · none'}</span><div class="states">` +
+    states.map((s) => `<span class="st-pill ${s === value ? 'on' : ''} ${s === value && (s === 'ERROR' || s === 'CLOSED') ? 'bad' : ''}">${s}</span>`).join('') + '</div>';
+}
+
+function render() {
+  const sc = SCENARIOS[cur], f = sc.frames[step], n = sc.frames.length;
+  $('counter').textContent = `STEP ${step + 1} OF ${n}`;
+  $('title').textContent = f.title;
+  $('fn').textContent = f.fn;
+  $('loc').textContent = f.loc;
+  $('text').textContent = f.text;
+  $('note').hidden = !f.note;
+  if (f.note) $('note').innerHTML = f.note;
+  $('prev').disabled = step === 0;
+  $('next').textContent = step === n - 1 ? 'Start again ↺' : 'Next step →';
+  $('ticks').innerHTML = sc.frames.map((fr, i) =>
+    `<button class="tick ${i < step ? 'done' : ''} ${i === step ? 'now' : ''}" type="button" data-i="${i}" title="${i + 1}. ${esc(fr.title)}" aria-label="Step ${i + 1}: ${esc(fr.title)}"></button>`).join('');
+
+  // wire
+  const r = sc.req, p = Math.min(f.parsed, f.recv);
+  $('req').innerHTML = `<span class="b-parsed">${bytesHtml(r.slice(0, p))}</span><span class="b-buffer">${bytesHtml(r.slice(p, f.recv))}</span><span class="b-pending">${bytesHtml(r.slice(f.recv))}</span>`;
+  $('reqinfo').textContent = `${f.recv} / ${r.length} bytes received`;
+  const st = $('respst');
+  st.className = 'resp-state ' + f.resp;
+  st.textContent = { none: 'not built yet', queued: 'in _outBuffer', sent: 'sent' }[f.resp];
+  $('resp').innerHTML = f.resp === 'none' ? '<span class="empty">Nothing to send yet.</span>'
+    : `<span class="${f.resp === 'sent' ? 'b-parsed' : 'b-buffer'}">${bytesHtml(sc.resp.head)}${esc(sc.resp.body)}</span>`;
+
+  // epoll
+  const before = new Set(prevFds);
+  $('fds').innerHTML = f.fds.map((d) => {
+    const fire = f.ready[d.fd];
+    return `<tr class="${fire ? 'ready' : ''} ${prevFds.length && !before.has(d.fd) ? 'enter' : ''}"><td class="fdn">${d.fd}</td>
+      <td><div class="who">${d.who}</div><div class="chips">${d.ev.map((e) => `<span class="chip ${e}">EPOLL${e}</span>`).join('')}</div></td>
+      <td>${fire ? `<span class="fire">${fire}</span>` : ''}</td></tr>`;
+  }).join('');
+  prevFds = f.fds.map((d) => d.fd);
+  $('proc').innerHTML = f.proc ? `<div class="proc"><span>child <b class="mono">pid ${f.proc.pid}</b> · <span class="mono">${f.proc.cmd}</span></span><span class="st ${f.proc.st}">${f.proc.st}${f.proc.code ? ' · ' + f.proc.code : ''}</span></div>` : '';
+
+  // machines
+  machine($('m-client'), 'Client::_state', CLIENT_STATES, f.client, true);
+  machine($('m-parser'), 'HttpParser::_state', PARSER_STATES, f.parser, true);
+  machine($('m-chunk'), 'HttpParser::_stateChunk', CHUNK_STATES, f.chunk, sc.id === 'cgi');
+  $('cgiwrap').hidden = !f.cgiout;
+  if (f.cgiout) $('cgiout').textContent = f.cgiout;
+
+  // trace
+  const log = $('log');
+  let html = '';
+  sc.frames.slice(0, step + 1).forEach((fr, i) => {
+    if (!fr.sys.length) return;
+    if (html) html += '<div class="sep"></div>';
+    html += fr.sys.map((l) => `<div class="${i === step ? 'new' : ''}">${esc(l)}</div>`).join('');
+  });
+  log.innerHTML = html || '<div>No system calls in this step.</div>';
+  log.scrollTop = log.scrollHeight;
+}
+
+function go(i) { const n = SCENARIOS[cur].frames.length; step = (i + n) % n; render(); }
+function next() { if (step === SCENARIOS[cur].frames.length - 1) { stop(); prevFds = []; go(0); } else go(step + 1); }
+function stop() { clearInterval(timer); timer = null; $('play').textContent = 'Play'; }
+function play() {
+  if (timer) return stop();
+  if (step === SCENARIOS[cur].frames.length - 1) { prevFds = []; go(0); }
+  $('play').textContent = 'Pause';
+  timer = setInterval(() => { if (step === SCENARIOS[cur].frames.length - 1) stop(); else go(step + 1); }, 3600);
+}
+
+$('prev').onclick = () => { stop(); go(step - 1); };
+$('next').onclick = () => { stop(); next(); };
+$('play').onclick = play;
+$('ticks').onclick = (e) => { const t = e.target.closest('.tick'); if (t) { stop(); go(+t.dataset.i); } };
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest('input, textarea')) return;
+  if (e.key === 'ArrowRight') { stop(); if (step < SCENARIOS[cur].frames.length - 1) go(step + 1); }
+  else if (e.key === 'ArrowLeft') { stop(); if (step > 0) go(step - 1); }
+  else if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); play(); }
+});
+
+renderTabs();
+render();
+</script>
